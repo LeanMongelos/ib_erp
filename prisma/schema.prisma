@@ -1,0 +1,1402 @@
+// Schema Prisma — Sistema ERP Ingeniería Biomédica
+// Modelos: Usuario, Cliente, Equipo, OrdenTrabajo, Factura, Inventario
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============ ENUMS ============
+
+enum Rol {
+  ADMIN
+  TECNICO
+  VENTAS
+  FACTURACION
+}
+
+enum TipoCliente {
+  HOSPITAL
+  CLINICA
+  CONSULTORIO
+  SANATORIO
+  ORGANISMO_PUBLICO
+  OTRO
+}
+
+enum EstadoEquipo {
+  ACTIVO
+  EN_REPARACION
+  BAJA
+}
+
+enum TipoEventoTracking {
+  RECEPCION
+  DEPOSITO
+  EN_TRANSITO
+  INSTALADO
+  EN_SERVICIO
+  RETIRO
+  BAJA
+}
+
+enum TipoComponenteEquipo {
+  BATERIA
+  FILTRO
+  CALIBRACION
+  SENSOR
+  OTRO
+}
+
+enum TipoArticuloInventario {
+  REPUESTO
+  CONSUMIBLE
+  ACCESORIO
+  BATERIA
+  EQUIPO
+}
+
+enum TipoItemKitEquipo {
+  ACCESORIO_ESPECIFICO
+  ACCESORIO_GENERICO
+  BATERIA
+  COMPONENTE
+  REPUESTO_INCLUIDO
+}
+
+enum TipoOT {
+  CORRECTIVO
+  PREVENTIVO
+  INSTALACION
+  CALIBRACION
+  GARANTIA
+}
+
+enum TipoEntradaHistoriaClinica {
+  OT
+  PREVENTIVO
+  NOTA
+  INSTALACION
+  COMPONENTE
+  TRACKING
+  CAMBIO_ESTADO
+}
+
+enum EstadoOT {
+  ABIERTA
+  EN_PROCESO
+  CERRADA
+  VENCIDA
+  CANCELADA
+}
+
+enum Prioridad {
+  BAJA
+  NORMAL
+  ALTA
+  URGENTE
+}
+
+enum TipoFactura {
+  A
+  B
+  C
+}
+
+enum OrigenProveedor {
+  NACIONAL
+  IMPORTADO
+}
+
+enum EstadoFactura {
+  BORRADOR
+  PENDIENTE       // legado: pendiente de cobro (pre-AFIP)
+  PENDIENTE_CAE   // confirmada, esperando CAE de AFIP
+  EMITIDA         // CAE obtenido — comprobante fiscal válido
+  RECHAZADA       // AFIP rechazó
+  PAGADA
+  VENCIDA
+  ANULADA
+}
+
+enum TipoPlantilla {
+  FACTURA
+  PRESUPUESTO
+  REMITO
+  NOTA_CREDITO
+  NOTA_DEBITO
+}
+
+enum EstadoPresupuesto {
+  BORRADOR
+  ENVIADO
+  APROBADO
+  RECHAZADO
+  VENCIDO
+  CONVERTIDO
+}
+
+enum MedioPago {
+  TRANSFERENCIA
+  EFECTIVO
+  CHEQUE
+  TARJETA
+  OTRO
+}
+
+enum EstadoVencimientoCobranza {
+  PENDIENTE
+  AVISO_ENVIADO
+  COBRADO
+  ANULADO
+}
+
+enum EstadoOrdenCompra {
+  BORRADOR
+  ENVIADA
+  APROBADA
+  PARCIAL
+  RECIBIDA
+  CANCELADA
+}
+
+// ============ MODELOS ============
+
+model Usuario {
+  id           String    @id @default(cuid())
+  nombre       String
+  email        String    @unique
+  password     String
+  rol          Rol       @default(TECNICO) // legado: rol principal. La autorización real usa `roles` (RBAC).
+  telefono     String?
+  avatarUrl    String?
+  activo       Boolean   @default(true)
+  ultimoAcceso DateTime?
+  creadoEn     DateTime  @default(now())
+
+  ots   OrdenTrabajo[]
+  roles UsuarioRol[]
+  presupuestosVendidos Presupuesto[]
+  mantenimientosAsignados PlanMantenimiento[]
+  eventosTracking EventoTracking[]
+  conversacionesAsignadas ConversacionCRM[]
+  mensajesCRM             MensajeCRM[]
+  equiposInstalados       Equipo[] @relation("EquipoInstaladoPor")
+  entradasHistoriaClinica HistoriaClinicaEntrada[]
+  historialEmbudo         HistorialEmbudo[]
+
+  @@map("usuarios")
+}
+
+// ============ RBAC ============
+
+model RolRBAC {
+  id       String       @id @default(cuid())
+  clave    String       @unique // SUPERADMIN, GERENTE, VENTAS, ...
+  nombre   String
+  sistema  Boolean      @default(false) // roles base que no se pueden borrar
+  creadoEn DateTime     @default(now())
+
+  usuarios UsuarioRol[]
+  permisos RolPermiso[]
+
+  @@map("roles")
+}
+
+model Permiso {
+  id          String       @id @default(cuid())
+  clave       String       @unique // "facturas.emit_afip"
+  modulo      String
+  descripcion String
+
+  roles RolPermiso[]
+
+  @@map("permisos")
+}
+
+model UsuarioRol {
+  usuarioId String
+  rolId     String
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  rol     RolRBAC @relation(fields: [rolId], references: [id], onDelete: Cascade)
+
+  @@id([usuarioId, rolId])
+  @@map("usuario_roles")
+}
+
+model RolPermiso {
+  rolId     String
+  permisoId String
+
+  rol     RolRBAC @relation(fields: [rolId], references: [id], onDelete: Cascade)
+  permiso Permiso @relation(fields: [permisoId], references: [id], onDelete: Cascade)
+
+  @@id([rolId, permisoId])
+  @@map("rol_permisos")
+}
+
+// ============ EMISORES (multi-CUIT, carga manual) ============
+
+enum AmbienteAfip {
+  HOMOLOGACION
+  PRODUCCION
+}
+
+model Emisor {
+  id                String       @id @default(cuid())
+  razonSocial       String
+  cuit              String       @unique
+  condicionIva      String       @default("Responsable Inscripto")
+  ingresosBrutos    String?
+  inicioActividades DateTime?
+  domicilio         String?
+  ciudad            String?
+  telefono          String?
+  email             String?
+  // Credenciales AFIP (rutas a archivos cifrados en el storage; nunca el contenido en claro)
+  certificadoPath   String?
+  clavePrivadaPath  String?
+  certificadoAlias  String?
+  ambiente          AmbienteAfip @default(HOMOLOGACION)
+  puntoVenta        Int          @default(1)
+  predeterminado    Boolean      @default(false)
+  activo            Boolean      @default(true)
+  creadoEn          DateTime     @default(now())
+
+  facturas     Factura[]
+  presupuestos Presupuesto[]
+
+  @@map("emisores")
+}
+
+// ============ AUDITORÍA ============
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  usuarioId String?
+  accion    String // "usuario.create", "emisor.update", ...
+  entidad   String
+  entidadId String?
+  antes     Json?
+  despues   Json?
+  ip        String?
+  fecha     DateTime @default(now())
+
+  @@index([entidad, entidadId])
+  @@index([usuarioId])
+  @@map("audit_logs")
+}
+
+model Cliente {
+  id        String      @id @default(cuid())
+  nombre    String
+  tipo      TipoCliente
+  cuit      String?
+  direccion String?
+  ciudad    String?
+  telefono  String?
+  email     String?
+  contacto  String?
+  activo    Boolean     @default(true)
+  creadoEn  DateTime    @default(now())
+
+  // ---- Ficha 360°: datos fiscales y comerciales (Fase 2) ----
+  condicionIva  String? // Responsable Inscripto, Monotributo, Exento, Consumidor Final
+  condicionPago String? // Contado, 30 días, 60 días, etc.
+  limiteCredito Float?  // límite de crédito en ARS (null = sin límite definido)
+  segmento      String? // segmento comercial manual (override del automático): VIP, Recurrente, etc.
+  sitioWeb      String?
+  notas         String?
+  lat           Float?  // geolocalización sede (Fase 8)
+  lng           Float?
+
+  alicuotaIvaId String?
+  alicuotaIva   AlicuotaIva? @relation(fields: [alicuotaIvaId], references: [id])
+
+  equipos      Equipo[]
+  ots          OrdenTrabajo[]
+  facturas     Factura[]
+  presupuestos Presupuesto[]
+  pagos        Pago[]
+  contactos    ContactoCliente[]
+  conversaciones ConversacionCRM[]
+  negociosEmbudo NegocioEmbudo[]
+  sucursales   ClienteSucursal[]
+
+  @@map("clientes")
+}
+
+model ClienteSucursal {
+  id        String   @id @default(cuid())
+  clienteId String
+  nombre    String
+  direccion String?
+  numero    String?
+  ciudad    String?
+  lat       Float?
+  lng       Float?
+  activo    Boolean  @default(true)
+  notas     String?
+  creadoEn  DateTime @default(now())
+
+  cliente Cliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  equipos Equipo[]
+  itemsFacturaInstalacion ItemFactura[]
+
+  @@index([clienteId])
+  @@map("clientes_sucursales")
+}
+
+// Contactos adicionales del cliente (multi-contacto de la ficha 360°)
+model ContactoCliente {
+  id        String   @id @default(cuid())
+  clienteId String
+  nombre    String
+  cargo     String?
+  email     String?
+  telefono  String?
+  principal Boolean  @default(false)
+  creadoEn  DateTime @default(now())
+
+  cliente Cliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+
+  @@index([clienteId])
+  @@map("contactos_cliente")
+}
+
+model Equipo {
+  id            String       @id @default(cuid())
+  nombre        String
+  marca         String?
+  modelo        String?
+  modeloExacto  String?
+  numeroSerie   String?      @unique
+  codigoInterno String?
+  firmwareVersion  String?
+  softwareVersion String?
+  garantiaHasta DateTime?
+  estado        EstadoEquipo @default(ACTIVO)
+  clienteId     String
+  ubicacionLat  Float?
+  ubicacionLng  Float?
+  direccionUbicacion String?
+  fechaInstalacion   DateTime?
+  servicioInstalacion String?
+  pisoSala           String?
+  contactoResponsable String?
+  notasTecnicas      String?
+  proveedorOrigenId  String?
+  referenciaCompra   String?
+  instaladoPorUsuarioId String?
+  sucursalId            String?
+  creadoEn      DateTime     @default(now())
+
+  cliente  Cliente             @relation(fields: [clienteId], references: [id])
+  sucursal ClienteSucursal?    @relation(fields: [sucursalId], references: [id])
+  proveedorOrigen Proveedor?   @relation(fields: [proveedorOrigenId], references: [id])
+  instaladoPor    Usuario?     @relation("EquipoInstaladoPor", fields: [instaladoPorUsuarioId], references: [id])
+  ots      OrdenTrabajo[]
+  planes   PlanMantenimiento[]
+  eventos  EventoTracking[]
+  accesorios  EquipoAccesorio[]
+  componentes EquipoComponente[]
+  entradasHistoria HistoriaClinicaEntrada[]
+  itemFacturaOrigen ItemFactura? @relation("FacturaItemEquipo")
+
+  @@index([clienteId])
+  @@index([sucursalId])
+  @@map("equipos")
+}
+
+model EquipoAccesorio {
+  id           String  @id @default(cuid())
+  equipoId     String
+  nombre       String
+  inventarioId String?
+  cantidad     Int     @default(1)
+  obligatorio  Boolean @default(true)
+  notas        String?
+  creadoEn     DateTime @default(now())
+
+  equipo     Equipo      @relation(fields: [equipoId], references: [id], onDelete: Cascade)
+  inventario Inventario? @relation(fields: [inventarioId], references: [id])
+
+  @@index([equipoId])
+  @@map("equipo_accesorios")
+}
+
+model EquipoComponente {
+  id              String               @id @default(cuid())
+  equipoId        String
+  tipo            TipoComponenteEquipo @default(OTRO)
+  descripcion     String
+  numeroSerie     String?
+  instaladoEn     DateTime?
+  venceEn         DateTime?
+  alertaDiasAntes Int                  @default(30)
+  activo          Boolean              @default(true)
+  notas           String?
+  creadoEn        DateTime             @default(now())
+
+  equipo Equipo @relation(fields: [equipoId], references: [id], onDelete: Cascade)
+
+  @@index([equipoId])
+  @@index([venceEn])
+  @@map("equipo_componentes")
+}
+
+model HistoriaClinicaEntrada {
+  id           String                   @id @default(cuid())
+  equipoId     String
+  tipo         TipoEntradaHistoriaClinica
+  titulo       String
+  contenido    String?
+  referenciaId String?
+  usuarioId    String?
+  fecha        DateTime                 @default(now())
+  creadoEn     DateTime                 @default(now())
+
+  equipo  Equipo   @relation(fields: [equipoId], references: [id], onDelete: Cascade)
+  usuario Usuario? @relation(fields: [usuarioId], references: [id])
+
+  @@index([equipoId, fecha])
+  @@map("historia_clinica_entradas")
+}
+
+model OrdenTrabajo {
+  id            String    @id @default(cuid())
+  numero        String    @unique
+  descripcion   String
+  diagnostico   String?
+  tipo          TipoOT    @default(CORRECTIVO)
+  estado        EstadoOT  @default(ABIERTA)
+  prioridad     Prioridad @default(NORMAL)
+  slaHoras      Int       @default(48)
+  fechaApertura DateTime  @default(now())
+  fechaCierre   DateTime?
+  slaVence      DateTime
+  clienteId     String
+  equipoId      String?
+  tecnicoId     String?
+  creadoEn      DateTime  @default(now())
+
+  cliente   Cliente       @relation(fields: [clienteId], references: [id])
+  equipo    Equipo?       @relation(fields: [equipoId], references: [id])
+  tecnico   Usuario?      @relation(fields: [tecnicoId], references: [id])
+  repuestos RepuestoOT[]
+  historial HistorialOT[]
+  factura   Factura?
+  presupuestos Presupuesto[]
+  eventosTracking EventoTracking[]
+
+  @@map("ordenes_trabajo")
+}
+
+model RepuestoOT {
+  id          String  @id @default(cuid())
+  descripcion String
+  cantidad    Int
+  precioUnit  Float
+  otId        String
+  inventarioId String?
+
+  ot         OrdenTrabajo @relation(fields: [otId], references: [id])
+  inventario Inventario?  @relation(fields: [inventarioId], references: [id])
+
+  @@map("repuestos_ot")
+}
+
+model HistorialOT {
+  id       String   @id @default(cuid())
+  estado   EstadoOT
+  nota     String?
+  otId     String
+  creadoEn DateTime @default(now())
+
+  ot OrdenTrabajo @relation(fields: [otId], references: [id])
+
+  @@map("historial_ot")
+}
+
+// ============ FISCAL / IVA ============
+
+model AlicuotaIva {
+  id               String   @id @default(cuid())
+  codigo           String   @unique
+  nombre           String
+  porcentaje       Float
+  activo           Boolean  @default(true)
+  esPredeterminada Boolean  @default(false)
+  creadoEn         DateTime @default(now())
+
+  clientes   Cliente[]
+  inventario Inventario[]
+  condicionesIva CondicionIvaCat[]
+
+  @@map("alicuotas_iva")
+}
+
+// ============ CONTABILIDAD / FISCAL ARGENTINA ============
+
+model ConfiguracionContable {
+  id                        String   @id @default("default")
+  monedaFuncional           String   @default("ARS")
+  cotizacionUsdManual       Float?
+  usaCotizacionBna          Boolean  @default(true)
+  agenteRetencionGanancias  Boolean  @default(false)
+  agenteRetencionIva        Boolean  @default(false)
+  agentePercepcionIva       Boolean  @default(false)
+  agenteRetencionIibb        Boolean  @default(false)
+  agentePercepcionIibb      Boolean  @default(false)
+  inscriptoIibb             Boolean  @default(false)
+  numeroInscripcionIibb     String?
+  convenioMultilateralIibb  Boolean  @default(false)
+  libroIvaDigital           Boolean  @default(true)
+  periodicidadIva           String   @default("MENSUAL") // MENSUAL | BIMESTRAL
+  cierreIvaDia              Int      @default(20)
+  ejercicioActivoId         String?  @unique
+  notasContador             String?
+  actualizadoEn             DateTime @updatedAt
+
+  ejercicioActivo EjercicioContable? @relation(fields: [ejercicioActivoId], references: [id])
+
+  @@map("configuracion_contable")
+}
+
+/// Correlativos configurables para migración (presupuesto, factura interna, remito).
+model SecuenciaNumeracion {
+  id            String   @id @default(cuid())
+  clave         String   @unique
+  etiqueta      String
+  tipo          String
+  subtipo       String?
+  anio          Int?
+  prefijo       String
+  padding       Int      @default(4)
+  /// Próximo número a asignar al crear un comprobante.
+  proximoNumero Int      @default(1)
+  actualizadoEn DateTime @updatedAt
+
+  @@map("secuencias_numeracion")
+}
+
+model CondicionIvaCat {
+  id            String  @id @default(cuid())
+  codigo        String  @unique
+  nombre        String
+  descripcion   String?
+  alicuotaIvaId String?
+  requiereCuit  Boolean @default(true)
+  activo        Boolean @default(true)
+  esDefault     Boolean @default(false)
+  orden         Int     @default(0)
+
+  alicuotaIva AlicuotaIva? @relation(fields: [alicuotaIvaId], references: [id])
+
+  @@map("condiciones_iva_cat")
+}
+
+model JurisdiccionIibb {
+  id                   String  @id @default(cuid())
+  codigo               String  @unique
+  nombre               String
+  provincia            String
+  alicuotaGeneral      Float?
+  convenioMultilateral Boolean @default(false)
+  activo               Boolean @default(true)
+
+  regimenes RegimenImpositivo[]
+
+  @@map("jurisdicciones_iibb")
+}
+
+model RegimenImpositivo {
+  id                 String  @id @default(cuid())
+  codigo             String  @unique
+  nombre             String
+  tipo               String // RET_GAN | RET_IVA | PERC_IVA | RET_IIBB | PERC_IIBB | RET_SUSS
+  alicuota           Float
+  minimoNoImponible  Float   @default(0)
+  baseMinima         Float   @default(0)
+  jurisdiccionIibbId String?
+  activo             Boolean @default(true)
+
+  jurisdiccion JurisdiccionIibb? @relation(fields: [jurisdiccionIibbId], references: [id])
+
+  @@map("regimenes_impositivos")
+}
+
+model CondicionPagoCat {
+  id              String  @id @default(cuid())
+  codigo          String  @unique
+  nombre          String
+  diasPlazo       Int     @default(0)
+  plazosCobranza  String? // ej. "30-60-90"
+  activo          Boolean @default(true)
+  esDefault       Boolean @default(false)
+
+  @@map("condiciones_pago_cat")
+}
+
+model PlanCuenta {
+  id               String  @id @default(cuid())
+  codigo           String  @unique
+  nombre           String
+  tipo             String // ACTIVO | PASIVO | PATRIMONIO | INGRESO | EGRESO | ORDEN
+  nivel            Int     @default(1)
+  padreId          String?
+  aceptaImputacion Boolean @default(true)
+  activo           Boolean @default(true)
+
+  padre PlanCuenta?  @relation("PlanCuentaArbol", fields: [padreId], references: [id])
+  hijos PlanCuenta[] @relation("PlanCuentaArbol")
+
+  @@map("plan_cuentas")
+}
+
+model EjercicioContable {
+  id          String   @id @default(cuid())
+  nombre      String
+  anio        Int
+  fechaInicio DateTime
+  fechaFin    DateTime
+  cerrado     Boolean  @default(false)
+  activo      Boolean  @default(true)
+  creadoEn    DateTime @default(now())
+
+  configActiva ConfiguracionContable?
+
+  @@unique([anio])
+  @@map("ejercicios_contables")
+}
+
+model TipoComprobanteAfip {
+  id          String  @id @default(cuid())
+  codigoAfip  Int     @unique
+  letra       String
+  descripcion String
+  aplicaIva   Boolean @default(true)
+  activo      Boolean @default(true)
+
+  @@map("tipos_comprobante_afip")
+}
+
+model TipoDocumentoAfip {
+  id         String  @id @default(cuid())
+  codigoAfip Int     @unique
+  nombre     String
+  activo     Boolean @default(true)
+
+  @@map("tipos_documento_afip")
+}
+
+model Factura {
+  id               String        @id @default(cuid())
+  numero           String        @unique // número interno legible (ej. B-10001)
+  tipo             TipoFactura
+  estado           EstadoFactura @default(BORRADOR)
+  fechaEmision     DateTime      @default(now())
+  fechaVencimiento DateTime?
+  fechaPago        DateTime? // fecha real de cobro (Fase 5)
+  subtotal         Float
+  iva              Float
+  total            Float
+  moneda           String        @default("ARS")
+  cotizacionUsd    Float?
+  bonificacionPct  Float         @default(0)
+  alicuotaIvaPct   Float         @default(21)
+  clienteId        String
+  emisorId         String?
+  plantillaId      String?
+  presupuestoId    String?       @unique
+  otId             String?       @unique
+  condicionPago    String?
+  observaciones    String?
+  // AFIP / fiscal
+  puntoVenta       Int?
+  numeroAfip       Int? // número de comprobante en AFIP
+  cae              String?
+  caeVencimiento   DateTime?
+  qrData           String? // JSON base64 para QR fiscal
+  afipObservaciones String?
+  concepto         Int           @default(1) // 1=Productos, 2=Servicios, 3=Ambos
+  creadoEn         DateTime      @default(now())
+
+  cliente     Cliente            @relation(fields: [clienteId], references: [id])
+  emisor      Emisor?            @relation(fields: [emisorId], references: [id])
+  plantilla   PlantillaImpresion? @relation(fields: [plantillaId], references: [id])
+  presupuesto Presupuesto?       @relation(fields: [presupuestoId], references: [id])
+  ot          OrdenTrabajo?      @relation(fields: [otId], references: [id])
+  items       ItemFactura[]
+  pagos       PagoFactura[]
+  vencimientos VencimientoCobranza[]
+
+  @@map("facturas")
+}
+
+model ItemFactura {
+  id               String  @id @default(cuid())
+  codigo           String?
+  descripcion      String
+  descripcionLarga String?
+  fotoUrl          String?
+  cantidad         Int
+  precioUnit       Float
+  bonificacionPct  Float   @default(0)
+  alicuotaIvaPct   Float?
+  subtotal         Float
+  inventarioId     String?
+  facturaId        String
+  numeroSerie      String?
+  proximoPreventivo DateTime?
+  equipoGeneradoId String?  @unique
+  sucursalInstalacionId String?
+
+  inventario Inventario? @relation(fields: [inventarioId], references: [id])
+  factura    Factura     @relation(fields: [facturaId], references: [id], onDelete: Cascade)
+  equipoGenerado Equipo? @relation("FacturaItemEquipo", fields: [equipoGeneradoId], references: [id])
+  sucursalInstalacion ClienteSucursal? @relation(fields: [sucursalInstalacionId], references: [id])
+
+  @@map("items_factura")
+}
+
+model Inventario {
+  id          String   @id @default(cuid())
+  nombre      String
+  descripcion String?
+  sku         String?  @unique
+  tipoArticulo TipoArticuloInventario @default(REPUESTO)
+  marca       String?
+  modelo      String?
+  esSerializado Boolean @default(false)
+  requierePreventivo Boolean @default(false)
+  intervaloPreventivoDias Int?
+  stock       Int      @default(0)
+  stockMinimo Int      @default(5)
+  stockMaximo Int?
+  puntoPedido Int? // reorder point
+  precioUnit  Float?
+  moneda      String   @default("ARS")
+  categoria   String?
+  alicuotaIvaId String?
+  fotoUrl     String?
+  activo      Boolean  @default(true)
+  creadoEn    DateTime @default(now())
+
+  proveedores  ProveedorProducto[]
+  itemsFactura ItemFactura[]
+  movimientos  MovimientoStock[]
+  itemsOC      ItemOrdenCompra[]
+  accesoriosEquipo EquipoAccesorio[]
+  repuestosOT      RepuestoOT[]
+  itemsPresupuesto ItemPresupuesto[]
+  kitComoEquipo    InventarioKitItem[] @relation("KitEquipoPadre")
+  kitComoIncluido  InventarioKitItem[] @relation("KitEquipoHijo")
+
+  alicuotaIva AlicuotaIva? @relation(fields: [alicuotaIvaId], references: [id])
+
+  @@map("inventario")
+}
+
+model InventarioKitItem {
+  id                String            @id @default(cuid())
+  inventarioPadreId String
+  inventarioHijoId  String?
+  nombre            String
+  tipoItem          TipoItemKitEquipo
+  tipoComponente    TipoComponenteEquipo?
+  obligatorio       Boolean           @default(false)
+  cantidad          Int               @default(1)
+  mesesVencimiento  Int?
+  notas             String?
+  orden             Int               @default(0)
+
+  padre Inventario  @relation("KitEquipoPadre", fields: [inventarioPadreId], references: [id], onDelete: Cascade)
+  hijo  Inventario? @relation("KitEquipoHijo", fields: [inventarioHijoId], references: [id])
+
+  @@index([inventarioPadreId])
+  @@map("inventario_kit_items")
+}
+
+// ============ PROVEEDORES (Fase 2) ============
+
+model Proveedor {
+  id               String          @id @default(cuid())
+  razonSocial      String
+  cuit             String?
+  condicionIva     String?
+  rubro            String? // rubro / categoría comercial
+  origen           OrigenProveedor @default(NACIONAL)
+  moneda           String          @default("ARS") // moneda habitual de operación
+  email            String?
+  telefono         String?
+  sitioWeb         String?
+  direccion        String?
+  ciudad           String?
+  marcas           String? // marcas / líneas que representa (texto libre)
+  // Condiciones comerciales por defecto
+  condicionPago    String? // Contado, 30/60/90 días, etc.
+  financiacionPct  Float? // % de recargo (+) o descuento (-) financiero por defecto
+  plazoEntregaDias Int? // lead time típico en días
+  minimoCompra     Float? // mínimo de compra
+  notas            String?
+  activo           Boolean         @default(true)
+  creadoEn         DateTime        @default(now())
+
+  contactos   ContactoProveedor[]
+  condiciones CondicionComercialProveedor[]
+  productos   ProveedorProducto[]
+  equiposOrigen Equipo[]
+  ordenesCompra OrdenCompra[]
+
+  @@map("proveedores")
+}
+
+// Contactos del proveedor (comercial, técnico, postventa…)
+model ContactoProveedor {
+  id          String   @id @default(cuid())
+  proveedorId String
+  nombre      String
+  cargo       String? // comercial, técnico, postventa
+  email       String?
+  telefono    String?
+  whatsapp    String?
+  principal   Boolean  @default(false)
+  creadoEn    DateTime @default(now())
+
+  proveedor Proveedor @relation(fields: [proveedorId], references: [id], onDelete: Cascade)
+
+  @@index([proveedorId])
+  @@map("contactos_proveedor")
+}
+
+// Condiciones de financiación por plazo (contado, 30d, 60d, cuotas…)
+model CondicionComercialProveedor {
+  id           String  @id @default(cuid())
+  proveedorId  String
+  descripcion  String // ej. "Contado", "30 días", "3 cuotas"
+  plazoDias    Int     @default(0)
+  recargoPct   Float   @default(0)
+  descuentoPct Float   @default(0)
+
+  proveedor Proveedor @relation(fields: [proveedorId], references: [id], onDelete: Cascade)
+
+  @@index([proveedorId])
+  @@map("condiciones_proveedor")
+}
+
+// Lista de precios: producto provisto por un proveedor (con histórico por vigencia)
+model ProveedorProducto {
+  id             String   @id @default(cuid())
+  proveedorId    String
+  inventarioId   String? // vínculo opcional con un ítem del inventario
+  nombreProducto String // nombre/descripción del producto que provee
+  costo          Float
+  moneda         String   @default("ARS")
+  leadTimeDias   Int?
+  garantiaMeses  Int?
+  vigenteDesde   DateTime @default(now())
+  creadoEn       DateTime @default(now())
+
+  proveedor  Proveedor   @relation(fields: [proveedorId], references: [id], onDelete: Cascade)
+  inventario Inventario? @relation(fields: [inventarioId], references: [id])
+
+  @@index([proveedorId])
+  @@index([inventarioId])
+  @@map("proveedor_productos")
+}
+
+// ============ PLANTILLAS DE IMPRESIÓN (Fase 3) ============
+
+model PlantillaImpresion {
+  id             String        @id @default(cuid())
+  nombre         String
+  tipo           TipoPlantilla
+  config         Json // esquema JSON versionado (bloques, columnas, estilos)
+  version        Int           @default(1)
+  predeterminado Boolean       @default(false)
+  activo         Boolean       @default(true)
+  creadoEn       DateTime      @default(now())
+
+  facturas     Factura[]
+  presupuestos Presupuesto[]
+
+  @@map("plantillas_impresion")
+}
+
+// ============ PRESUPUESTOS (Fase 3) ============
+
+model Presupuesto {
+  id              String            @id @default(cuid())
+  numero          String            @unique
+  estado          EstadoPresupuesto @default(BORRADOR)
+  clienteId       String
+  emisorId        String?
+  plantillaId     String?
+  vendedorId      String?
+  condicionPago         String?
+  tasaFinanciacionPct   Float             @default(0)
+  interesFinanciacion   Float             @default(0)
+  vigenciaDias          Int               @default(15)
+  observaciones   String?
+  formaPago       String?
+  plazoEntrega    String?
+  garantia        String?
+  subtotal        Float
+  iva             Float
+  total           Float
+  moneda          String            @default("ARS")
+  cotizacionUsd   Float?
+  bonificacionPct Float             @default(0)
+  alicuotaIvaPct  Float             @default(21)
+  fechaEmision    DateTime          @default(now())
+  fechaVencimiento DateTime?
+  creadoEn        DateTime          @default(now())
+  otId            String?
+
+  cliente   Cliente             @relation(fields: [clienteId], references: [id])
+  emisor    Emisor?             @relation(fields: [emisorId], references: [id])
+  plantilla PlantillaImpresion? @relation(fields: [plantillaId], references: [id])
+  vendedor  Usuario?            @relation(fields: [vendedorId], references: [id])
+  ot        OrdenTrabajo?       @relation(fields: [otId], references: [id])
+  items     ItemPresupuesto[]
+  factura   Factura?
+  negociosEmbudo NegocioEmbudo[]
+
+  @@index([otId])
+  @@map("presupuestos")
+}
+
+model ItemPresupuesto {
+  id               String  @id @default(cuid())
+  presupuestoId    String
+  codigo           String?
+  descripcion      String
+  descripcionLarga String?
+  fotoUrl          String?
+  cantidad         Int
+  precioUnit       Float
+  bonificacionPct  Float   @default(0)
+  alicuotaIvaPct   Float?
+  subtotal         Float
+  inventarioId     String?
+  numeroSerie      String?
+  proximoPreventivo DateTime?
+
+  presupuesto Presupuesto @relation(fields: [presupuestoId], references: [id], onDelete: Cascade)
+  inventario  Inventario? @relation(fields: [inventarioId], references: [id])
+
+  @@map("items_presupuesto")
+}
+
+// ============ COBRANZAS (Fase 5) ============
+
+model Pago {
+  id         String    @id @default(cuid())
+  clienteId  String
+  monto      Float
+  medio      MedioPago @default(TRANSFERENCIA)
+  fecha      DateTime  @default(now())
+  referencia String?
+  notas      String?
+  creadoEn   DateTime  @default(now())
+
+  cliente     Cliente       @relation(fields: [clienteId], references: [id])
+  imputaciones PagoFactura[]
+
+  @@map("pagos")
+}
+
+model PagoFactura {
+  pagoId    String
+  facturaId String
+  monto     Float
+
+  pago    Pago    @relation(fields: [pagoId], references: [id], onDelete: Cascade)
+  factura Factura @relation(fields: [facturaId], references: [id])
+
+  @@id([pagoId, facturaId])
+  @@map("pago_facturas")
+}
+
+model VencimientoCobranza {
+  id               String                    @id @default(cuid())
+  facturaId        String
+  numeroCuota      Int
+  diasDesdeEmision Int
+  fechaVencimiento DateTime
+  monto            Float
+  estado           EstadoVencimientoCobranza @default(PENDIENTE)
+  avisoEnviadoEn   DateTime?
+  cobradoEn        DateTime?
+  creadoEn          DateTime                  @default(now())
+
+  factura Factura @relation(fields: [facturaId], references: [id], onDelete: Cascade)
+
+  @@unique([facturaId, numeroCuota])
+  @@index([fechaVencimiento, estado])
+  @@map("vencimientos_cobranza")
+}
+
+// ============ INVENTARIO AVANZADO (Fase 2 inv) ============
+
+model Deposito {
+  id       String  @id @default(cuid())
+  nombre   String
+  direccion String?
+  activo   Boolean @default(true)
+  creadoEn DateTime @default(now())
+
+  movimientos MovimientoStock[]
+
+  @@map("depositos")
+}
+
+enum TipoMovimientoStock {
+  ENTRADA
+  SALIDA
+  AJUSTE
+  TRANSFERENCIA
+}
+
+model MovimientoStock {
+  id           String             @id @default(cuid())
+  inventarioId String
+  depositoId   String?
+  tipo         TipoMovimientoStock
+  cantidad     Int
+  stockAntes   Int
+  stockDespues Int
+  motivo       String?
+  referencia   String? // OC-xxx, OT-xxx, etc.
+  usuarioId    String?
+  creadoEn     DateTime           @default(now())
+
+  inventario Inventario @relation(fields: [inventarioId], references: [id])
+  deposito   Deposito?  @relation(fields: [depositoId], references: [id])
+
+  @@index([inventarioId])
+  @@map("movimientos_stock")
+}
+
+// ============ ÓRDENES DE COMPRA (Fase 6) ============
+
+model OrdenCompra {
+  id           String            @id @default(cuid())
+  numero       String            @unique
+  proveedorId  String
+  estado       EstadoOrdenCompra @default(BORRADOR)
+  subtotal     Float             @default(0)
+  total        Float             @default(0)
+  observaciones String?
+  fechaEmision DateTime          @default(now())
+  fechaEntrega DateTime?
+  creadoEn     DateTime          @default(now())
+
+  proveedor Proveedor         @relation(fields: [proveedorId], references: [id])
+  items     ItemOrdenCompra[]
+
+  @@map("ordenes_compra")
+}
+
+model ItemOrdenCompra {
+  id             String @id @default(cuid())
+  ordenCompraId  String
+  inventarioId   String?
+  descripcion    String
+  cantidad       Int
+  cantidadRecibida Int  @default(0)
+  precioUnit     Float
+  subtotal       Float
+
+  ordenCompra OrdenCompra @relation(fields: [ordenCompraId], references: [id], onDelete: Cascade)
+  inventario  Inventario? @relation(fields: [inventarioId], references: [id])
+
+  @@map("items_orden_compra")
+}
+
+// ============ MANTENIMIENTO PREVENTIVO (Fase 7) ============
+
+enum EstadoMantenimiento {
+  PENDIENTE
+  PROGRAMADO
+  COMPLETADO
+  VENCIDO
+  CANCELADO
+}
+
+model PlanMantenimiento {
+  id              String              @id @default(cuid())
+  equipoId        String
+  descripcion     String
+  intervaloDias   Int                 @default(180)
+  ultimoServicio  DateTime?
+  proximoServicio DateTime?
+  estado          EstadoMantenimiento @default(PENDIENTE)
+  tecnicoId       String?
+  notas           String?
+  creadoEn        DateTime            @default(now())
+
+  equipo  Equipo   @relation(fields: [equipoId], references: [id])
+  tecnico Usuario? @relation(fields: [tecnicoId], references: [id])
+
+  @@index([equipoId])
+  @@index([proximoServicio])
+  @@map("planes_mantenimiento")
+}
+
+// ============ TRACKING + MAPA (Fase 8) ============
+
+model EventoTracking {
+  id        String             @id @default(cuid())
+  equipoId  String
+  tipo      TipoEventoTracking
+  lat       Float
+  lng       Float
+  direccion String?
+  nota      String?
+  fotoUrl   String?
+  otId      String?
+  usuarioId String?
+  fecha     DateTime           @default(now())
+  creadoEn  DateTime           @default(now())
+
+  equipo  Equipo          @relation(fields: [equipoId], references: [id], onDelete: Cascade)
+  ot      OrdenTrabajo?   @relation(fields: [otId], references: [id])
+  usuario Usuario?        @relation(fields: [usuarioId], references: [id])
+
+  @@index([equipoId])
+  @@index([fecha])
+  @@map("eventos_tracking")
+}
+
+// ============ CRM OMNICANAL (Fase 9) ============
+
+enum TipoCanalIntegracion {
+  WHATSAPP
+  INSTAGRAM
+  FACEBOOK
+  EMAIL_IMAP
+  EMAIL_GRAPH
+  N8N
+}
+
+enum EstadoCanalIntegracion {
+  NO_CONFIGURADO
+  PENDIENTE
+  CONECTADO
+  ERROR
+}
+
+enum EstadoConversacionCRM {
+  ABIERTA
+  PENDIENTE
+  CERRADA
+}
+
+enum DireccionMensajeCRM {
+  ENTRANTE
+  SALIENTE
+}
+
+model CanalIntegracion {
+  id              String                 @id @default(cuid())
+  tipo            TipoCanalIntegracion   @unique
+  nombre          String
+  activo          Boolean                @default(false)
+  estado          EstadoCanalIntegracion @default(NO_CONFIGURADO)
+  config          Json                   @default("{}")
+  webhookUrl      String?
+  pasoCompletado  Int                    @default(0)
+  ultimoSync      DateTime?
+  errorMensaje    String?
+  creadoEn        DateTime               @default(now())
+  actualizadoEn   DateTime               @updatedAt
+
+  conversaciones ConversacionCRM[]
+
+  @@map("canales_integracion")
+}
+
+model ConversacionCRM {
+  id               String                @id @default(cuid())
+  canalId          String
+  externalId       String?
+  estado           EstadoConversacionCRM @default(ABIERTA)
+  asignadoId       String?
+  clienteId        String?
+  contactoNombre   String
+  contactoHandle   String
+  preview          String?
+  etiquetas        String[]              @default([])
+  sinLeer          Int                   @default(0)
+  ultimoMensajeEn  DateTime              @default(now())
+  creadoEn         DateTime              @default(now())
+
+  canal    CanalIntegracion @relation(fields: [canalId], references: [id])
+  cliente  Cliente?         @relation(fields: [clienteId], references: [id])
+  asignado Usuario?         @relation(fields: [asignadoId], references: [id])
+  mensajes MensajeCRM[]
+
+  @@index([canalId])
+  @@index([estado])
+  @@index([ultimoMensajeEn])
+  @@map("conversaciones_crm")
+}
+
+model MensajeCRM {
+  id             String              @id @default(cuid())
+  conversacionId String
+  direccion      DireccionMensajeCRM
+  tipo           String              @default("TEXTO")
+  contenido      String
+  adjuntoUrl     String?
+  externalMsgId  String?
+  usuarioId      String?
+  fecha          DateTime            @default(now())
+
+  conversacion ConversacionCRM @relation(fields: [conversacionId], references: [id], onDelete: Cascade)
+  usuario      Usuario?        @relation(fields: [usuarioId], references: [id])
+
+  @@index([conversacionId])
+  @@map("mensajes_crm")
+}
+
+// ============ CRM EMBUDO DE VENTAS ============
+
+enum EtapaEmbudo {
+  ENTRADA
+  CONTACTO
+  DOCUMENTACION
+  PROPUESTA
+  SEGUIMIENTO
+  ANALISIS
+  ENTREGA
+  CIERRE
+}
+
+enum UrgenciaEmbudo {
+  NORMAL
+  URGENTE
+}
+
+model NegocioEmbudo {
+  id                 String         @id @default(cuid())
+  numero             Int            @unique
+  nombre             String
+  cliente            String
+  clienteId          String?
+  productoServicio   String?
+  monto              Float          @default(0)
+  vendedor           String
+  urgencia           UrgenciaEmbudo @default(NORMAL)
+  etapa              EtapaEmbudo    @default(ENTRADA)
+  etapaDesde         DateTime       @default(now())
+  proximaAccionFecha DateTime?
+  presupuestoId      String?
+  notas              String?
+  datos              Json           @default("{}")
+  activo             Boolean        @default(true)
+  cerradoEn          DateTime?
+  creadoEn           DateTime       @default(now())
+  actualizadoEn      DateTime       @updatedAt
+
+  clienteRel  Cliente?          @relation(fields: [clienteId], references: [id])
+  presupuesto Presupuesto?      @relation(fields: [presupuestoId], references: [id])
+  historial   HistorialEmbudo[]
+
+  @@index([etapa])
+  @@index([vendedor])
+  @@map("negocios_embudo")
+}
+
+model HistorialEmbudo {
+  id         String      @id @default(cuid())
+  negocioId  String
+  etapaDesde EtapaEmbudo
+  etapaHasta EtapaEmbudo
+  retroceso  Boolean     @default(false)
+  datos      Json        @default("{}")
+  notas      String?
+  usuarioId  String?
+  creadoEn   DateTime    @default(now())
+
+  negocio NegocioEmbudo @relation(fields: [negocioId], references: [id], onDelete: Cascade)
+  usuario Usuario?      @relation(fields: [usuarioId], references: [id])
+
+  @@index([negocioId])
+  @@map("historial_embudo")
+}
+
+// ============ CONFIGURACIÓN — CATÁLOGOS, NOTIFICACIONES, SEGURIDAD ============
+
+model CategoriaInventarioCat {
+  id       String   @id @default(cuid())
+  codigo   String   @unique
+  nombre   String
+  orden    Int      @default(0)
+  activo   Boolean  @default(true)
+  creadoEn DateTime @default(now())
+
+  @@map("categorias_inventario_cat")
+}
+
+model PoliticaSeguridad {
+  id                  String   @id @default("default")
+  longitudMinPassword Int      @default(8)
+  requiereMayuscula    Boolean  @default(true)
+  requiereNumero      Boolean  @default(true)
+  requiereEspecial    Boolean  @default(false)
+  expiracionDias      Int?
+  maxIntentosLogin    Int      @default(5)
+  bloqueoMinutos      Int      @default(15)
+  maxIntentosIpHora   Int      @default(30)
+  sesionMaxDias       Int      @default(30)
+  totpHabilitado      Boolean  @default(false)
+  actualizadoEn       DateTime @updatedAt
+
+  @@map("politica_seguridad")
+}
+
+model PlantillaNotificacion {
+  id       String   @id @default(cuid())
+  codigo   String   @unique
+  nombre   String
+  canal    String   @default("SISTEMA")
+  asunto   String?
+  cuerpo   String
+  activo   Boolean  @default(true)
+  creadoEn DateTime @default(now())
+
+  reglas ReglaNotificacion[]
+
+  @@map("plantillas_notificacion")
+}
+
+model ReglaNotificacion {
+  id               String   @id @default(cuid())
+  codigo           String   @unique
+  nombre           String
+  evento           String
+  diasAnticipacion Int?
+  activo           Boolean  @default(true)
+  plantillaId      String?
+  creadoEn         DateTime @default(now())
+
+  plantilla PlantillaNotificacion? @relation(fields: [plantillaId], references: [id])
+
+  @@map("reglas_notificacion")
+}
+
+model NotificacionLeida {
+  usuarioId String
+  clave     String
+  leidaEn   DateTime @default(now())
+
+  @@id([usuarioId, clave])
+  @@map("notificaciones_leidas")
+}

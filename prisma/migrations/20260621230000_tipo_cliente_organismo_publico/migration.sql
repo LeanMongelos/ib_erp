@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "TipoCliente" ADD VALUE 'ORGANISMO_PUBLICO';
