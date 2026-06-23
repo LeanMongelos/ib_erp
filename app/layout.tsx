@@ -11,7 +11,6 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: 'IB · Sistema de Gestión',
   description: 'ERP · CRM · Servicio Técnico — Ingeniería Biomédica',
-  icons: { icon: '/favicon.png', apple: '/favicon.png' },
 }
 
 export default function RootLayout({

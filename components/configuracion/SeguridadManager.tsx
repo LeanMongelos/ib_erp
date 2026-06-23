@@ -20,7 +20,7 @@ interface Politica {
   maxIntentosLogin: number
   bloqueoMinutos: number
   maxIntentosIpHora: number
-  sesionMaxDias: number
+  sesionMaxHoras: number
   totpHabilitado: boolean
 }
 
@@ -122,8 +122,8 @@ export function SeguridadManager() {
               onChange={(e) => setPolitica({ ...politica, bloqueoMinutos: Number(e.target.value) })} />
             <Input label="Máx. intentos por IP / hora" type="number" value={politica.maxIntentosIpHora}
               onChange={(e) => setPolitica({ ...politica, maxIntentosIpHora: Number(e.target.value) })} />
-            <Input label="Duración de sesión (días)" type="number" value={politica.sesionMaxDias}
-              onChange={(e) => setPolitica({ ...politica, sesionMaxDias: Number(e.target.value) })} />
+            <Input label="Duración de sesión (horas)" type="number" value={politica.sesionMaxHoras}
+              onChange={(e) => setPolitica({ ...politica, sesionMaxHoras: Number(e.target.value) })} />
             <label className="flex items-center gap-2 text-[12.5px] opacity-60">
               <input type="checkbox" checked={politica.totpHabilitado} disabled onChange={(e) => setPolitica({ ...politica, totpHabilitado: e.target.checked })} />
               Autenticación 2FA (próximamente)

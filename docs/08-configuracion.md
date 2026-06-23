@@ -15,6 +15,7 @@ graph TD
     CFG --> NOTIF[Notificaciones]
     CFG --> SEG[Seguridad]
     CFG --> AUD[Auditoría]
+    CFG --> LOG[Logs del sistema]
     CFG --> BK[Backups / Datos]
 ```
 
@@ -73,7 +74,17 @@ graph TD
 
 ## 10. Auditoría
 - Visor de `AuditLog` (quién, qué, cuándo, antes/después), filtros y export.
+- Ruta: `/configuracion/auditoria` · permiso `auditoria.read`.
+- Helper: `lib/audit.ts` → `registrarAuditoria()`.
 
-## 11. Backups / Datos
+## 11. Logs del sistema
+- Errores técnicos capturados automáticamente (API 500, workers).
+- Modelo `SystemLog` — **distinto** de auditoría (no mezclar stack traces con acciones de usuario).
+- Ruta: `/configuracion/logs` · permiso `logs.read` (SUPERADMIN, GERENTE).
+- Retención **15 días**; purga: `npm run logs:purge` o cron diario.
+- Filtros por día, nivel (ERROR/WARN/INFO), origen (`api`, `worker-afip`, …), usuario.
+- Ver [`17-OBSERVABILIDAD-Y-LOGS.md`](17-OBSERVABILIDAD-Y-LOGS.md).
+
+## 12. Backups / Datos
 - Programación de backups de BD, export de datos (clientes, productos, comprobantes),
   e importación inicial (migración desde el sistema actual).

@@ -99,6 +99,7 @@ Leyenda: ✅ operativo · 🟡 parcial · ❌ pendiente
 | Email CRM (IMAP) | `npm run worker:crm-email` | polling `CRM_EMAIL_POLL_MS` | `worker/crm-email-worker.ts` |
 | Graph CRM | `npm run worker:crm-graph` | polling `CRM_GRAPH_POLL_MS` | `worker/crm-graph-worker.ts` |
 | Vencimientos cobranza | `npm run worker:cobranzas` | polling | `worker/cobranzas-vencimientos-worker.ts` |
+| Purga logs sistema | `npm run logs:purge` | cron diario | `scripts/purge-system-logs.ts` |
 | Cron HTTP | — | `POST /api/cron/cobranzas-vencimientos` + `CRON_SECRET` | `app/api/cron/` |
 
 ```mermaid
@@ -122,6 +123,22 @@ graph LR
 | `npm run e2e:all` | Ambos |
 
 Ver [`DEV-ESTABILIDAD.md`](DEV-ESTABILIDAD.md).
+
+---
+
+## 3b. Observabilidad y logs técnicos
+
+| Componente | Archivo | Rol |
+|------------|---------|-----|
+| Persistencia errores | `lib/error-log.ts` | `registrarError()`, retención 15 días |
+| Hook API | `lib/api-auth.ts` → `handleApiError` | 500 → `persistirErrorApi()` |
+| Workers | `worker/*.ts` | `registrarErrorDesdeExcepcion()` en catch |
+| UI | `/configuracion/logs` | `LogsManager` |
+| API | `GET /api/logs` | Permiso `logs.read` |
+
+**Distinto de auditoría:** `AuditLog` = acciones de usuario; `SystemLog` = stack traces.
+
+Ver [`17-OBSERVABILIDAD-Y-LOGS.md`](17-OBSERVABILIDAD-Y-LOGS.md).
 
 ---
 
@@ -181,3 +198,5 @@ Ver `.env.local.example`: `DATABASE_URL`, `NEXTAUTH_*`, `REDIS_URL`, `N8N_API_KE
 | Factura no emite CAE | Worker AFIP caído / certificado | §3, `02-facturacion-afip.md` |
 | OT no avanza en wizard | Presupuesto sin `otId` o estado OT | `13-FLUJOS-COMERCIALES.md` |
 | Preview PDF colgada | 3 PDFs paralelos en dev | `12-PLANTILLAS-PDF.md` |
+| Dashboard 500 Prisma | PostgreSQL / Docker apagado | [`18-RUNBOOK-OPERACIONES.md`](18-RUNBOOK-OPERACIONES.md) §1 |
+| Usuario no ve Logs | Permiso + re-login JWT | `scripts/sync-logs-permiso.ts` |

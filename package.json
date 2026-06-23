@@ -4,7 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "node scripts/dev-start.js",
-    "dev:fast": "next dev",
+    "dev:fast": "node scripts/dev-fast.js",
+    "dev:status": "node scripts/dev-status.js",
+    "dev:up": "node scripts/dev-up.js",
     "dev:clean": "node -e \"try{require('fs').rmSync('.next',{recursive:true,force:true})}catch(e){}\" && prisma generate && next dev",
     "dev:reset": "node scripts/dev-reset.js",
     "build": "next build",
@@ -21,7 +23,9 @@
     "worker:afip": "tsx --env-file=.env worker/afip-worker.ts",
     "worker:crm-email": "tsx --env-file=.env worker/crm-email-worker.ts",
     "worker:crm-graph": "tsx --env-file=.env worker/crm-graph-worker.ts",
-    "worker:cobranzas": "tsx --env-file=.env worker/cobranzas-vencimientos-worker.ts"
+    "worker:cobranzas": "tsx --env-file=.env worker/cobranzas-vencimientos-worker.ts",
+    "logs:purge": "tsx --env-file=.env scripts/purge-system-logs.ts",
+    "icons:generate": "node scripts/generate-favicons.mjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -86,6 +90,7 @@
   "allowScripts": {
     "prisma@7.8.0": true,
     "@prisma/engines@7.8.0": true,
-    "esbuild@0.28.1": true
+    "esbuild@0.28.1": true,
+    "ssh2@1.17.0": true
   }
 }

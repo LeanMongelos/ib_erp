@@ -5,6 +5,7 @@
  */
 
 import { procesarEmisionFactura } from '@/lib/afip/emitir'
+import { registrarErrorDesdeExcepcion } from '@/lib/error-log'
 
 const REDIS_URL = process.env.REDIS_URL
 
@@ -29,7 +30,7 @@ async function runWorker() {
     const { Worker } = await import('bullmq')
     const connection = parseRedisUrl(REDIS_URL)
 
-    new Worker(
+    const worker = new Worker(
       'afip-emision',
       async (job) => {
         const { facturaId, usuarioId } = job.data as { facturaId: string; usuarioId?: string }
@@ -40,6 +41,14 @@ async function runWorker() {
       },
       { connection },
     )
+
+    worker.on('failed', async (job, err) => {
+      const data = job?.data as { facturaId?: string; usuarioId?: string } | undefined
+      await registrarErrorDesdeExcepcion('worker-afip', err, {
+        usuarioId: data?.usuarioId ?? null,
+        metadata: { facturaId: data?.facturaId },
+      })
+    })
 
     console.log('[afip-worker] Escuchando cola afip-emision…')
   } catch (err) {

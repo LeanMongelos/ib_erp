@@ -1,21 +1,27 @@
 /**
- * Arranque de desarrollo más estable (Windows-friendly).
- * Mata procesos huérfanos en :3000 y limpia caché webpack antes de next dev.
+ * Arranque de desarrollo estable (Windows-friendly).
+ * Solo libera el puerto configurado (PORT en .env, default 3001).
+ * NO toca el 3000 — convive con otras webs locales.
+ *
  * Uso: npm run dev
  */
 const { rmSync, existsSync } = require('fs')
 const { execSync, spawn } = require('child_process')
+const { loadDevEnv, getDevPort, getDevUrl } = require('./dev-env')
 
 const root = process.cwd()
+
+loadDevEnv()
+const port = getDevPort()
 
 function log(msg) {
   console.log(msg)
 }
 
-function killPort3000() {
+function killPort(p) {
   try {
     if (process.platform === 'win32') {
-      const out = execSync('netstat -ano | findstr :3000 | findstr LISTENING', { encoding: 'utf8' })
+      const out = execSync(`netstat -ano | findstr :${p} | findstr LISTENING`, { encoding: 'utf8' })
       const pids = new Set()
       for (const line of out.split('\n')) {
         const m = line.trim().match(/\s(\d+)\s*$/)
@@ -24,13 +30,13 @@ function killPort3000() {
       for (const pid of pids) {
         try {
           execSync(`taskkill /F /PID ${pid}`, { stdio: 'ignore' })
-          log(`   Proceso ${pid} en :3000 terminado`)
+          log(`   Proceso ${pid} en :${p} terminado (instancia previa de este ERP)`)
         } catch {
           /* ignore */
         }
       }
     } else {
-      execSync('lsof -ti:3000 | xargs kill -9 2>/dev/null || true', { shell: true, stdio: 'ignore' })
+      execSync(`lsof -ti:${p} | xargs kill -9 2>/dev/null || true`, { shell: true, stdio: 'ignore' })
     }
   } catch {
     /* puerto libre */
@@ -45,16 +51,28 @@ function limpiarCacheWebpack() {
   }
 }
 
-log('\n🚀 Iniciando dev (modo estable)...\n')
-killPort3000()
-limpiarCacheWebpack()
+log('\n🚀 Iniciando iBiomédica ERP...\n')
+log(`   Puerto: ${port} (otras webs pueden usar 3000 u otro puerto)`)
+log(`   URL:    ${getDevUrl()}\n`)
 
-log('   Tip: si la UI se ve sin estilos → npm run dev:reset\n')
+killPort(port)
 
-const child = spawn('npx', ['next', 'dev'], {
+const resetCache = process.argv.includes('--reset') || process.env.DEV_RESET === '1'
+if (resetCache) {
+  limpiarCacheWebpack()
+} else {
+  log('   Caché webpack conservada. Reset completo: npm run dev:reset\n')
+}
+
+const child = spawn('npx', ['next', 'dev', '-p', port], {
   cwd: root,
   stdio: 'inherit',
   shell: true,
+  env: {
+    ...process.env,
+    PORT: port,
+    NODE_OPTIONS: process.env.NODE_OPTIONS || '--max-old-space-size=4096',
+  },
 })
 
 child.on('exit', (code) => process.exit(code ?? 0))

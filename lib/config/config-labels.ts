@@ -23,6 +23,28 @@ export function etiquetaAccion(accion: string): string {
   return ACCION_AUDITORIA_LABEL[accion] ?? accion.replace(/\./g, ' · ')
 }
 
+export const NIVEL_LOG_LABEL: Record<string, string> = {
+  ERROR: 'Error',
+  WARN: 'Advertencia',
+  INFO: 'Info',
+}
+
+export const ORIGEN_LOG_LABEL: Record<string, string> = {
+  api: 'API',
+  'worker-afip': 'Worker AFIP',
+  'worker-crm': 'Worker CRM',
+  'worker-cobranzas': 'Worker Cobranzas',
+  page: 'Página',
+}
+
+export function etiquetaNivelLog(nivel: string): string {
+  return NIVEL_LOG_LABEL[nivel] ?? nivel
+}
+
+export function etiquetaOrigenLog(origen: string): string {
+  return ORIGEN_LOG_LABEL[origen] ?? origen
+}
+
 export const EVENTOS_NOTIFICACION: { value: string; label: string }[] = [
   { value: 'cobranza.vencida', label: 'Factura de cobranza vencida' },
   { value: 'cobranza.proximo', label: 'Vencimiento de cobranza próximo' },

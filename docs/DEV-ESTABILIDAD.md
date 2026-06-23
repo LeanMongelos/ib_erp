@@ -15,7 +15,8 @@ Si la app se ve **sin estilos** (tipografía Times, menú plano, elementos super
 | Causa | Por qué pasa |
 |-------|----------------|
 | **Caché `.next` corrupta** | HMR de Next en Windows + muchos cambios de archivos seguidos |
-| **Varios `npm run dev` a la vez** | Varios procesos pelean por `.next` y el puerto 3000 |
+| **Varios `npm run dev` a la vez** | Varios procesos pelean por `.next` y el mismo puerto |
+| **Conflicto con otra web en :3000** | `dev-start.js` antes mataba **todo** el 3000 — ahora iBiomédica usa **3001** por defecto |
 | **`npm run build` con dev corriendo** | Sobrescribe chunks que el dev server espera |
 | **Cambios en `schema.prisma` sin reiniciar** | Cliente Prisma en memoria queda obsoleto |
 | **No correr `prisma generate` tras pull/migrate** | Modelos nuevos no existen en runtime |
@@ -30,15 +31,32 @@ npm run dev:reset
 
 Luego **Ctrl+Shift+R** en el navegador.
 
-Esto: mata procesos en `:3000`, borra `.next` completo, regenera Prisma e inicia dev limpio.
+Esto: mata procesos en el **puerto del ERP** (`PORT` en `.env`, default **3001**), borra `.next` completo, regenera Prisma e inicia dev limpio.
+
+## Convivir con otra web local
+
+| App | Puerto típico |
+|-----|----------------|
+| Otra web / Next | **3000** |
+| **iBiomédica ERP** | **3001** (`PORT=3001` en `.env`) |
+
+`npm run dev` **solo libera el puerto 3001** — no mata tu otra app en 3000.
+
+Verificar estado:
+
+```bash
+npm run dev:status
+```
+
+URL del ERP: **http://localhost:3001** (debe coincidir con `NEXTAUTH_URL` en `.env`).
 
 ## Prevención (desde jun 2026)
 
-`npm run dev` ahora usa `scripts/dev-start.js`:
-- Mata procesos huérfanos en el puerto 3000.
-- Borra **solo** `.next/cache` (webpack) antes de arrancar — reduce roturas sin recompilar todo cada vez.
+`npm run dev` usa `scripts/dev-start.js`:
+- Libera solo el puerto configurado (`PORT`, default 3001).
+- **No** borra caché webpack en cada arranque (más rápido). Reset: `npm run dev:reset`.
 
-Si necesitás arranque más rápido y aceptás el riesgo: `npm run dev:fast` (next dev directo).
+Arranque directo sin matar puerto: `npm run dev:fast`.
 
 ## Solución rápida (alternativa manual)
 

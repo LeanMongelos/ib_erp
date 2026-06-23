@@ -27,6 +27,25 @@ Sedes de instalación geocodificadas, distintas de la dirección fiscal del clie
 
 Relaciones: `Equipo.sucursalId`, `ItemFactura.sucursalInstalacionId`.
 
+### SystemLog (`system_logs`)
+
+Errores técnicos del sistema (no confundir con `AuditLog`).
+
+| Campo | Tipo | Notas |
+|-------|------|-------|
+| `id` | cuid | PK |
+| `nivel` | enum `NivelLog` | ERROR, WARN, INFO |
+| `origen` | string | `api`, `worker-afip`, `worker-crm`, … |
+| `ruta`, `metodo` | string? | Endpoint HTTP |
+| `mensaje` | string | Hasta 4000 chars |
+| `stack` | string? | Stack trace |
+| `usuarioId` | string? | Usuario en sesión si aplica |
+| `ip` | string? | |
+| `metadata` | Json? | Contexto extra |
+| `fecha` | DateTime | Retención 15 días |
+
+Helper: `lib/error-log.ts`. Ver [`17-OBSERVABILIDAD-Y-LOGS.md`](17-OBSERVABILIDAD-Y-LOGS.md).
+
 ### TipoCliente
 
 Valores: `HOSPITAL`, `CLINICA`, `CONSULTORIO`, `SANATORIO`, `ORGANISMO_PUBLICO`, `OTRO`.

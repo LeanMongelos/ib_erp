@@ -24,7 +24,7 @@ function note(msg: string) {
   console.log('⚠️ ', msg)
 }
 
-const BASE = process.env.E2E_BASE_URL ?? 'http://localhost:3000'
+const BASE = process.env.E2E_BASE_URL ?? process.env.NEXTAUTH_URL ?? `http://localhost:${process.env.PORT ?? '3001'}`
 
 async function httpJson(path: string, init?: RequestInit): Promise<{ status: number; json?: unknown; html?: boolean }> {
   try {
@@ -180,7 +180,7 @@ async function main() {
   }
 
   // --- HTTP routes (requiere dev server) ---
-  console.log('\n--- HTTP (localhost:3000) ---\n')
+  console.log(`\n--- HTTP (${BASE}) ---\n`)
 
   const pages = ['/crm/nuevo', '/crm/inbox', '/facturacion/nueva']
   for (const p of pages) {

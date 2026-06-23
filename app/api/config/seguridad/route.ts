@@ -36,7 +36,7 @@ const politicaSchema = z.object({
   maxIntentosLogin: z.number().int().min(1).max(20).optional(),
   bloqueoMinutos: z.number().int().min(1).max(1440).optional(),
   maxIntentosIpHora: z.number().int().min(5).max(200).optional(),
-  sesionMaxDias: z.number().int().min(1).max(90).optional(),
+  sesionMaxHoras: z.number().int().min(1).max(168).optional(),
   totpHabilitado: z.boolean().optional(),
 })
 

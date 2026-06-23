@@ -30,7 +30,10 @@ export async function POST(req: NextRequest) {
   const config = parseCanalConfig<WhatsAppConfig>(decryptCanalConfig(canal?.config))
   const signature = req.headers.get('x-hub-signature-256')
 
-  if (config.appSecret && !verifyMetaSignature(rawBody, signature, config.appSecret)) {
+  if (!config.appSecret) {
+    return NextResponse.json({ error: 'Canal no configurado' }, { status: 503 })
+  }
+  if (!verifyMetaSignature(rawBody, signature, config.appSecret)) {
     return NextResponse.json({ error: 'Firma inválida' }, { status: 401 })
   }
 

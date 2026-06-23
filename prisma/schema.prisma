@@ -291,6 +291,32 @@ model AuditLog {
   @@map("audit_logs")
 }
 
+enum NivelLog {
+  ERROR
+  WARN
+  INFO
+}
+
+model SystemLog {
+  id        String   @id @default(cuid())
+  nivel     NivelLog @default(ERROR)
+  origen    String // api, worker-afip, worker-crm, page, etc.
+  ruta      String?
+  metodo    String?
+  mensaje   String
+  stack     String?
+  usuarioId String?
+  ip        String?
+  metadata  Json?
+  fecha     DateTime @default(now())
+
+  @@index([fecha])
+  @@index([nivel])
+  @@index([origen])
+  @@index([usuarioId])
+  @@map("system_logs")
+}
+
 model Cliente {
   id        String      @id @default(cuid())
   nombre    String
@@ -1355,7 +1381,7 @@ model PoliticaSeguridad {
   maxIntentosLogin    Int      @default(5)
   bloqueoMinutos      Int      @default(15)
   maxIntentosIpHora   Int      @default(30)
-  sesionMaxDias       Int      @default(30)
+  sesionMaxHoras      Int      @default(8)
   totpHabilitado      Boolean  @default(false)
   actualizadoEn       DateTime @updatedAt
 

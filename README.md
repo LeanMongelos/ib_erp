@@ -36,7 +36,8 @@ omnicanal.
    ```env
    DATABASE_URL="postgresql://admin:admin123@localhost:5432/ibiomedica_db"
    NEXTAUTH_SECRET="<openssl rand -base64 32>"
-   NEXTAUTH_URL="http://localhost:3000"
+   NEXTAUTH_URL="http://localhost:3001"
+   PORT=3001
    ```
 
    > `.env` está en `.gitignore`. No commitear secretos.
@@ -60,7 +61,7 @@ omnicanal.
    npm run dev
    ```
 
-   Abrí [http://localhost:3000](http://localhost:3000).
+   Abrí [http://localhost:3001](http://localhost:3001) (puerto **3001** para no chocar con otras apps en 3000).
 
    Si la UI se ve sin estilos o hay errores de chunks: `npm run dev:reset`.
 
@@ -77,7 +78,8 @@ omnicanal.
 
 | Script              | Descripción                                      |
 | ------------------- | ------------------------------------------------ |
-| `npm run dev`       | Servidor de desarrollo                           |
+| `npm run dev`       | Servidor de desarrollo (puerto 3001 por defecto) |
+| `npm run dev:status`| Ver si Docker + Next están arriba                |
 | `npm run dev:reset` | Limpia `.next`, regenera Prisma, inicia dev      |
 | `npm run build`     | Build de producción                              |
 | `npm run start`     | Servir build de producción                       |
@@ -89,6 +91,17 @@ omnicanal.
 | `npm run db:seed`   | Datos demo                                       |
 | `npm run db:studio` | Prisma Studio                                    |
 | `npm run db:reset`  | Reset completo de BD (¡borra todo!)              |
+| `npm run logs:purge`| Elimina logs del sistema con más de 15 días      |
+| `npm run icons:generate` | Regenera favicon IB desde `logo.png`        |
+
+### Workers (procesos separados)
+
+| Script | Descripción |
+|--------|-------------|
+| `npm run worker:afip` | Cola emisión AFIP (requiere Redis) |
+| `npm run worker:cobranzas` | Avisos vencimientos cobranza |
+| `npm run worker:crm-email` | Poll IMAP CRM |
+| `npm run worker:crm-graph` | Poll Microsoft Graph |
 
 ### Scripts auxiliares
 
@@ -96,6 +109,7 @@ omnicanal.
 |---------|-----|
 | `npx tsx --env-file=.env scripts/demo-historial-graciela.ts` | Demo historial CRM (Clínica San Juan / Graciela) |
 | `npx tsx --env-file=.env scripts/reset-role-permisos.ts ADMINISTRACION` | Restaurar permisos de un rol |
+| `npx tsx --env-file=.env scripts/sync-logs-permiso.ts` | Sincronizar permiso `logs.read` en BD |
 
 ## Rutas principales
 
@@ -106,7 +120,23 @@ omnicanal.
 | `/crm/[id]` | Ficha 360° + sucursales |
 | `/presupuestos`, `/facturacion/nueva` | Comercial |
 | `/servicio-tecnico`, `/servicio-tecnico/mapa` | OT + mapa interactivo |
-| `/configuracion/*` | Emisores, plantillas, usuarios, integraciones |
+| `/configuracion/*` | Emisores, plantillas, usuarios, integraciones, **logs**, auditoría |
+
+## Checklist producción
+
+Antes de abrir a usuarios reales:
+
+- [ ] Cambiar secretos (`NEXTAUTH_SECRET`, `INTEGRATION_SECRET`, `CRON_SECRET`, …)
+- [ ] `NEXTAUTH_URL` con dominio HTTPS real
+- [ ] Eliminar o cambiar usuarios demo del seed
+- [ ] Certificados AFIP de **producción** en emisores
+- [ ] `docker compose up -d` + `npx prisma migrate deploy`
+- [ ] `npm run build && npm run start` (no `npm run dev`)
+- [ ] Workers y cron (`logs:purge`, cobranzas) en PM2/systemd
+- [ ] Backup diario PostgreSQL
+- [ ] `npm run smoke` post-deploy
+
+Guía completa: **[docs/16-DESPLIEGUE-PRODUCCION.md](docs/16-DESPLIEGUE-PRODUCCION.md)** · Runbook: **[docs/18-RUNBOOK-OPERACIONES.md](docs/18-RUNBOOK-OPERACIONES.md)**
 
 ## Funcionalidades destacadas
 
@@ -125,6 +155,10 @@ omnicanal.
 - Ítems `EQUIPO` exigen **sucursal de instalación** obligatoria.
 - **Carga rápida de sucursal** desde la factura si no existe en el cliente.
 - Provisión automática: equipo + kit + preventivo + posición en mapa.
+
+### Observabilidad
+- **Auditoría** (`/configuracion/auditoria`): quién cambió qué.
+- **Logs del sistema** (`/configuracion/logs`): errores técnicos, 15 días, filtros por día.
 
 ## Estructura
 
@@ -158,8 +192,15 @@ prisma/                     schema, migraciones, seed
 
 ## Documentación
 
-Índice completo: **[docs/README.md](docs/README.md)**  
-Guía para agentes de código: **[AGENTS.md](AGENTS.md)**
+| Doc | Contenido |
+|-----|-----------|
+| **[docs/README.md](docs/README.md)** | Índice completo |
+| **[AGENTS.md](AGENTS.md)** | Guía para agentes IA / devs |
+| **[CONTRIBUTING.md](CONTRIBUTING.md)** | Cómo contribuir |
+| **[docs/16-DESPLIEGUE-PRODUCCION.md](docs/16-DESPLIEGUE-PRODUCCION.md)** | Deploy VPS |
+| **[docs/18-RUNBOOK-OPERACIONES.md](docs/18-RUNBOOK-OPERACIONES.md)** | Troubleshooting |
+| **[docs/20-GLOSARIO-DOMINIO.md](docs/20-GLOSARIO-DOMINIO.md)** | Términos de negocio |
+| **[docs/22-MAPA-MODULOS.md](docs/22-MAPA-MODULOS.md)** | Ruta → API → permisos |
 
 ## Automatizaciones (n8n)
 

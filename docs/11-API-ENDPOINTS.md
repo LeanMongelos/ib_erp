@@ -217,6 +217,17 @@ Ver detalle: [`12-PLANTILLAS-PDF.md`](12-PLANTILLAS-PDF.md).
 | * | `/api/webhooks/meta` | Meta verify | Meta |
 | POST | `/api/cron/cobranzas-vencimientos` | `CRON_SECRET` | Job vencimientos |
 
+## Auditoría y logs
+
+| Método | Ruta | Permiso | Descripción |
+|--------|------|---------|-------------|
+| GET | `/api/auditoria` | `auditoria.read` | Listado paginado AuditLog (filtros: q, entidad, usuarioId) |
+| GET | `/api/logs` | `logs.read` | Listado paginado SystemLog (filtros: q, nivel, origen, dia, usuarioId) |
+
+Query GET `/api/logs`: `dia=YYYY-MM-DD` agrupa por día local; respuesta incluye `filtros.dias` (últimos 15).
+
+Ver [`17-OBSERVABILIDAD-Y-LOGS.md`](17-OBSERVABILIDAD-Y-LOGS.md).
+
 ---
 
 ## Contratos comunes

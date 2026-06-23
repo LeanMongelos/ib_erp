@@ -15,10 +15,11 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { ZodError } from 'zod'
 import { Prisma } from '@prisma/client'
-import { authOptions } from '@/lib/auth'
+import { getAuthOptions } from '@/lib/auth'
 import { tienePermiso } from '@/lib/rbac'
 import { applySecurityHeaders } from '@/lib/security/headers'
 import { traducirMensajeInterno } from '@/lib/errores'
+import { persistirErrorApi, type ApiErrorLogContext } from '@/lib/error-log'
 
 export interface SessionUser {
   id: string
@@ -42,7 +43,7 @@ export class ApiError extends Error {
 
 /** Devuelve el usuario de la sesión actual, o `null` si no hay sesión. */
 export async function getSessionUser(): Promise<SessionUser | null> {
-  const session = await getServerSession(authOptions)
+  const session = await getServerSession(await getAuthOptions())
   if (!session?.user) return null
   return session.user as SessionUser
 }
@@ -84,7 +85,7 @@ export async function requirePermission(...permisos: string[]): Promise<SessionU
  * Convierte cualquier error lanzado dentro de un handler en una respuesta
  * JSON consistente. Mapea los casos conocidos a códigos HTTP adecuados.
  */
-export function handleApiError(error: unknown): NextResponse {
+export function handleApiError(error: unknown, ctx?: ApiErrorLogContext): NextResponse {
   const wrap = (body: object, status: number) =>
     applySecurityHeaders(NextResponse.json(body, { status })) as NextResponse
 
@@ -115,6 +116,13 @@ export function handleApiError(error: unknown): NextResponse {
   }
 
   console.error('[API] Error no controlado:', error)
+  void (async () => {
+    const user = ctx?.usuarioId !== undefined ? null : await getSessionUser()
+    persistirErrorApi(error, {
+      ...ctx,
+      usuarioId: ctx?.usuarioId ?? user?.id ?? null,
+    })
+  })()
   const raw =
     error instanceof Error
       ? error.message

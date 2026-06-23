@@ -10,11 +10,16 @@
 | Documento | Contenido |
 |-----------|-----------|
 | **[`../AGENTS.md`](../AGENTS.md)** | Reglas de oro, estructura, checklist, flujos críticos |
+| **[`../CONTRIBUTING.md`](../CONTRIBUTING.md)** | Flujo de contribución y checklist PR |
 | **[`00-ARQUITECTURA-IMPLEMENTADA.md`](00-ARQUITECTURA-IMPLEMENTADA.md)** | Stack real, módulos, middleware |
 | **[`14-CONTRATOS-FRONTERAS.md`](14-CONTRATOS-FRONTERAS.md)** | Cliente/servidor, RBAC, anti-patrones |
 | **[`11-API-ENDPOINTS.md`](11-API-ENDPOINTS.md)** | Catálogo de route handlers |
 | **[`13-FLUJOS-COMERCIALES.md`](13-FLUJOS-COMERCIALES.md)** | OT → presupuesto → factura + sucursales |
 | **[`15-ESTADOS-WORKERS-SEGURIDAD.md`](15-ESTADOS-WORKERS-SEGURIDAD.md)** | Estados, workers, seguridad |
+| **[`17-OBSERVABILIDAD-Y-LOGS.md`](17-OBSERVABILIDAD-Y-LOGS.md)** | Logs técnicos vs auditoría |
+| **[`16-DESPLIEGUE-PRODUCCION.md`](16-DESPLIEGUE-PRODUCCION.md)** | Deploy VPS, checklist prod |
+| **[`18-RUNBOOK-OPERACIONES.md`](18-RUNBOOK-OPERACIONES.md)** | Si X falla → Y |
+| **[`22-MAPA-MODULOS.md`](22-MAPA-MODULOS.md)** | Ruta → API → lib → permiso |
 | **[`REGLAS-INTERFAZ-ESPAÑOL.md`](REGLAS-INTERFAZ-ESPAÑOL.md)** | UI y errores en español |
 | **[`DEV-ESTABILIDAD.md`](DEV-ESTABILIDAD.md)** | Prisma HMR, dev:reset, E2E |
 
@@ -32,6 +37,13 @@
 | 13 | [Flujos comerciales](13-FLUJOS-COMERCIALES.md) | OT, factura, sucursales |
 | 14 | [Contratos y fronteras](14-CONTRATOS-FRONTERAS.md) | Client/server, Zod |
 | 15 | [Estados, workers, seguridad](15-ESTADOS-WORKERS-SEGURIDAD.md) | Transiciones, BullMQ |
+| 16 | [Despliegue producción](16-DESPLIEGUE-PRODUCCION.md) | VPS, SSL, backups, cron |
+| 17 | [Observabilidad y logs](17-OBSERVABILIDAD-Y-LOGS.md) | SystemLog, purga 15 días |
+| 18 | [Runbook operaciones](18-RUNBOOK-OPERACIONES.md) | Troubleshooting |
+| 19 | [Decisiones arquitectura](19-DECISIONES-ARQUITECTURA.md) | ADR resumido |
+| 20 | [Glosario dominio](20-GLOSARIO-DOMINIO.md) | Términos negocio |
+| 21 | [Testing y calidad](21-TESTING-Y-CALIDAD.md) | smoke, e2e, build |
+| 22 | [Mapa módulos](22-MAPA-MODULOS.md) | UI → API → permisos |
 
 ### Diseño / dominio
 
@@ -78,6 +90,8 @@ npx prisma migrate deploy && npx prisma generate
 npm run db:seed
 npm run build
 npx tsc --noEmit         # scripts/ excluidos del typecheck Next
+npm run logs:purge       # Purga logs > 15 días
+npm run icons:generate   # Regenerar favicon IB
 ```
 
 ---
@@ -95,6 +109,8 @@ npx tsc --noEmit         # scripts/ excluidos del typecheck Next
 | `/presupuestos`, `/facturacion/nueva` | Comercial |
 | `/servicio-tecnico/mapa` | Mapa equipos |
 | `/configuracion/plantillas` | Editor PDF |
+| `/configuracion/logs` | Logs técnicos (15 días) |
+| `/configuracion/auditoria` | Auditoría de negocio |
 
 ---
 

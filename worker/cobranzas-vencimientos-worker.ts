@@ -4,6 +4,7 @@
  */
 
 import { procesarVencimientosDelDia } from '@/lib/cobranzas/procesar-vencimientos'
+import { registrarErrorDesdeExcepcion } from '@/lib/error-log'
 
 const INTERVAL_MS = Number(process.env.COBRANZA_POLL_MS ?? 3_600_000)
 
@@ -15,6 +16,7 @@ async function tick() {
     }
   } catch (err) {
     console.error('[cobranzas-worker]', err instanceof Error ? err.message : err)
+    await registrarErrorDesdeExcepcion('worker-cobranzas', err)
   }
 }
 

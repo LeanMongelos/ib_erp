@@ -105,6 +105,8 @@ export const PERMISSIONS: Permiso[] = [
   { clave: 'config.manage_billing_templates', modulo: 'config', descripcion: 'Gestionar plantillas de impresión' },
   // Auditoría
   { clave: 'auditoria.read', modulo: 'auditoria', descripcion: 'Ver auditoría' },
+  // Logs del sistema
+  { clave: 'logs.read', modulo: 'logs', descripcion: 'Ver logs de errores del sistema' },
 ]
 
 export const ROLE_DEFS: Record<string, string> = {
@@ -145,6 +147,7 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     'config.manage_billing_templates',
     'config.update',
     'auditoria.read',
+    'logs.read',
   ],
 
   ADMINISTRACION: [

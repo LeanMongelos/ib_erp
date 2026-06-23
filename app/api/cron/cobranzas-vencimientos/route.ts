@@ -6,11 +6,12 @@ import { procesarVencimientosDelDia } from '@/lib/cobranzas/procesar-vencimiento
 export async function POST(req: NextRequest) {
   try {
     const secret = process.env.CRON_SECRET
-    if (secret) {
-      const auth = req.headers.get('authorization')
-      if (auth !== `Bearer ${secret}`) {
-        return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-      }
+    if (!secret) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 503 })
+    }
+    const auth = req.headers.get('authorization')
+    if (auth !== `Bearer ${secret}`) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
     const result = await procesarVencimientosDelDia()

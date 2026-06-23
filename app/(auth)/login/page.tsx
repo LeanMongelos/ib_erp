@@ -9,6 +9,7 @@ import { z } from 'zod'
 import { User, Lock, Eye, EyeOff, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import Image from 'next/image'
+import './login.css'
 
 const loginSchema = z.object({
   email:    z.string().email('Email inválido'),
@@ -16,6 +17,17 @@ const loginSchema = z.object({
 })
 
 type LoginForm = z.infer<typeof loginSchema>
+
+const AUTH_TIMEOUT_MS = 20_000
+
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      setTimeout(() => reject(new Error(message)), ms)
+    }),
+  ])
+}
 
 export default function LoginPage() {
   const router = useRouter()
@@ -31,11 +43,19 @@ export default function LoginPage() {
   async function onSubmit(data: LoginForm) {
     setLoading(true)
     try {
-      const statusRes = await fetch('/api/auth/login-status', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: data.email }),
-      })
+      const statusRes = await withTimeout(
+        fetch('/api/auth/login-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: data.email }),
+        }),
+        AUTH_TIMEOUT_MS,
+        'timeout',
+      )
+      if (!statusRes.ok) {
+        toast.error('El servidor no respondió. Probá recargar la página o ejecutá npm run dev:up.')
+        return
+      }
       const status = await statusRes.json().catch(() => ({}))
 
       if (status.locked) {
@@ -47,13 +67,21 @@ export default function LoginPage() {
         return
       }
 
-      const result = await signIn('credentials', {
-        email: data.email,
-        password: data.password,
-        redirect: false,
-      })
+      const result = await withTimeout(
+        signIn('credentials', {
+          email: data.email,
+          password: data.password,
+          redirect: false,
+        }),
+        AUTH_TIMEOUT_MS,
+        'timeout',
+      )
 
-      if (result?.error) {
+      if (!result?.ok) {
+        if (result?.url?.includes('csrf=true')) {
+          toast.error('Sesión de login expirada. Recargá la página e intentá de nuevo.')
+          return
+        }
         const after = await fetch('/api/auth/login-status', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -71,56 +99,88 @@ export default function LoginPage() {
         } else {
           toast.error('Credenciales incorrectas. Verificá tu email y contraseña.')
         }
-      } else {
-        router.push('/dashboard')
-        router.refresh()
+        return
       }
-    } catch {
-      toast.error('Error al conectar con el servidor.')
+
+      router.push('/dashboard')
+      router.refresh()
+    } catch (e) {
+      const msg = e instanceof Error && e.message === 'timeout'
+        ? 'El servidor tardó demasiado. Ejecutá npm run dev:up en la terminal e intentá de nuevo.'
+        : 'Error al conectar con el servidor.'
+      toast.error(msg)
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div
-      className="min-h-screen flex flex-col items-center justify-center relative"
-      style={{
-        background: 'radial-gradient(900px 520px at 50% -8%, rgba(232,101,10,.26), rgba(232,101,10,0) 60%), radial-gradient(700px 500px at 50% 120%, rgba(245,184,0,.10), transparent 60%), #050505',
-      }}
-    >
+    <div className="login-page min-h-screen flex flex-col items-center justify-center">
+      <div className="login-ambient" aria-hidden>
+        <div className="login-grid" />
+        <div className="login-rays" />
+        <div className="login-vignette" />
+        <div className="login-scan" />
+        <svg className="login-ecg login-ecg--back" viewBox="0 0 1200 80" preserveAspectRatio="none">
+          <path
+            className="login-ecg-path"
+            d="M0,40 H180 L200,40 L218,40 L232,8 L248,72 L262,40 L282,40 H1200"
+            pathLength="1"
+          />
+        </svg>
+        <svg className="login-ecg login-ecg--front" viewBox="0 0 1200 80" preserveAspectRatio="none">
+          <path
+            className="login-ecg-path login-ecg-path--bright"
+            d="M0,40 H420 L438,40 L452,8 L468,72 L482,40 L500,40 H1200"
+            pathLength="1"
+          />
+        </svg>
+        <div className="login-streak login-streak--1" />
+        <div className="login-streak login-streak--2" />
+        <div className="login-streak login-streak--3" />
+        <div className="login-orb login-orb--top" />
+        <div className="login-orb login-orb--bottom" />
+        <div className="login-orb login-orb--side" />
+      </div>
+
+      <div className="login-content flex flex-col items-center">
       {/* Logo */}
-      <Image
-        src="/logo.png"
-        alt="Ingeniería Biomédica"
-        width={120}
-        height={120}
-        priority
-        className="object-contain drop-shadow-[0_0_28px_rgba(232,101,10,0.55)]"
-      />
+      <div className="login-logo-wrap">
+        <Image
+          src="/logo.png"
+          alt="Ingeniería Biomédica"
+          width={200}
+          height={200}
+          priority
+          className="login-logo object-contain"
+        />
+      </div>
 
       {/* Títulos */}
-      <div className="text-center mt-6 mb-9">
+      <div className="login-heading text-center mt-6 mb-9">
         <h1 className="text-white text-[25px] font-extrabold tracking-tight">
           Sistema de Gestión
         </h1>
         <p className="text-[#9aa1ab] text-[14px] font-medium mt-1.5 tracking-wide">
-          Ingeniería Biomédica · Formosa
+          Formosa
         </p>
       </div>
 
       {/* Formulario */}
       <form
         onSubmit={handleSubmit(onSubmit)}
-        className="w-[380px] flex flex-col gap-4"
+        className="login-form w-[380px] flex flex-col gap-4"
         noValidate
       >
+        <div className="login-corners" aria-hidden>
+          <span /><span /><span /><span />
+        </div>
         {/* Email */}
-        <div>
+        <div className="login-field">
           <label className="block text-[#8b929c] text-[11.5px] font-semibold mb-1.5 tracking-wide">
             Usuario
           </label>
-          <div className="flex items-center gap-2.5 bg-[#121212] border border-[#272727] rounded-[9px] px-3 focus-within:border-[#E8650A] transition-colors">
+          <div className="login-input-wrap flex items-center gap-2.5 bg-[#121212] border border-[#272727] rounded-[9px] px-3">
             <User size={17} strokeWidth={1.8} className="text-[#6b7280] flex-shrink-0" />
             <input
               {...register('email')}
@@ -136,11 +196,11 @@ export default function LoginPage() {
         </div>
 
         {/* Contraseña */}
-        <div>
+        <div className="login-field">
           <label className="block text-[#8b929c] text-[11.5px] font-semibold mb-1.5 tracking-wide">
             Contraseña
           </label>
-          <div className="flex items-center gap-2.5 bg-[#121212] border border-[#272727] rounded-[9px] px-3 focus-within:border-[#E8650A] transition-colors">
+          <div className="login-input-wrap flex items-center gap-2.5 bg-[#121212] border border-[#272727] rounded-[9px] px-3">
             <Lock size={17} strokeWidth={1.8} className="text-[#6b7280] flex-shrink-0" />
             <input
               {...register('password')}
@@ -167,7 +227,7 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={loading}
-          className="mt-1.5 w-full flex items-center justify-center gap-2 text-white font-extrabold text-[14.5px] border-none rounded-[9px] py-3.5 cursor-pointer transition-all tracking-wide disabled:opacity-60"
+          className="login-btn mt-1.5 w-full flex items-center justify-center gap-2 text-white font-extrabold text-[14.5px] border-none rounded-[9px] py-3.5 cursor-pointer tracking-wide disabled:opacity-60"
           style={{
             background: 'linear-gradient(135deg,#F0820A,#E8650A)',
             boxShadow: '0 6px 18px rgba(232,101,10,.4)',
@@ -179,18 +239,19 @@ export default function LoginPage() {
 
         <a
           href="#"
-          className="text-center text-[#8b929c] text-[12.5px] font-medium hover:text-[#9aa1ab] transition-colors"
+          className="login-forgot text-center text-[#8b929c] text-[12.5px] font-medium hover:text-[#9aa1ab] transition-colors"
         >
           ¿Olvidaste tu contraseña?
         </a>
       </form>
+      </div>
 
       {/* Footer */}
       <a
         href="https://lmdigitalsolutions.com.ar/"
         target="_blank"
         rel="noopener noreferrer"
-        className="absolute bottom-6 flex items-center gap-3 hover:opacity-90 transition-opacity"
+        className="login-footer absolute bottom-6 z-[1] flex items-center gap-3 hover:opacity-90 transition-opacity"
       >
         <Image
           src="/1.png"

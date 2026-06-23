@@ -1,0 +1,530 @@
+/* Login — animaciones CSS puras (transform/opacity, sin JS) */
+
+.login-page {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(900px 520px at 50% -8%, rgba(232, 101, 10, 0.26), rgba(232, 101, 10, 0) 60%),
+    radial-gradient(700px 500px at 50% 120%, rgba(245, 184, 0, 0.1), transparent 60%),
+    #050505;
+}
+
+.login-ambient {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* ── Grilla técnica ── */
+.login-grid {
+  position: absolute;
+  inset: -50%;
+  width: 200%;
+  height: 200%;
+  background-image:
+    linear-gradient(rgba(232, 101, 10, 0.055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(232, 101, 10, 0.055) 1px, transparent 1px);
+  background-size: 56px 56px;
+  transform: perspective(600px) rotateX(58deg) translateY(-12%);
+  transform-origin: 50% 0%;
+  mask-image: radial-gradient(ellipse 85% 70% at 50% 35%, black 10%, transparent 72%);
+  animation: loginGridDrift 36s linear infinite;
+}
+
+@keyframes loginGridDrift {
+  from {
+    background-position: 0 0, 0 0;
+  }
+  to {
+    background-position: 56px 56px, 56px 56px;
+  }
+}
+
+/* ── Rayas diagonales ── */
+.login-rays {
+  position: absolute;
+  inset: -20%;
+  background: repeating-linear-gradient(
+    -52deg,
+    transparent,
+    transparent 72px,
+    rgba(232, 101, 10, 0.035) 72px,
+    rgba(232, 101, 10, 0.035) 73px
+  );
+  animation: loginRaySlide 28s linear infinite;
+  mask-image: radial-gradient(ellipse 90% 80% at 50% 45%, black 15%, transparent 78%);
+}
+
+@keyframes loginRaySlide {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(73px);
+  }
+}
+
+.login-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 55% 50% at 50% 42%, transparent 30%, #050505 88%);
+}
+
+/* ── Línea de barrido horizontal ── */
+.login-scan {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(232, 101, 10, 0) 15%,
+    rgba(232, 101, 10, 0.55) 50%,
+    rgba(232, 101, 10, 0) 85%,
+    transparent 100%
+  );
+  box-shadow: 0 0 24px rgba(232, 101, 10, 0.35);
+  opacity: 0.7;
+  animation: loginScanMove 9s ease-in-out infinite;
+}
+
+@keyframes loginScanMove {
+  0%,
+  100% {
+    top: 8%;
+    opacity: 0;
+  }
+  8% {
+    opacity: 0.65;
+  }
+  92% {
+    opacity: 0.65;
+  }
+  50% {
+    top: 92%;
+    opacity: 0.85;
+  }
+}
+
+/* ── ECG / pulso biomédico ── */
+.login-ecg {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 90px;
+  overflow: visible;
+}
+
+.login-ecg--back {
+  bottom: 18%;
+  opacity: 0.35;
+}
+
+.login-ecg--front {
+  bottom: 22%;
+  opacity: 0.55;
+}
+
+.login-ecg-path {
+  fill: none;
+  stroke: rgba(232, 101, 10, 0.45);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: loginEcgDraw 5s linear infinite;
+}
+
+.login-ecg-path--bright {
+  stroke: rgba(255, 160, 60, 0.7);
+  stroke-width: 2;
+  filter: drop-shadow(0 0 6px rgba(232, 101, 10, 0.6));
+  animation-duration: 4.2s;
+  animation-delay: -1.8s;
+}
+
+@keyframes loginEcgDraw {
+  0% {
+    stroke-dashoffset: 1;
+    opacity: 0;
+  }
+  5% {
+    opacity: 1;
+  }
+  85% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+}
+
+/* ── Streaks de luz diagonal ── */
+.login-streak {
+  position: absolute;
+  width: 140%;
+  height: 1px;
+  left: -20%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(232, 101, 10, 0.15) 40%,
+    rgba(255, 190, 80, 0.35) 50%,
+    rgba(232, 101, 10, 0.15) 60%,
+    transparent
+  );
+  transform: rotate(-12deg);
+  opacity: 0;
+}
+
+.login-streak--1 {
+  top: 22%;
+  animation: loginStreak 14s ease-in-out infinite;
+}
+
+.login-streak--2 {
+  top: 58%;
+  animation: loginStreak 18s ease-in-out infinite;
+  animation-delay: -6s;
+  transform: rotate(-8deg);
+}
+
+.login-streak--3 {
+  top: 78%;
+  animation: loginStreak 22s ease-in-out infinite;
+  animation-delay: -11s;
+  transform: rotate(-15deg);
+}
+
+@keyframes loginStreak {
+  0%,
+  100% {
+    opacity: 0;
+    transform: translateX(-8%) rotate(-12deg);
+  }
+  45% {
+    opacity: 0.9;
+  }
+  55% {
+    opacity: 0.9;
+    transform: translateX(8%) rotate(-12deg);
+  }
+}
+
+.login-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(72px);
+  will-change: transform;
+}
+
+.login-orb--top {
+  width: 520px;
+  height: 520px;
+  top: -18%;
+  left: 50%;
+  margin-left: -260px;
+  background: rgba(232, 101, 10, 0.32);
+  animation: loginOrbDrift 24s ease-in-out infinite;
+}
+
+.login-orb--bottom {
+  width: 400px;
+  height: 400px;
+  bottom: -12%;
+  left: 22%;
+  background: rgba(245, 184, 0, 0.14);
+  animation: loginOrbDrift 30s ease-in-out infinite reverse;
+  animation-delay: -10s;
+}
+
+.login-orb--side {
+  width: 280px;
+  height: 280px;
+  top: 42%;
+  right: -8%;
+  background: rgba(232, 101, 10, 0.12);
+  animation: loginOrbDrift 20s ease-in-out infinite;
+  animation-delay: -5s;
+}
+
+@keyframes loginOrbDrift {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.75;
+  }
+  33% {
+    transform: translate(18px, -22px) scale(1.06);
+    opacity: 1;
+  }
+  66% {
+    transform: translate(-14px, 14px) scale(0.96);
+    opacity: 0.85;
+  }
+}
+
+@keyframes loginFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes loginLogoFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-7px);
+  }
+}
+
+@keyframes loginLogoGlow {
+  0%,
+  100% {
+    filter:
+      drop-shadow(0 0 32px rgba(232, 101, 10, 0.75))
+      drop-shadow(0 0 64px rgba(232, 101, 10, 0.35))
+      brightness(1.05);
+  }
+  50% {
+    filter:
+      drop-shadow(0 0 48px rgba(232, 101, 10, 0.95))
+      drop-shadow(0 0 90px rgba(245, 160, 40, 0.45))
+      brightness(1.12);
+  }
+}
+
+.login-logo-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: loginFadeUp 0.65s ease-out both;
+}
+
+.login-logo {
+  position: relative;
+  z-index: 1;
+  width: 200px !important;
+  height: 200px !important;
+  animation:
+    loginLogoFloat 5.5s ease-in-out 0.65s infinite,
+    loginLogoGlow 4s ease-in-out 0.65s infinite;
+}
+
+.login-heading {
+  animation: loginFadeUp 0.65s ease-out 0.1s both;
+}
+
+/* Marco HUD — 4 esquinas del form */
+.login-corners {
+  position: absolute;
+  inset: -12px;
+  pointer-events: none;
+}
+
+.login-corners span {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  border-color: rgba(232, 101, 10, 0.5);
+  border-style: solid;
+  animation: loginCornerPulse 4s ease-in-out infinite;
+}
+
+.login-corners span:nth-child(1) {
+  top: 0;
+  left: 0;
+  border-width: 1px 0 0 1px;
+}
+
+.login-corners span:nth-child(2) {
+  top: 0;
+  right: 0;
+  border-width: 1px 1px 0 0;
+  animation-delay: -1s;
+}
+
+.login-corners span:nth-child(3) {
+  bottom: 0;
+  left: 0;
+  border-width: 0 0 1px 1px;
+  animation-delay: -2s;
+}
+
+.login-corners span:nth-child(4) {
+  bottom: 0;
+  right: 0;
+  border-width: 0 1px 1px 0;
+  animation-delay: -3s;
+}
+
+.login-form {
+  position: relative;
+  animation: loginFadeUp 0.65s ease-out 0.2s both;
+}
+
+/* (legacy pseudo corners removed — use .login-corners) */
+.login-form::before,
+.login-form::after {
+  display: none;
+}
+
+@keyframes loginCornerPulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    width: 22px;
+    height: 22px;
+  }
+  50% {
+    opacity: 0.85;
+    width: 32px;
+    height: 32px;
+  }
+}
+
+.login-field {
+  animation: loginFadeUp 0.55s ease-out both;
+}
+
+.login-field:nth-child(1) {
+  animation-delay: 0.28s;
+}
+
+.login-field:nth-child(2) {
+  animation-delay: 0.38s;
+}
+
+.login-input-wrap {
+  position: relative;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.25s ease;
+}
+
+.login-input-wrap::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 12px;
+  right: 12px;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(232, 101, 10, 0.5) 50%,
+    transparent
+  );
+  transform: scaleX(0);
+  transition: transform 0.35s ease;
+}
+
+.login-input-wrap:focus-within::after {
+  transform: scaleX(1);
+}
+
+.login-input-wrap:focus-within {
+  border-color: #e8650a !important;
+  box-shadow:
+    0 0 0 1px rgba(232, 101, 10, 0.35),
+    0 0 22px rgba(232, 101, 10, 0.14);
+}
+
+.login-btn {
+  position: relative;
+  overflow: hidden;
+  animation: loginFadeUp 0.55s ease-out 0.48s both;
+  transition:
+    transform 0.22s ease,
+    box-shadow 0.22s ease;
+}
+
+.login-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 35%,
+    rgba(255, 255, 255, 0.18) 50%,
+    transparent 65%
+  );
+  transform: translateX(-120%);
+  animation: loginBtnSheen 5s ease-in-out infinite;
+}
+
+@keyframes loginBtnSheen {
+  0%,
+  70%,
+  100% {
+    transform: translateX(-120%);
+  }
+  85% {
+    transform: translateX(120%);
+  }
+}
+
+.login-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 32px rgba(232, 101, 10, 0.48) !important;
+}
+
+.login-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.login-forgot {
+  animation: loginFadeUp 0.5s ease-out 0.58s both;
+}
+
+.login-footer {
+  animation: loginFadeUp 0.55s ease-out 0.68s both;
+}
+
+.login-content {
+  position: relative;
+  z-index: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-grid,
+  .login-rays,
+  .login-scan,
+  .login-ecg-path,
+  .login-streak,
+  .login-orb,
+  .login-corners span,
+  .login-btn::after,
+  .login-logo,
+  .login-heading,
+  .login-form,
+  .login-field,
+  .login-btn,
+  .login-forgot,
+  .login-footer {
+    animation: none !important;
+  }
+
+  .login-input-wrap::after {
+    transform: scaleX(1);
+    opacity: 0.3;
+  }
+
+  .login-logo {
+    filter:
+      drop-shadow(0 0 32px rgba(232, 101, 10, 0.75))
+      brightness(1.05);
+  }
+}

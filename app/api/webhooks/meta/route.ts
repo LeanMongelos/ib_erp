@@ -34,7 +34,10 @@ export async function POST(req: NextRequest) {
     .find(Boolean)
 
   const signature = req.headers.get('x-hub-signature-256')
-  if (appSecret && !verifyMetaSignature(rawBody, signature, appSecret)) {
+  if (!appSecret) {
+    return NextResponse.json({ error: 'Canal no configurado' }, { status: 503 })
+  }
+  if (!verifyMetaSignature(rawBody, signature, appSecret)) {
     return NextResponse.json({ error: 'Firma inválida' }, { status: 401 })
   }
 

@@ -26,7 +26,7 @@ export default function AutomatizacionesPage() {
             Abrir n8n Dashboard
           </a>
           <p className="text-[11.5px] text-[#9aa1ab] mt-4">
-            Usuario: admin · Contraseña: admin123 · Puerto: 5678
+            Las credenciales de n8n se gestionan en el servidor — consultá al administrador.
           </p>
         </Card>
       </div>

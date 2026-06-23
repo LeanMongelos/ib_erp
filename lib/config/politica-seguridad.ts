@@ -10,7 +10,7 @@ export type PoliticaSeguridadData = {
   maxIntentosLogin: number
   bloqueoMinutos: number
   maxIntentosIpHora: number
-  sesionMaxDias: number
+  sesionMaxHoras: number
   totpHabilitado: boolean
   actualizadoEn: Date
 }

@@ -30,7 +30,8 @@ export function verifyMetaSignature(
   signature: string | null,
   appSecret: string | undefined,
 ): boolean {
-  if (!appSecret || !signature?.startsWith('sha256=')) return !appSecret
+  if (!appSecret) return false
+  if (!signature?.startsWith('sha256=')) return false
   const expected = crypto.createHmac('sha256', appSecret).update(rawBody).digest('hex')
   const received = signature.slice(7)
   try {

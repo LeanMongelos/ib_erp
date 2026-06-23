@@ -5,7 +5,7 @@ import { Header } from '@/components/layout/Header'
 import { Card } from '@/components/ui/card'
 import { useCan } from '@/components/auth/useCan'
 import {
-  Users, Building2, FileText, Plug, Boxes, Bell, Shield, History, ChevronRight, Settings,
+  Users, Building2, FileText, Plug, Boxes, Bell, Shield, History, ChevronRight, Settings, Terminal,
 } from 'lucide-react'
 
 interface Item {
@@ -27,6 +27,7 @@ const ITEMS: Item[] = [
   { href: '/configuracion/notificaciones', titulo: 'Notificaciones', desc: 'Plantillas y reglas de aviso', icon: Bell, permiso: 'config.update', disponible: true },
   { href: '/configuracion/seguridad', titulo: 'Seguridad', desc: 'Contraseñas, 2FA y sesiones', icon: Shield, permiso: 'config.update', disponible: true },
   { href: '/configuracion/auditoria', titulo: 'Auditoría', desc: 'Registro de cambios del sistema', icon: History, permiso: 'auditoria.read', disponible: true },
+  { href: '/configuracion/logs', titulo: 'Logs del sistema', desc: 'Errores técnicos (15 días de retención)', icon: Terminal, permiso: 'logs.read', disponible: true },
 ]
 
 export default function ConfiguracionPage() {

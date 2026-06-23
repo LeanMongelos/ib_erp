@@ -13,6 +13,9 @@
  * 3. Buscamos el usuario en la DB y comparamos el hash de la contraseña con bcrypt
  * 4. Si todo es válido, devolvemos el objeto usuario → NextAuth genera el JWT
  * 5. En cada request, los callbacks jwt() y session() enriquecen la sesión con el rol
+ *
+ * Duración de sesión: leída de PoliticaSeguridad.sesionMaxHoras (default 8 h).
+ * updateAge > maxAge evita renovación deslizante — expira de forma absoluta desde el login.
  */
 
 import { NextAuthOptions } from 'next-auth'
@@ -28,6 +31,9 @@ import {
 } from '@/lib/auth/login-rate-limit'
 import { registrarAuditoria } from '@/lib/audit'
 import { notifyAdminLoginLockout } from '@/lib/auth/login-lock-notify'
+import { obtenerPoliticaSeguridad } from '@/lib/config/politica-seguridad'
+
+const DEFAULT_SESION_MAX_HORAS = 8
 
 // Fallback: si un usuario todavía no tiene roles RBAC asignados, mapeamos su
 // rol legado (columna `rol`) a un rol del nuevo sistema.
@@ -38,156 +44,152 @@ const ROL_LEGADO_A_RBAC: Record<string, string> = {
   FACTURACION: 'FACTURACION',
 }
 
-export const authOptions: NextAuthOptions = {
-  // Estrategia JWT: el token vive en una cookie, no en la base de datos
-  session: {
-    strategy: 'jwt',
-    maxAge: 30 * 24 * 60 * 60, // 30 días — se renueva con cada request
-  },
-  jwt: {
-    maxAge: 30 * 24 * 60 * 60, // mismo tiempo que la sesión
-  },
+function buildAuthOptions(maxAge: number): NextAuthOptions {
+  return {
+    session: {
+      strategy: 'jwt',
+      maxAge,
+      updateAge: maxAge + 1, // sin extensión deslizante — expira desde el login
+    },
+    jwt: {
+      maxAge,
+    },
 
-  // Página de login personalizada (en lugar de la de NextAuth por defecto)
-  pages: { signIn: '/login' },
+    pages: { signIn: '/login' },
 
-  providers: [
-    CredentialsProvider({
-      name: 'credentials',
-      credentials: {
-        email:    { label: 'Email',      type: 'email' },
-        password: { label: 'Contraseña', type: 'password' },
-      },
+    providers: [
+      CredentialsProvider({
+        name: 'credentials',
+        credentials: {
+          email:    { label: 'Email',      type: 'email' },
+          password: { label: 'Contraseña', type: 'password' },
+        },
 
-      /**
-       * authorize() — se ejecuta cuando el usuario envía el formulario de login.
-       * Retorna el objeto usuario si las credenciales son válidas, o null si no.
-       */
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null
+        async authorize(credentials) {
+          if (!credentials?.email || !credentials?.password) return null
 
-        const email = credentials.email.trim().toLowerCase()
-        const ip = await getClientIp()
+          const email = credentials.email.trim().toLowerCase()
+          const ip = await getClientIp()
 
-        const lock = await getLoginLockStatus(ip, email)
-        if (lock.locked) return null
+          const lock = await getLoginLockStatus(ip, email)
+          if (lock.locked) return null
 
-        const usuario = await prisma.usuario.findUnique({
-          where: { email },
-        })
-        const fail = async () => {
-          const after = await recordLoginFailure(ip, email)
-          if (after.newlyLocked || after.newlyIpLocked) {
-            await registrarAuditoria({
-              accion: 'login.rate_limited',
-              entidad: 'Usuario',
-              entidadId: usuario?.id,
-              despues: {
-                ip,
+          const usuario = await prisma.usuario.findUnique({
+            where: { email },
+          })
+          const fail = async () => {
+            const after = await recordLoginFailure(ip, email)
+            if (after.newlyLocked || after.newlyIpLocked) {
+              await registrarAuditoria({
+                accion: 'login.rate_limited',
+                entidad: 'Usuario',
+                entidadId: usuario?.id,
+                despues: {
+                  ip,
+                  email,
+                  reason: after.newlyLocked ? 'account' : 'ip',
+                },
+              }).catch(() => {})
+
+              notifyAdminLoginLockout({
                 email,
+                ip,
                 reason: after.newlyLocked ? 'account' : 'ip',
-              },
-            }).catch(() => {})
-
-            notifyAdminLoginLockout({
-              email,
-              ip,
-              reason: after.newlyLocked ? 'account' : 'ip',
-              retryAfterMinutes: after.retryAfterMinutes,
-              usuarioNombre: usuario?.nombre ?? null,
-            }).catch((err) => console.error('[login-lock-notify]', err))
+                retryAfterMinutes: after.retryAfterMinutes,
+                usuarioNombre: usuario?.nombre ?? null,
+              }).catch((err) => console.error('[login-lock-notify]', err))
+            }
+            return null
           }
-          return null
+
+          if (!usuario || !usuario.activo) return fail()
+
+          const passwordOk = await bcrypt.compare(credentials.password, usuario.password)
+          if (!passwordOk) return fail()
+
+          await clearLoginAttempts(ip, email)
+
+          await registrarAuditoria({
+            usuarioId: usuario.id,
+            accion: 'login.success',
+            entidad: 'Usuario',
+            entidadId: usuario.id,
+            ip,
+          }).catch(() => {})
+
+          const usuarioRoles = await prisma.usuarioRol.findMany({
+            where: { usuarioId: usuario.id },
+            include: { rol: true },
+          })
+          let roles = usuarioRoles.map((ur) => ur.rol.clave)
+          if (roles.length === 0) {
+            roles = [ROL_LEGADO_A_RBAC[usuario.rol] ?? 'TECNICO']
+          }
+          const permissions = permisosDeRoles(roles)
+
+          prisma.usuario
+            .update({ where: { id: usuario.id }, data: { ultimoAcceso: new Date() } })
+            .catch(() => {})
+
+          return {
+            id:        usuario.id,
+            name:      usuario.nombre,
+            email:     usuario.email,
+            role:      roles[0],
+            roles,
+            permissions,
+            avatarUrl: usuario.avatarUrl,
+          } as {
+            id: string
+            name: string
+            email: string
+            role: string
+            roles: string[]
+            permissions: string[]
+            avatarUrl: string | null
+          }
+        },
+      }),
+    ],
+
+    callbacks: {
+      async jwt({ token, user, trigger, session }) {
+        if (user) {
+          token.role        = user.role
+          token.id          = user.id
+          token.roles       = (user as { roles?: string[] }).roles ?? []
+          token.permissions = (user as { permissions?: string[] }).permissions ?? []
+          token.avatarUrl   = (user as { avatarUrl?: string | null }).avatarUrl ?? null
         }
-
-        if (!usuario || !usuario.activo) return fail()
-
-        const passwordOk = await bcrypt.compare(credentials.password, usuario.password)
-        if (!passwordOk) return fail()
-
-        await clearLoginAttempts(ip, email)
-
-        await registrarAuditoria({
-          usuarioId: usuario.id,
-          accion: 'login.success',
-          entidad: 'Usuario',
-          entidadId: usuario.id,
-          ip,
-        }).catch(() => {})
-
-        // Resolvemos los roles RBAC del usuario; si no tiene, usamos el legado
-        const usuarioRoles = await prisma.usuarioRol.findMany({
-          where: { usuarioId: usuario.id },
-          include: { rol: true },
-        })
-        let roles = usuarioRoles.map((ur) => ur.rol.clave)
-        if (roles.length === 0) {
-          roles = [ROL_LEGADO_A_RBAC[usuario.rol] ?? 'TECNICO']
+        if (trigger === 'update' && session) {
+          const s = session as { name?: string; avatarUrl?: string | null }
+          if (s.name !== undefined) token.name = s.name
+          if (s.avatarUrl !== undefined) token.avatarUrl = s.avatarUrl
         }
-        const permissions = permisosDeRoles(roles)
-
-        // Registramos el último acceso (sin bloquear el login)
-        prisma.usuario
-          .update({ where: { id: usuario.id }, data: { ultimoAcceso: new Date() } })
-          .catch(() => {})
-
-        // Login exitoso: devolvemos los datos del usuario + roles/permisos
-        return {
-          id:        usuario.id,
-          name:      usuario.nombre,
-          email:     usuario.email,
-          role:      roles[0],
-          roles,
-          permissions,
-          avatarUrl: usuario.avatarUrl,
-        } as {
-          id: string
-          name: string
-          email: string
-          role: string
-          roles: string[]
-          permissions: string[]
-          avatarUrl: string | null
-        }
+        return token
       },
-    }),
-  ],
 
-  callbacks: {
-    /**
-     * jwt() — se ejecuta cada vez que se crea o actualiza el token.
-     * Aquí guardamos el rol e id en el token para no consultar la DB en cada request.
-     */
-    async jwt({ token, user, trigger, session }) {
-      if (user) {
-        token.role        = user.role
-        token.id          = user.id
-        token.roles       = (user as { roles?: string[] }).roles ?? []
-        token.permissions = (user as { permissions?: string[] }).permissions ?? []
-        token.avatarUrl   = (user as { avatarUrl?: string | null }).avatarUrl ?? null
-      }
-      if (trigger === 'update' && session) {
-        const s = session as { name?: string; avatarUrl?: string | null }
-        if (s.name !== undefined) token.name = s.name
-        if (s.avatarUrl !== undefined) token.avatarUrl = s.avatarUrl
-      }
-      return token
+      async session({ session, token }) {
+        if (token && session.user) {
+          session.user.role        = token.role
+          session.user.id          = token.id
+          session.user.roles       = token.roles ?? []
+          session.user.permissions = token.permissions ?? []
+          session.user.avatarUrl   = token.avatarUrl ?? null
+          session.user.image       = token.avatarUrl ?? undefined
+        }
+        return session
+      },
     },
-
-    /**
-     * session() — transforma el token JWT en el objeto `session` que usan
-     * los componentes con useSession() o getServerSession().
-     */
-    async session({ session, token }) {
-      if (token && session.user) {
-        session.user.role        = token.role
-        session.user.id          = token.id
-        session.user.roles       = token.roles ?? []
-        session.user.permissions = token.permissions ?? []
-        session.user.avatarUrl   = token.avatarUrl ?? null
-        session.user.image       = token.avatarUrl ?? undefined
-      }
-      return session
-    },
-  },
+  }
 }
+
+/** Opciones de NextAuth con duración de sesión según política de seguridad en BD. */
+export async function getAuthOptions(): Promise<NextAuthOptions> {
+  const politica = await obtenerPoliticaSeguridad()
+  const maxAge = politica.sesionMaxHoras * 3600
+  return buildAuthOptions(maxAge)
+}
+
+/** Fallback estático (8 h) cuando no se puede leer la política de forma async. */
+export const authOptions: NextAuthOptions = buildAuthOptions(DEFAULT_SESION_MAX_HORAS * 3600)
