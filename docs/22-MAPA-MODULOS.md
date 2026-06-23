@@ -15,7 +15,7 @@
 
 | UI | API | lib | Permiso |
 |----|-----|-----|---------|
-| `/dashboard` | `GET /api/dashboard` | `lib/dashboard/` | 🔐 `DASHBOARD_ACCESS_PERMISSIONS` (OR) |
+| `/dashboard` | `GET /api/dashboard` | `lib/dashboard/metrics.ts` | 🔐 acceso: `DASHBOARD_ACCESS_PERMISSIONS` (OR); KPIs filtrados por `servicio.read`, `clientes.read`, `facturas.read`/`cobranzas.read` |
 | `/reportes` | `GET /api/reportes/*` | — | `reportes.read_*` (OR) |
 
 ---
