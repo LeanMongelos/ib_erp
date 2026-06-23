@@ -26,4 +26,6 @@ jobs:
           script: |
             set -euo pipefail
             cd /opt/ibiomedica
+            git fetch origin
+            git reset --hard origin/master
             bash scripts/vps-deploy-from-git.sh

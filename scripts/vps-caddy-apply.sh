@@ -42,24 +42,15 @@ www.${DOMAIN} {
 http://${VPS_IP} {
 	redir https://${DOMAIN}{uri} permanent
 }
-
-:80 {
-	@known host ${DOMAIN} www.${DOMAIN}
-	handle @known {
-		redir https://${DOMAIN}{uri} permanent
-	}
-	@unknown not host ${DOMAIN} www.${DOMAIN}
-	handle @unknown {
-		respond 404
-	}
-}
 CADDYEOF
 
 caddy validate --config /etc/caddy/Caddyfile
 systemctl enable caddy 2>/dev/null || true
 systemctl restart caddy
-sleep 4
+sleep 5
 systemctl is-active caddy
+
+ss -tlnp | grep -E ':80 |:443 ' || true
 
 echo -n "https_local:"
 curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 15 \

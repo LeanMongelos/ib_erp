@@ -13,7 +13,14 @@ fi
 
 echo "==> Actualizando código (origin/$BRANCH)..."
 git fetch origin
+OLD_HEAD="$(git rev-parse HEAD)"
 git reset --hard "origin/$BRANCH"
+NEW_HEAD="$(git rev-parse HEAD)"
+if [[ "$OLD_HEAD" != "$NEW_HEAD" && "${DEPLOY_SELF_REEXEC:-1}" == "1" ]]; then
+  echo "==> Código actualizado; re-ejecutando deploy con script nuevo..."
+  export DEPLOY_SELF_REEXEC=0
+  exec bash "$0" "$@"
+fi
 
 echo "==> Docker Compose producción..."
 cat > docker-compose.prod.yml <<'EOF'
