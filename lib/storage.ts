@@ -101,10 +101,10 @@ export function getStorage(): StorageProvider {
   if (_storage) return _storage
   const cfg = getStorageConfig()
   if (cfg.driver === 's3') {
-    // La implementación S3/MinIO (con @aws-sdk/client-s3) se agrega al construir
-    // las subidas de archivos (Fase 3/4). Mantiene esta misma interfaz.
-    throw new Error(
-      'STORAGE_DRIVER=s3 todavía no está implementado. Usá STORAGE_DRIVER=local en desarrollo.',
+    // S3/MinIO pendiente (Fase 3/4). En VPS usar local hasta tener bucket configurado.
+    console.warn(
+      '[storage] STORAGE_DRIVER=s3 no implementado aún; usando disco local en',
+      cfg.localDir,
     )
   }
   _storage = new LocalStorageProvider(cfg.localDir)

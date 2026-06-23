@@ -7,12 +7,14 @@ import 'leaflet/dist/leaflet.css'
 
 const CENTRO: [number, number] = [-26.1849, -58.1731]
 
-const PIN = L.divIcon({
-  className: '',
-  html: `<div style="width:16px;height:16px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:#E8650A;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,.35)"></div>`,
-  iconSize: [16, 16],
-  iconAnchor: [8, 16],
-})
+function crearPin() {
+  return L.divIcon({
+    className: '',
+    html: `<div style="width:16px;height:16px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:#E8650A;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,.35)"></div>`,
+    iconSize: [16, 16],
+    iconAnchor: [8, 16],
+  })
+}
 
 function CentrarMarcador({ lat, lng }: { lat: number; lng: number }) {
   const map = useMap()
@@ -31,12 +33,14 @@ interface Props {
 
 export function SucursalMapPreview({ lat, lng, onPositionChange, height = 160 }: Props) {
   const [mounted, setMounted] = useState(false)
+  const [pin, setPin] = useState<L.DivIcon | null>(null)
 
   useEffect(() => {
     setMounted(true)
+    setPin(crearPin())
   }, [])
 
-  if (!mounted) {
+  if (!mounted || !pin) {
     return (
       <div
         className="bg-[#eef0f2] rounded-lg flex items-center justify-center text-[11px] text-[#9aa1ab]"
@@ -62,7 +66,7 @@ export function SucursalMapPreview({ lat, lng, onPositionChange, height = 160 }:
       <CentrarMarcador lat={lat} lng={lng} />
       <Marker
         position={[lat, lng]}
-        icon={PIN}
+        icon={pin}
         draggable={!!onPositionChange}
         eventHandlers={
           onPositionChange

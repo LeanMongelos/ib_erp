@@ -1,10 +1,22 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { useEffect, useRef } from 'react'
 import { CheckCircle2, Loader2, MapPin, AlertCircle } from 'lucide-react'
 import { Input } from '@/components/ui/input'
-import { SucursalMapPreview } from '@/components/clientes/SucursalMapPreview'
 import { mensajeErrorDesconocido } from '@/lib/errores'
+
+const SucursalMapPreview = dynamic(
+  () => import('@/components/clientes/SucursalMapPreview').then((m) => m.SucursalMapPreview),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="bg-[#eef0f2] rounded-lg flex items-center justify-center text-[11px] text-[#9aa1ab] min-h-[140px]">
+        Cargando mapa…
+      </div>
+    ),
+  },
+)
 
 export type GeoStatus = 'idle' | 'loading' | 'confirmed' | 'error'
 
