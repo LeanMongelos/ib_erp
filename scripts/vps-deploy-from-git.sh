@@ -51,14 +51,9 @@ echo "==> PM2..."
 pm2 restart ibiomedica 2>/dev/null || pm2 start npm --name ibiomedica -- start
 pm2 save
 
-echo "==> Caddy..."
-cat > /etc/caddy/Caddyfile <<'CADDYEOF'
-:80 {
-	reverse_proxy 127.0.0.1:3000
-}
-CADDYEOF
-systemctl restart caddy
+echo "==> Caddy (dominio + HTTPS, no sobrescribir con HTTP plano)..."
+bash scripts/vps-caddy-apply.sh
 
 sleep 2
-curl -s -o /dev/null -w "deploy_ok:%{http_code}\n" http://127.0.0.1/login
+curl -s -o /dev/null -w "deploy_ok:%{http_code}\n" http://127.0.0.1:3000/login
 pm2 status

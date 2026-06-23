@@ -200,7 +200,7 @@ flowchart TB
 | Capa | Dev | Prod |
 |------|-----|------|
 | Firewall | localhost | ufw 80,443,5244 |
-| TLS | No | Pendiente dominio + Caddy LE |
+| TLS | No | Caddy + Let's Encrypt (`scripts/vps-caddy-apply.sh`) |
 | DB expuesta | localhost:5432 | 127.0.0.1:5433 only |
 | Headers | next.config + lib/security | Igual |
 
