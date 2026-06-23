@@ -9,7 +9,7 @@ export async function renderPreviewPlantilla(cfg: PlantillaConfig): Promise<Buff
     throw new Error('Tipo de plantilla no soportado para vista previa')
   }
   const datos = datosEjemploPlantilla(tipo)
-  return renderDocumentoPDF(cfg, datos)
+  return renderDocumentoPDF(cfg, datos, { forPreview: true })
 }
 
 export function configDefaultPorTipo(tipo: 'FACTURA' | 'PRESUPUESTO' | 'REMITO'): PlantillaConfig {

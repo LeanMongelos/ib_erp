@@ -274,20 +274,34 @@ function DocPDF({ cfg, datos }: { cfg: PlantillaConfig; datos: DatosDocumentoRen
   )
 }
 
-export async function renderDocumentoPDF(cfg: PlantillaConfig, datos: DatosDocumentoRender): Promise<Buffer> {
-  let html = cfg.html?.trim()
-  if (!html && (cfg.tipo === 'FACTURA' || cfg.tipo === 'PRESUPUESTO')) {
-    const { htmlDefaultPorTipo } = await import('./html-templates')
-    html = htmlDefaultPorTipo(cfg.tipo)
-  }
-  if (html) {
-    try {
-      const { renderHtmlDocumento } = await import('./render-html')
-      const { htmlToPdf } = await import('./html-to-pdf.server')
-      const rendered = renderHtmlDocumento(html, datos)
-      return htmlToPdf(rendered, cfg.papel)
-    } catch (error) {
-      console.error('[plantillas] HTML/Puppeteer falló, usando react-pdf:', error)
+export type RenderDocumentoPdfOpts = {
+  /** Vista previa en UI: react-pdf (layout), sin Puppeteer/HTML. */
+  forPreview?: boolean
+}
+
+export async function renderDocumentoPDF(
+  cfg: PlantillaConfig,
+  datos: DatosDocumentoRender,
+  opts?: RenderDocumentoPdfOpts,
+): Promise<Buffer> {
+  if (!opts?.forPreview) {
+    let html = cfg.html?.trim()
+    if (!html && (cfg.tipo === 'FACTURA' || cfg.tipo === 'PRESUPUESTO')) {
+      const { htmlDefaultPorTipo } = await import('./html-templates')
+      html = htmlDefaultPorTipo(cfg.tipo)
+    }
+    if (html) {
+      try {
+        const { renderHtmlDocumento } = await import('./render-html')
+        const { htmlToPdf } = await import('./html-to-pdf.server')
+        const { isValidPdfBuffer } = await import('./pdf-valid')
+        const rendered = renderHtmlDocumento(html, datos)
+        const pdf = await htmlToPdf(rendered, cfg.papel)
+        if (isValidPdfBuffer(pdf)) return pdf
+        console.error('[plantillas] Puppeteer devolvió PDF inválido, usando react-pdf')
+      } catch (error) {
+        console.error('[plantillas] HTML/Puppeteer falló, usando react-pdf:', error)
+      }
     }
   }
   return renderToBuffer(<DocPDF cfg={cfg} datos={datos} />)

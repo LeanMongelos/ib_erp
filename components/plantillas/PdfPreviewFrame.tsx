@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { Loader2 } from 'lucide-react'
+import { validarPdfBlob } from '@/lib/plantillas/pdf-valid'
 
 /** Cola global: un solo PDF a la vez para no bloquear el dev server. */
 let pdfQueue: Promise<void> = Promise.resolve()
@@ -39,7 +40,13 @@ export function PdfPreviewFrame({
   const [blobUrl, setBlobUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [waiting, setWaiting] = useState(true)
+  const [iframeError, setIframeError] = useState(false)
   const requestId = useRef(0)
+
+  const marcarIframeRoto = useCallback(() => {
+    setIframeError(true)
+    setError('No se pudo mostrar el PDF en el navegador')
+  }, [])
 
   useEffect(() => {
     if (!enabled) {
@@ -53,6 +60,7 @@ export function PdfPreviewFrame({
     let revoke: string | null = null
     setBlobUrl(null)
     setError(null)
+    setIframeError(false)
     setWaiting(true)
 
     const delayTimer = window.setTimeout(() => {
@@ -74,7 +82,7 @@ export function PdfPreviewFrame({
             throw new Error(text.slice(0, 80) || 'Respuesta no es PDF')
           }
           const blob = await res.blob()
-          if (blob.size < 100) throw new Error('PDF vacío')
+          await validarPdfBlob(blob)
           return blob
         })
 
@@ -117,10 +125,10 @@ export function PdfPreviewFrame({
     )
   }
 
-  if (error) {
+  if (error || iframeError) {
     return (
       <div className={`flex items-center justify-center bg-[#fef2f2] text-[#991b1b] text-[10px] p-3 text-center ${className ?? ''}`}>
-        {error}
+        {error ?? 'No se pudo mostrar el PDF'}
       </div>
     )
   }
@@ -147,12 +155,18 @@ export function PdfPreviewFrame({
             transform: `scale(${scale})`,
             transformOrigin: 'top left',
           }}
+          onError={marcarIframeRoto}
         />
       </div>
     )
   }
 
   return (
-    <iframe src={blobUrl} title={titulo} className={`border-0 bg-white w-full ${className ?? ''}`} />
+    <iframe
+      src={blobUrl}
+      title={titulo}
+      className={`border-0 bg-white w-full ${className ?? ''}`}
+      onError={marcarIframeRoto}
+    />
   )
 }
