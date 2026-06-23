@@ -59,8 +59,8 @@ echo "==> PM2..."
 pm2 restart ibiomedica 2>/dev/null || pm2 start npm --name ibiomedica -- start
 pm2 save
 
-echo "==> Tracking demo backfill (idempotente)..."
-npx tsx --env-file=.env scripts/sync-tracking-demo.ts || true
+echo "==> Tracking backfill (idempotente, obligatorio)..."
+npx tsx --env-file=.env scripts/sync-tracking-demo.ts
 
 echo "==> Caddy (dominio + HTTPS, no sobrescribir con HTTP plano)..."
 bash scripts/vps-caddy-apply.sh

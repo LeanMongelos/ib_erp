@@ -89,7 +89,22 @@ export async function getEquiposParaMapa(filtros?: { clienteId?: string; estado?
       ...(filtros?.estado && { estado: filtros.estado }),
     },
     include: {
-      cliente: { select: { id: true, nombre: true, ciudad: true, lat: true, lng: true, direccion: true } },
+      cliente: {
+        select: {
+          id: true,
+          nombre: true,
+          ciudad: true,
+          lat: true,
+          lng: true,
+          direccion: true,
+          sucursales: {
+            where: { activo: true, lat: { not: null }, lng: { not: null } },
+            orderBy: { creadoEn: 'asc' },
+            take: 1,
+            select: { lat: true, lng: true, nombre: true, direccion: true, numero: true, ciudad: true },
+          },
+        },
+      },
       sucursal: { select: { id: true, nombre: true, direccion: true, numero: true, ciudad: true, lat: true, lng: true } },
       eventos: {
         orderBy: { fecha: 'desc' },
@@ -107,8 +122,9 @@ export async function getEquiposParaMapa(filtros?: { clienteId?: string; estado?
 
   return equipos.map((e) => {
     const ultimoEvento = e.eventos[0]
-    const lat = e.ubicacionLat ?? e.sucursal?.lat ?? e.cliente.lat ?? ultimoEvento?.lat
-    const lng = e.ubicacionLng ?? e.sucursal?.lng ?? e.cliente.lng ?? ultimoEvento?.lng
+    const sucursalGeo = e.sucursal?.lat != null ? e.sucursal : e.cliente.sucursales[0]
+    const lat = e.ubicacionLat ?? sucursalGeo?.lat ?? e.cliente.lat ?? ultimoEvento?.lat
+    const lng = e.ubicacionLng ?? sucursalGeo?.lng ?? e.cliente.lng ?? ultimoEvento?.lng
     const plan = e.planes[0]
     const proximo = plan?.proximoServicio
     const mantenimientoProximo = proximo
@@ -117,11 +133,11 @@ export async function getEquiposParaMapa(filtros?: { clienteId?: string; estado?
     const direccion =
       e.direccionUbicacion ??
       ultimoEvento?.direccion ??
-      (e.sucursal
+      (sucursalGeo
         ? [
-            e.sucursal.nombre,
-            construirDireccionCompleta(e.sucursal.direccion, e.sucursal.numero),
-            e.sucursal.ciudad,
+            sucursalGeo.nombre,
+            construirDireccionCompleta(sucursalGeo.direccion, sucursalGeo.numero),
+            sucursalGeo.ciudad,
           ].filter(Boolean).join(' · ')
         : e.cliente.ciudad)
     return {
