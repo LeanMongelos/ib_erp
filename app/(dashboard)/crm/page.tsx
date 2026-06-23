@@ -2,6 +2,7 @@ import { Header } from '@/components/layout/Header'
 import { ClientesTable } from '@/components/crm/ClientesTable'
 import { CrmSubNav } from '@/components/crm/CrmSubNav'
 import { prisma } from '@/lib/prisma'
+import { requirePagePermission } from '@/lib/page-guard'
 
 async function getClientes(search?: string, tipo?: string) {
   return prisma.cliente.findMany({
@@ -33,6 +34,7 @@ export default async function CRMPage({
 }: {
   searchParams: Promise<{ q?: string; tipo?: string }>
 }) {
+  await requirePagePermission('clientes.read')
   const params = await searchParams
   const clientes = await getClientes(params.q, params.tipo)
 

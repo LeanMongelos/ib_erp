@@ -15,8 +15,8 @@
 
 | UI | API | lib | Permiso |
 |----|-----|-----|---------|
-| `/dashboard` | `GET /api/dashboard` | `lib/dashboard/` | 🔐 sesión |
-| `/reportes` | `GET /api/reportes/*` | — | `reportes.read_*` |
+| `/dashboard` | `GET /api/dashboard` | `lib/dashboard/` | 🔐 `DASHBOARD_ACCESS_PERMISSIONS` (OR) |
+| `/reportes` | `GET /api/reportes/*` | — | `reportes.read_*` (OR) |
 
 ---
 

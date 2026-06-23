@@ -3,6 +3,7 @@ import { FacturasTable } from '@/components/facturacion/FacturasTable'
 import { prisma } from '@/lib/prisma'
 import { formatMonto } from '@/lib/utils'
 import { plain } from '@/lib/serialize'
+import { requirePagePermission } from '@/lib/page-guard'
 
 async function getFacturas() {
   return prisma.factura.findMany({
@@ -15,6 +16,7 @@ async function getFacturas() {
 }
 
 export default async function FacturacionPage() {
+  await requirePagePermission('facturas.read')
   const facturas = await getFacturas()
 
   const totalFacturado = facturas.reduce((acc, f) => acc + Number(f.total), 0)

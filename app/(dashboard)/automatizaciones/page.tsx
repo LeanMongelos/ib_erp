@@ -1,8 +1,10 @@
 import { Header } from '@/components/layout/Header'
 import { ExternalLink, Zap } from 'lucide-react'
 import { Card } from '@/components/ui/card'
+import { requirePagePermission } from '@/lib/page-guard'
 
-export default function AutomatizacionesPage() {
+export default async function AutomatizacionesPage() {
+  await requirePagePermission('config.manage_integrations')
   return (
     <>
       <Header title="Automatizaciones" subtitle="n8n · Workflows conectados" />

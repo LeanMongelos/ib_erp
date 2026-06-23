@@ -1,7 +1,15 @@
 /**
  * middleware.ts
- * Protección centralizada de rutas del panel + headers de seguridad.
- * Las APIs públicas (webhooks, n8n, OAuth callback) quedan fuera del matcher.
+ *
+ * Protección de rutas del panel (dashboard) vía NextAuth JWT.
+ * Aplica headers de seguridad en cada respuesta del matcher.
+ *
+ * IMPORTANTE — no protege /api/*:
+ *   Cada route handler en app/api/ valida su propia auth (requirePermission,
+ *   CRON_SECRET, N8N_API_KEY, firma webhook, etc.). Ver docs/AI-MASTER.md §7.
+ *
+ * Rutas públicas intencionales fuera del matcher:
+ *   /login, /api/auth/*, /api/webhooks/*, /api/n8n/*, /api/cron/*, /api/health
  */
 
 import { NextResponse } from 'next/server'

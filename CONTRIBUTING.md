@@ -6,10 +6,11 @@ Guía breve para desarrolladores y agentes de código. La referencia completa es
 
 ## Antes de codear
 
-1. Leer **[AGENTS.md](AGENTS.md)** (reglas de oro).
-2. Identificar módulo en **[docs/22-MAPA-MODULOS.md](docs/22-MAPA-MODULOS.md)**.
-3. Si tocás flujo comercial → **[docs/13-FLUJOS-COMERCIALES.md](docs/13-FLUJOS-COMERCIALES.md)**.
-4. Si tocás cliente/servidor → **[docs/14-CONTRATOS-FRONTERAS.md](docs/14-CONTRATOS-FRONTERAS.md)**.
+1. Leer **[docs/AI-MASTER.md](docs/AI-MASTER.md)** (protocolo completo).
+2. Leer **[AGENTS.md](AGENTS.md)** (reglas de oro).
+3. Identificar módulo en **[docs/22-MAPA-MODULOS.md](docs/22-MAPA-MODULOS.md)**.
+4. Flujo comercial → **[docs/13-FLUJOS-COMERCIALES.md](docs/13-FLUJOS-COMERCIALES.md)**.
+5. Cliente/servidor → **[docs/14-CONTRATOS-FRONTERAS.md](docs/14-CONTRATOS-FRONTERAS.md)**.
 
 ---
 
@@ -58,9 +59,9 @@ Ver **[docs/21-TESTING-Y-CALIDAD.md](docs/21-TESTING-Y-CALIDAD.md)**.
 
 ## Documentación
 
-Índice: **[docs/README.md](docs/README.md)**.
+Índice: **[docs/README.md](docs/README.md)** · Canónicos: **[docs/00-INDICE-CANONICO.md](docs/00-INDICE-CANONICO.md)**.
 
-Al agregar feature:
+Al agregar feature, actualizar **solo el doc canónico** del tema (no duplicar):
 
 - Endpoint → `docs/11-API-ENDPOINTS.md`
 - Modelo Prisma → `docs/09-modelo-de-datos.md` + migración

@@ -4,6 +4,10 @@ import { prisma } from '@/lib/prisma'
 import { requireAuth, handleApiError, ApiError } from '@/lib/api-auth'
 import { cambiarPasswordSchema } from '@/lib/validation'
 import { registrarAuditoria, getIp } from '@/lib/audit'
+import {
+  obtenerPoliticaSeguridad,
+  validarPasswordSegunPolitica,
+} from '@/lib/config/politica-seguridad'
 
 export async function PUT(req: NextRequest) {
   try {
@@ -16,6 +20,10 @@ export async function PUT(req: NextRequest) {
 
     const ok = await bcrypt.compare(actual, usuario.password)
     if (!ok) throw new ApiError(400, 'La contraseña actual es incorrecta')
+
+    const politica = await obtenerPoliticaSeguridad()
+    const errorPolitica = validarPasswordSegunPolitica(nueva, politica)
+    if (errorPolitica) throw new ApiError(400, errorPolitica)
 
     const passwordHash = await bcrypt.hash(nueva, 10)
     await prisma.usuario.update({ where: { id: actor.id }, data: { password: passwordHash } })

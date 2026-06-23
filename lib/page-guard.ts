@@ -14,3 +14,12 @@ export async function requirePagePermission(permiso: string) {
   if (!tienePermiso(user.permissions, permiso)) redirect('/dashboard')
   return user
 }
+
+/** Redirige a /dashboard si el usuario no tiene al menos uno de los permisos indicados. */
+export async function requirePagePermissionAny(...permisos: string[]) {
+  const user = await getSessionUser()
+  if (!user) redirect('/login')
+  const tiene = permisos.some((p) => tienePermiso(user.permissions, p))
+  if (!tiene) redirect('/dashboard')
+  return user
+}

@@ -2,12 +2,13 @@ import { NextResponse } from 'next/server'
 import { subMonths, startOfMonth, endOfMonth, format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { prisma } from '@/lib/prisma'
-import { requireAuth, handleApiError } from '@/lib/api-auth'
+import { requirePermissionAny, handleApiError } from '@/lib/api-auth'
 import { actualizarOTsVencidas } from '@/lib/ots'
+import { DASHBOARD_ACCESS_PERMISSIONS } from '@/lib/page-permissions'
 
 export async function GET() {
   try {
-    await requireAuth()
+    await requirePermissionAny(...DASHBOARD_ACCESS_PERMISSIONS)
     await actualizarOTsVencidas()
 
     const ahora = new Date()

@@ -1,5 +1,9 @@
 # 09 · Modelo de Datos Consolidado
 
+> ⚠️ **NO EDITAR COMO FUENTE DE VERDAD** — Este documento es referencia histórica + extractos.  
+> **Canónico:** [`prisma/schema.prisma`](../prisma/schema.prisma)  
+> **Índice:** [`00-INDICE-CANONICO.md`](00-INDICE-CANONICO.md)
+
 Diagrama de alto nivel de cómo se relacionan los módulos y un **borrador de schema
 Prisma** (propuesta, no final). Lo de hoy (Usuario, Cliente, Equipo,
 OrdenTrabajo, Factura, Inventario) se conserva y se extiende.

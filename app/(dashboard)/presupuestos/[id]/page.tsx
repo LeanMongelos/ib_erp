@@ -3,8 +3,10 @@ import { Header } from '@/components/layout/Header'
 import { PresupuestoDetalle } from '@/components/presupuestos/PresupuestoDetalle'
 import { prisma } from '@/lib/prisma'
 import { plain } from '@/lib/serialize'
+import { requirePagePermission } from '@/lib/page-guard'
 
 export default async function PresupuestoDetallePage({ params }: { params: Promise<{ id: string }> }) {
+  await requirePagePermission('presupuestos.read')
   const { id } = await params
   const presupuesto = await prisma.presupuesto.findUnique({
     where: { id },

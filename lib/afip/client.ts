@@ -56,8 +56,14 @@ export async function emitirCAEFactura(facturaId: string): Promise<ResultadoCAE>
   const emisor = factura.emisor
   const ptoVta = factura.puntoVenta ?? emisor.puntoVenta
 
-  // Sin certificados → modo simulación (homologación local)
+  // Sin certificados → simulación solo en homologación (nunca en producción fiscal)
   if (!emisor.certificadoPath || !emisor.clavePrivadaPath) {
+    if (emisor.ambiente === 'PRODUCCION') {
+      return {
+        ok: false,
+        observaciones: 'El emisor no tiene certificado AFIP configurado. Cargá certificado y clave privada antes de emitir en producción.',
+      }
+    }
     console.warn('[afip] Sin certificado; emitiendo CAE simulado para', factura.numero)
     return caeSimulado(facturaId, ptoVta)
   }

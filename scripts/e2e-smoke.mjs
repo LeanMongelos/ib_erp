@@ -1,5 +1,6 @@
 /**
- * Smoke E2E — login + APIs y páginas clave.
+ * Smoke E2E HTTP — login + APIs y páginas clave.
+ * LEGACY: preferir `npm run smoke` (e2e-smoke.ts, validación DB).
  * Uso: node scripts/e2e-smoke.mjs [baseUrl]
  */
 const base = process.argv[2] ?? process.env.NEXTAUTH_URL ?? `http://localhost:${process.env.PORT ?? '3001'}`

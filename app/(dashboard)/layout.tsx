@@ -5,6 +5,8 @@ import { DashboardShell } from '@/components/layout/DashboardShell'
 import { SessionProvider } from './session-provider'
 import { SecurityShell } from '@/components/security/SecurityShell'
 
+export const dynamic = 'force-dynamic'
+
 export default async function DashboardLayout({
   children,
 }: {

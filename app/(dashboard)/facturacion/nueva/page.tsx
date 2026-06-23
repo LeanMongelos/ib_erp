@@ -7,6 +7,7 @@ import {
   ensureClienteEventual,
   ordenarClientesConEventual,
 } from '@/lib/clientes/eventual'
+import { requirePagePermission } from '@/lib/page-guard'
 
 async function getData(otId?: string, presupuestoId?: string) {
   const clienteEventual = await ensureClienteEventual()
@@ -66,6 +67,7 @@ export default async function NuevaFacturaPage({
 }: {
   searchParams: Promise<{ otId?: string; presupuestoId?: string }>
 }) {
+  await requirePagePermission('facturas.create')
   const params = await searchParams
   let { otId, presupuestoId } = params
 

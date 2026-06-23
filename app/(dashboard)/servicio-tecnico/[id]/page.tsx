@@ -4,6 +4,7 @@ import { OTDetalle } from '@/components/servicio-tecnico/OTDetalle'
 import { prisma } from '@/lib/prisma'
 import { actualizarOTsVencidas } from '@/lib/ots'
 import { plain } from '@/lib/serialize'
+import { requirePagePermission } from '@/lib/page-guard'
 
 async function getOT(id: string) {
   await actualizarOTsVencidas()
@@ -29,6 +30,7 @@ export default async function OTDetallePage({
 }: {
   params: Promise<{ id: string }>
 }) {
+  await requirePagePermission('servicio.read')
   const { id } = await params
   const ot = await getOT(id)
   if (!ot) notFound()

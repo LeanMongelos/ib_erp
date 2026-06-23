@@ -81,6 +81,11 @@ export async function requirePermission(...permisos: string[]): Promise<SessionU
   return user
 }
 
+/** Exige al menos uno de los permisos indicados (OR lógico). */
+export async function requirePermissionAny(...permisos: string[]): Promise<SessionUser> {
+  return requirePermission(...permisos)
+}
+
 /**
  * Convierte cualquier error lanzado dentro de un handler en una respuesta
  * JSON consistente. Mapea los casos conocidos a códigos HTTP adecuados.

@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { actualizarOTsVencidas } from '@/lib/ots'
 import { Button } from '@/components/ui/button'
 import { Calendar, Map } from 'lucide-react'
+import { requirePagePermission } from '@/lib/page-guard'
 
 async function getOTs() {
   await actualizarOTsVencidas()
@@ -30,6 +31,7 @@ async function getOTs() {
 }
 
 export default async function ServicioTecnicoPage() {
+  await requirePagePermission('servicio.read')
   const ots = await getOTs()
   const abiertas = ots.filter((o) => o.estado === 'ABIERTA' || o.estado === 'EN_PROCESO').length
   const vencidas = ots.filter((o) => o.estado === 'VENCIDA').length

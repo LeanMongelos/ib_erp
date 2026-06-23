@@ -3,7 +3,9 @@
 > **Proyecto:** iBiomédica ERP · Cliente: Ingeniería Biomédica (Formosa, AR)  
 > **Stack:** Next.js 14 App Router · Prisma 7 · PostgreSQL · NextAuth · Tailwind · @react-pdf/renderer
 
-Este archivo es la **fuente de verdad operativa** para no romper módulos al tocar otros. Leer antes de implementar.
+Este archivo es la **fuente de verdad operativa** para no romper módulos al tocar otros.
+
+**→ Leer primero:** [`docs/AI-MASTER.md`](docs/AI-MASTER.md) (protocolo completo + checklist + anti-patrones).
 
 ---
 
@@ -77,7 +79,6 @@ npm run dev:reset        # Borra .next + prisma generate + dev (Windows-friendly
 npm run smoke            # Smoke test Prisma + contabilidad
 npm run e2e              # E2E CRM, sucursales, historial, geocoding
 npm run e2e:all          # smoke + e2e
-npm run e2e:all          # smoke + e2e
 npm run logs:purge       # Eliminar logs > 15 días
 npm run icons:generate   # Regenerar favicon desde logo.png
 npx tsx --env-file=.env scripts/sync-logs-permiso.ts  # Permiso logs.read en BD existente
@@ -103,12 +104,14 @@ npm run db:seed          # Seed demo (plantillas, usuarios, catálogos)
 
 ## 6. Índice completo de documentación
 
-Ver [`docs/README.md`](docs/README.md) — incluye arquitectura, APIs, contratos, runbook, deploy y reglas de negocio por módulo.
-
-Documentos clave para agentes:
+Ver [`docs/README.md`](docs/README.md).
 
 | Doc | Uso |
 |-----|-----|
+| [`docs/AI-MASTER.md`](docs/AI-MASTER.md) | **Protocolo IA — leer primero** |
+| [`docs/00-SISTEMA-PUNTA-A-PUNTA.md`](docs/00-SISTEMA-PUNTA-A-PUNTA.md) | Flujos end-to-end + diagramas |
+| [`docs/00-INFRAESTRUCTURA.md`](docs/00-INFRAESTRUCTURA.md) | Dev, Docker, VPS, CI/CD |
+| [`docs/00-INDICE-CANONICO.md`](docs/00-INDICE-CANONICO.md) | Qué doc manda; anti-duplicados |
 | [`docs/22-MAPA-MODULOS.md`](docs/22-MAPA-MODULOS.md) | Dónde está cada feature |
 | [`docs/18-RUNBOOK-OPERACIONES.md`](docs/18-RUNBOOK-OPERACIONES.md) | Troubleshooting |
 | [`docs/17-OBSERVABILIDAD-Y-LOGS.md`](docs/17-OBSERVABILIDAD-Y-LOGS.md) | Logs vs auditoría |

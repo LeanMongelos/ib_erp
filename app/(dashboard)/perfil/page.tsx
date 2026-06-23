@@ -1,12 +1,11 @@
-import { redirect } from 'next/navigation'
+import { notFound } from 'next/navigation'
 import { Header } from '@/components/layout/Header'
 import { prisma } from '@/lib/prisma'
-import { getSessionUser } from '@/lib/api-auth'
 import { PerfilForm } from '@/components/perfil/PerfilForm'
+import { requirePagePermission } from '@/lib/page-guard'
 
 export default async function PerfilPage() {
-  const actor = await getSessionUser()
-  if (!actor) redirect('/login')
+  const actor = await requirePagePermission('perfil.edit_own')
 
   const me = await prisma.usuario.findUnique({
     where: { id: actor.id },
@@ -15,7 +14,7 @@ export default async function PerfilPage() {
       roles: { select: { rol: { select: { nombre: true } } } },
     },
   })
-  if (!me) redirect('/login')
+  if (!me) notFound()
 
   return (
     <>

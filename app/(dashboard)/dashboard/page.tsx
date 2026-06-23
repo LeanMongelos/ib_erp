@@ -9,6 +9,8 @@ import { formatMonto } from '@/lib/utils'
 import { actualizarOTsVencidas } from '@/lib/ots'
 import { subMonths, startOfMonth, endOfMonth, format } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { requirePagePermissionAny } from '@/lib/page-guard'
+import { DASHBOARD_ACCESS_PERMISSIONS } from '@/lib/page-permissions'
 
 async function getDashboardData() {
   // Sincronizamos las OTs vencidas antes de calcular cualquier métrica
@@ -83,6 +85,7 @@ async function getDashboardData() {
 }
 
 export default async function DashboardPage() {
+  await requirePagePermissionAny(...DASHBOARD_ACCESS_PERMISSIONS)
   const data = await getDashboardData()
 
   const estadoMap: Record<string, number> = Object.fromEntries(

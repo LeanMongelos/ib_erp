@@ -3,6 +3,7 @@ import { Header } from '@/components/layout/Header'
 import { ClienteFicha } from '@/components/crm/ClienteFicha'
 import { prisma } from '@/lib/prisma'
 import { calcularMetricasCliente } from '@/lib/clientes-metrics'
+import { requirePagePermission } from '@/lib/page-guard'
 
 async function getCliente(id: string) {
   return prisma.cliente.findUnique({
@@ -29,6 +30,7 @@ export default async function ClienteFichaPage({
 }: {
   params: Promise<{ id: string }>
 }) {
+  await requirePagePermission('clientes.read')
   const { id } = await params
   const cliente = await getCliente(id)
   if (!cliente) notFound()

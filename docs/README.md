@@ -7,9 +7,16 @@
 
 ## Para agentes de código (leer primero)
 
+| Orden | Documento | Contenido |
+|-------|-----------|-----------|
+| **1** | **[`AI-MASTER.md`](AI-MASTER.md)** | Protocolo obligatorio, checklist, anti-patrones |
+| **2** | **[`../AGENTS.md`](../AGENTS.md)** | Reglas de oro, estructura repo |
+| **3** | **[`00-SISTEMA-PUNTA-A-PUNTA.md`](00-SISTEMA-PUNTA-A-PUNTA.md)** | Flujos end-to-end + diagramas Mermaid |
+| **4** | **[`00-INFRAESTRUCTURA.md`](00-INFRAESTRUCTURA.md)** | Dev, Docker, VPS, CI/CD |
+| **5** | **[`00-INDICE-CANONICO.md`](00-INDICE-CANONICO.md)** | Fuente única por tema (evitar duplicados) |
+
 | Documento | Contenido |
 |-----------|-----------|
-| **[`../AGENTS.md`](../AGENTS.md)** | Reglas de oro, estructura, checklist, flujos críticos |
 | **[`../CONTRIBUTING.md`](../CONTRIBUTING.md)** | Flujo de contribución y checklist PR |
 | **[`00-ARQUITECTURA-IMPLEMENTADA.md`](00-ARQUITECTURA-IMPLEMENTADA.md)** | Stack real, módulos, middleware |
 | **[`14-CONTRATOS-FRONTERAS.md`](14-CONTRATOS-FRONTERAS.md)** | Cliente/servidor, RBAC, anti-patrones |
@@ -60,7 +67,9 @@
 | 09 | [Modelo de datos](09-modelo-de-datos.md) | Entidades Prisma |
 | 10 | [Roadmap](10-roadmap.md) | Fases |
 
-> Ante duda: **`00` + `schema.prisma` + `AGENTS.md`** prevalecen sobre diseño histórico.
+> **Ante duda:** `schema.prisma` + `AI-MASTER.md` + `AGENTS.md` prevalecen sobre diseño histórico.
+
+Ver [`00-INDICE-CANONICO.md`](00-INDICE-CANONICO.md) para saber qué documento usar por tema.
 
 ---
 
@@ -80,19 +89,7 @@ Principios: trazabilidad punta a punta, RBAC granular, cumplimiento fiscal AFIP,
 
 ## Comandos de desarrollo
 
-```bash
-npm run dev              # Desarrollo
-npm run dev:reset        # Limpia .next + prisma generate + dev
-npm run smoke            # Smoke contabilidad + Prisma
-npm run e2e              # E2E CRM, sucursales, historial, geocoding
-npm run e2e:all          # Ambos tests
-npx prisma migrate deploy && npx prisma generate
-npm run db:seed
-npm run build
-npx tsc --noEmit         # scripts/ excluidos del typecheck Next
-npm run logs:purge       # Purga logs > 15 días
-npm run icons:generate   # Regenerar favicon IB
-```
+Ver [`AI-MASTER.md`](AI-MASTER.md) §9 y [`DEV-ESTABILIDAD.md`](DEV-ESTABILIDAD.md).
 
 ---
 

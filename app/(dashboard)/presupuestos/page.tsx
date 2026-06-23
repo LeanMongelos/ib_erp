@@ -3,8 +3,10 @@ import { PresupuestosTable } from '@/components/presupuestos/PresupuestosTable'
 import { prisma } from '@/lib/prisma'
 import { formatMonto } from '@/lib/utils'
 import { plain } from '@/lib/serialize'
+import { requirePagePermission } from '@/lib/page-guard'
 
 export default async function PresupuestosPage() {
+  await requirePagePermission('presupuestos.read')
   const presupuestos = await prisma.presupuesto.findMany({
     orderBy: { creadoEn: 'desc' },
     include: { cliente: { select: { nombre: true } } },

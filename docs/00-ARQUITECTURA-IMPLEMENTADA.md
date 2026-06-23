@@ -1,6 +1,7 @@
 # 00 — Arquitectura implementada (estado actual)
 
-> Actualizado para reflejar el **código en producción/dev**, no solo diseño.
+> Actualizado para reflejar el **código en producción/dev**, no solo diseño.  
+> **Ver también:** [`AI-MASTER.md`](AI-MASTER.md) · [`00-SISTEMA-PUNTA-A-PUNTA.md`](00-SISTEMA-PUNTA-A-PUNTA.md) · [`00-INFRAESTRUCTURA.md`](00-INFRAESTRUCTURA.md)
 
 ## 1. Stack real
 
