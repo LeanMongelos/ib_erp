@@ -281,10 +281,14 @@ export async function renderDocumentoPDF(cfg: PlantillaConfig, datos: DatosDocum
     html = htmlDefaultPorTipo(cfg.tipo)
   }
   if (html) {
-    const { renderHtmlDocumento } = await import('./render-html')
-    const { htmlToPdf } = await import('./html-to-pdf.server')
-    const rendered = renderHtmlDocumento(html, datos)
-    return htmlToPdf(rendered, cfg.papel)
+    try {
+      const { renderHtmlDocumento } = await import('./render-html')
+      const { htmlToPdf } = await import('./html-to-pdf.server')
+      const rendered = renderHtmlDocumento(html, datos)
+      return htmlToPdf(rendered, cfg.papel)
+    } catch (error) {
+      console.error('[plantillas] HTML/Puppeteer falló, usando react-pdf:', error)
+    }
   }
   return renderToBuffer(<DocPDF cfg={cfg} datos={datos} />)
 }

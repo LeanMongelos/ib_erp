@@ -50,6 +50,7 @@ done
 echo "==> Build..."
 export NODE_OPTIONS=--max-old-space-size=3072
 npm ci
+bash scripts/vps-install-puppeteer-deps.sh
 npx prisma generate
 npx prisma migrate deploy
 npm run build
