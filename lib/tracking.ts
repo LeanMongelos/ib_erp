@@ -91,6 +91,11 @@ export async function getEquiposParaMapa(filtros?: { clienteId?: string; estado?
     include: {
       cliente: { select: { id: true, nombre: true, ciudad: true, lat: true, lng: true, direccion: true } },
       sucursal: { select: { id: true, nombre: true, direccion: true, numero: true, ciudad: true, lat: true, lng: true } },
+      eventos: {
+        orderBy: { fecha: 'desc' },
+        take: 1,
+        select: { lat: true, lng: true, direccion: true },
+      },
       planes: {
         where: { estado: { in: ['PROGRAMADO', 'PENDIENTE'] } },
         orderBy: { proximoServicio: 'asc' },
@@ -101,8 +106,9 @@ export async function getEquiposParaMapa(filtros?: { clienteId?: string; estado?
   })
 
   return equipos.map((e) => {
-    const lat = e.ubicacionLat ?? e.sucursal?.lat ?? e.cliente.lat
-    const lng = e.ubicacionLng ?? e.sucursal?.lng ?? e.cliente.lng
+    const ultimoEvento = e.eventos[0]
+    const lat = e.ubicacionLat ?? e.sucursal?.lat ?? e.cliente.lat ?? ultimoEvento?.lat
+    const lng = e.ubicacionLng ?? e.sucursal?.lng ?? e.cliente.lng ?? ultimoEvento?.lng
     const plan = e.planes[0]
     const proximo = plan?.proximoServicio
     const mantenimientoProximo = proximo
@@ -110,6 +116,7 @@ export async function getEquiposParaMapa(filtros?: { clienteId?: string; estado?
       : null
     const direccion =
       e.direccionUbicacion ??
+      ultimoEvento?.direccion ??
       (e.sucursal
         ? [
             e.sucursal.nombre,

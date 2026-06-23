@@ -10,8 +10,6 @@ import { addHours, subDays, addDays } from 'date-fns'
 import { PERMISSIONS, ROLE_DEFS, ROLE_PERMISSIONS, WILDCARD } from '../lib/rbac'
 import { PLANTILLA_FACTURA_DEFAULT, PLANTILLA_PRESUPUESTO_DEFAULT } from '../lib/plantillas/defaults'
 import { ensureSecuenciasActuales } from '../lib/numeracion'
-import { UBICACION_IB } from '../lib/tracking'
-
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! })
 const prisma = new PrismaClient({ adapter })
 
@@ -170,62 +168,6 @@ async function main() {
     create: { id: 'seed-deposito-central', nombre: 'Depósito Central', direccion: 'Eva Perón Nº679, Formosa' },
   })
   console.log('✅ Depósito Central')
-
-  // ============ TRACKING DEMO (Fase 8, idempotente) ============
-  if ((await prisma.eventoTracking.count()) === 0) {
-    const equiposDemo = await prisma.equipo.findMany({
-      take: 6,
-      orderBy: { creadoEn: 'asc' },
-      include: { cliente: true },
-    })
-    const offsets = [
-      { lat: 0, lng: 0 },
-      { lat: 0.012, lng: -0.008 },
-      { lat: -0.006, lng: 0.015 },
-      { lat: 0.018, lng: 0.006 },
-      { lat: -0.014, lng: -0.012 },
-      { lat: 0.008, lng: -0.018 },
-    ]
-    let idx = 0
-    for (const eq of equiposDemo) {
-      const off = offsets[idx % offsets.length]
-      const latCli = -26.1849 + off.lat
-      const lngCli = -58.1731 + off.lng
-      await prisma.cliente.update({
-        where: { id: eq.clienteId },
-        data: { lat: latCli, lng: lngCli },
-      })
-      const base = subDays(new Date(), 30 - idx * 4)
-      const eventos: Array<{ tipo: 'RECEPCION' | 'DEPOSITO' | 'EN_TRANSITO' | 'INSTALADO'; dias: number; lat: number; lng: number; dir: string }> = [
-        { tipo: 'RECEPCION', dias: 0, lat: UBICACION_IB.lat, lng: UBICACION_IB.lng, dir: UBICACION_IB.direccion },
-        { tipo: 'DEPOSITO', dias: 1, lat: UBICACION_IB.lat, lng: UBICACION_IB.lng, dir: 'Depósito Central' },
-        { tipo: 'EN_TRANSITO', dias: 3, lat: (UBICACION_IB.lat + latCli) / 2, lng: (UBICACION_IB.lng + lngCli) / 2, dir: 'Ruta a cliente' },
-        { tipo: 'INSTALADO', dias: 5, lat: latCli, lng: lngCli, dir: eq.cliente.direccion ?? eq.cliente.ciudad ?? 'Cliente' },
-      ]
-      for (const ev of eventos) {
-        await prisma.eventoTracking.create({
-          data: {
-            equipoId: eq.id,
-            tipo: ev.tipo,
-            lat: ev.lat,
-            lng: ev.lng,
-            direccion: ev.dir,
-            fecha: addDays(base, ev.dias),
-          },
-        })
-      }
-      await prisma.equipo.update({
-        where: { id: eq.id },
-        data: {
-          ubicacionLat: latCli,
-          ubicacionLng: lngCli,
-          direccionUbicacion: eq.cliente.direccion ?? eq.cliente.ciudad ?? undefined,
-        },
-      })
-      idx++
-    }
-    if (equiposDemo.length > 0) console.log(`✅ Tracking demo (${equiposDemo.length} equipos)`)
-  }
 
   // ============ CRM OMNICANAL DEMO (Fase 9) ============
   const tiposCanal = ['WHATSAPP', 'INSTAGRAM', 'FACEBOOK', 'EMAIL_IMAP', 'N8N'] as const
@@ -561,6 +503,10 @@ async function main() {
     }
   }
   console.log(`✅ ${equipos.length} equipos creados`)
+
+  const { seedTrackingDemo } = await import('../lib/equipos/seed-tracking-demo')
+  const trackingDemoCount = await seedTrackingDemo()
+  if (trackingDemoCount > 0) console.log(`✅ Tracking demo (${trackingDemoCount} equipos)`)
 
   const { seedHistoriaClinicaDemo } = await import('../lib/equipos/seed-historia-demo')
   await seedHistoriaClinicaDemo(equipos.slice(0, 3))
