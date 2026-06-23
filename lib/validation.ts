@@ -294,12 +294,25 @@ export const inventarioUpdateSchema = inventarioCreateSchema.partial().extend({
 
 // ============ USUARIOS ============
 
-export const usuarioCreateSchema = z.object({
-  nombre:   z.string().trim().min(2, 'El nombre debe tener al menos 2 caracteres'),
-  email:    z.string().trim().email('Email inválido').toLowerCase(),
-  telefono: z.string().trim().max(40).optional(),
-  roles:    z.array(z.string().min(1)).min(1, 'Asigná al menos un rol'),
-})
+const usuarioPasswordFieldsSchema = z
+  .object({
+    password: z.string().min(1, 'Ingresá una contraseña').optional(),
+    confirmarPassword: z.string().optional(),
+    exigirCambioPassword: z.boolean().optional(),
+  })
+  .refine(
+    (d) => !d.password || d.password === d.confirmarPassword,
+    { message: 'Las contraseñas no coinciden', path: ['confirmarPassword'] },
+  )
+
+export const usuarioCreateSchema = z
+  .object({
+    nombre:   z.string().trim().min(2, 'El nombre debe tener al menos 2 caracteres'),
+    email:    z.string().trim().email('Email inválido').toLowerCase(),
+    telefono: z.string().trim().max(40).optional(),
+    roles:    z.array(z.string().min(1)).min(1, 'Asigná al menos un rol'),
+  })
+  .merge(usuarioPasswordFieldsSchema)
 
 export const usuarioUpdateSchema = z
   .object({
@@ -308,6 +321,7 @@ export const usuarioUpdateSchema = z
     roles:    z.array(z.string().min(1)).min(1).optional(),
     activo:   z.boolean().optional(),
   })
+  .merge(usuarioPasswordFieldsSchema)
   .refine((d) => Object.keys(d).length > 0, { message: 'Nada para actualizar' })
 
 export const rolePermisosUpdateSchema = z.object({
@@ -335,8 +349,8 @@ export const perfilUpdateSchema = z
   .refine((d) => Object.keys(d).length > 0, { message: 'Nada para actualizar' })
 
 export const cambiarPasswordSchema = z.object({
-  actual: z.string().min(1, 'Ingresá tu contraseña actual'),
-  nueva:  z.string().min(8, 'La nueva contraseña debe tener al menos 8 caracteres'),
+  actual: z.string().optional(),
+  nueva:  z.string().min(1, 'Ingresá la nueva contraseña'),
 })
 
 // ============ EMISORES ============

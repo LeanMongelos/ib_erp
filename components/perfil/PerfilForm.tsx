@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { Camera, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -19,11 +19,14 @@ interface Me {
   telefono: string | null
   avatarUrl: string | null
   roles: string[]
+  exigirCambioPassword: boolean
 }
 
 export function PerfilForm({ me }: { me: Me }) {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { update } = useSession()
+  const cambioObligatorio = me.exigirCambioPassword || searchParams.get('cambio') === '1'
 
   const [nombre, setNombre] = useState(me.nombre)
   const [telefono, setTelefono] = useState(me.telefono ?? '')
@@ -99,18 +102,26 @@ export function PerfilForm({ me }: { me: Me }) {
   }
 
   async function cambiarPassword() {
-    if (nueva.length < 8) { toast.error('La nueva contraseña debe tener al menos 8 caracteres'); return }
     if (nueva !== repetir) { toast.error('Las contraseñas no coinciden'); return }
+    if (!cambioObligatorio && !actual) { toast.error('Ingresá tu contraseña actual'); return }
     setSavingPass(true)
     try {
       const res = await fetch('/api/perfil/password', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ actual, nueva }),
+        body: JSON.stringify({
+          ...(cambioObligatorio ? {} : { actual }),
+          nueva,
+        }),
       })
       if (!res.ok) throw new Error(mensajeErrorJson(await res.json().catch(() => ({})), 'No se pudo cambiar la contraseña'))
       toast.success('Contraseña actualizada')
       setActual(''); setNueva(''); setRepetir('')
+      if (cambioObligatorio) {
+        await update?.({ exigirCambioPassword: false })
+        router.replace('/perfil')
+        router.refresh()
+      }
     } catch (e: unknown) {
       toast.error(mensajeErrorDesconocido(e, 'No se pudo cambiar la contraseña'))
     } finally {
@@ -178,9 +189,20 @@ export function PerfilForm({ me }: { me: Me }) {
       </Card>
 
       <Card>
-        <h3 className="text-[13.5px] font-bold text-[#16181d] mb-4">Cambiar contraseña</h3>
+        <h3 className="text-[13.5px] font-bold text-[#16181d] mb-4">
+          {cambioObligatorio ? 'Definir nueva contraseña' : 'Cambiar contraseña'}
+        </h3>
+        {cambioObligatorio && (
+          <p className="text-[12.5px] text-amber-800 bg-amber-50 border border-amber-200 rounded-[9px] px-3 py-2.5 mb-4">
+            Tu administrador te asignó una contraseña temporal. Definí una nueva para continuar usando el sistema.
+          </p>
+        )}
         <div className="grid grid-cols-2 gap-3.5">
-          <div className="col-span-2"><Input label="Contraseña actual" type="password" value={actual} onChange={(e) => setActual(e.target.value)} autoComplete="current-password" /></div>
+          {!cambioObligatorio && (
+            <div className="col-span-2">
+              <Input label="Contraseña actual" type="password" value={actual} onChange={(e) => setActual(e.target.value)} autoComplete="current-password" />
+            </div>
+          )}
           <Input label="Nueva contraseña" type="password" value={nueva} onChange={(e) => setNueva(e.target.value)} autoComplete="new-password" />
           <Input label="Repetir nueva" type="password" value={repetir} onChange={(e) => setRepetir(e.target.value)} autoComplete="new-password" />
         </div>

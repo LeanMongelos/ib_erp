@@ -18,15 +18,23 @@ export async function PUT(req: NextRequest) {
     const usuario = await prisma.usuario.findUnique({ where: { id: actor.id } })
     if (!usuario) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
 
-    const ok = await bcrypt.compare(actual, usuario.password)
-    if (!ok) throw new ApiError(400, 'La contraseña actual es incorrecta')
+    const cambioObligatorio = usuario.exigirCambioPassword
+
+    if (!cambioObligatorio) {
+      if (!actual) throw new ApiError(400, 'Ingresá tu contraseña actual')
+      const ok = await bcrypt.compare(actual, usuario.password)
+      if (!ok) throw new ApiError(400, 'La contraseña actual es incorrecta')
+    }
 
     const politica = await obtenerPoliticaSeguridad()
     const errorPolitica = validarPasswordSegunPolitica(nueva, politica)
     if (errorPolitica) throw new ApiError(400, errorPolitica)
 
     const passwordHash = await bcrypt.hash(nueva, 10)
-    await prisma.usuario.update({ where: { id: actor.id }, data: { password: passwordHash } })
+    await prisma.usuario.update({
+      where: { id: actor.id },
+      data: { password: passwordHash, exigirCambioPassword: false },
+    })
 
     await registrarAuditoria({
       usuarioId: actor.id,
@@ -36,7 +44,7 @@ export async function PUT(req: NextRequest) {
       ip: getIp(req),
     })
 
-    return NextResponse.json({ ok: true })
+    return NextResponse.json({ ok: true, exigirCambioPassword: false })
   } catch (error) {
     return handleApiError(error)
   }

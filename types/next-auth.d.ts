@@ -14,6 +14,7 @@ declare module 'next-auth' {
       roles: string[]
       permissions: string[]
       avatarUrl: string | null
+      exigirCambioPassword: boolean
     } & DefaultSession['user']
   }
 
@@ -22,6 +23,7 @@ declare module 'next-auth' {
     roles?: string[]
     permissions?: string[]
     avatarUrl?: string | null
+    exigirCambioPassword?: boolean
   }
 }
 
@@ -32,5 +34,6 @@ declare module 'next-auth/jwt' {
     roles: string[]
     permissions: string[]
     avatarUrl?: string | null
+    exigirCambioPassword?: boolean
   }
 }

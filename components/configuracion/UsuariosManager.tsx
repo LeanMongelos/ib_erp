@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { UserPlus, Power, X, Copy, Pencil, KeyRound, Users, Shield } from 'lucide-react'
+import { UserPlus, Power, X, Copy, Pencil, KeyRound, Users, Shield, Eye, EyeOff } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -198,6 +198,12 @@ function UsuarioModal({
   const [loading, setLoading] = useState(false)
   const [resettingPass, setResettingPass] = useState(false)
   const [tempPass, setTempPass] = useState<string | null>(null)
+  const [nuevaPassword, setNuevaPassword] = useState('')
+  const [confirmarPassword, setConfirmarPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [exigirCambio, setExigirCambio] = useState(false)
+
+  const hayPasswordManual = nuevaPassword.length > 0 || confirmarPassword.length > 0
 
   function toggleRol(clave: string) {
     if (!puedeAsignarRoles) return
@@ -223,10 +229,26 @@ function UsuarioModal({
   async function guardar() {
     if (!esEdicion && (!nombre || !email)) { toast.error('Completá nombre y email'); return }
     if (puedeAsignarRoles && seleccion.length === 0) { toast.error('Asigná al menos un rol'); return }
+    if (hayPasswordManual) {
+      if (!nuevaPassword) { toast.error('Ingresá la nueva contraseña'); return }
+      if (nuevaPassword !== confirmarPassword) { toast.error('Las contraseñas no coinciden'); return }
+    }
     setLoading(true)
     try {
-      const bodyEdicion: Record<string, unknown> = { nombre, telefono: telefono || null }
+      const passwordPayload = hayPasswordManual
+        ? { password: nuevaPassword, confirmarPassword, exigirCambioPassword: exigirCambio }
+        : {}
+
+      const bodyEdicion: Record<string, unknown> = { nombre, telefono: telefono || null, ...passwordPayload }
       if (puedeAsignarRoles) bodyEdicion.roles = seleccion
+
+      const bodyAlta: Record<string, unknown> = {
+        nombre,
+        email,
+        telefono: telefono || undefined,
+        roles: seleccion,
+        ...passwordPayload,
+      }
 
       const res = esEdicion
         ? await fetch(`/api/usuarios/${usuario!.id}`, {
@@ -237,7 +259,7 @@ function UsuarioModal({
         : await fetch('/api/usuarios', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nombre, email, telefono: telefono || undefined, roles: seleccion }),
+            body: JSON.stringify(bodyAlta),
           })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(mensajeErrorJson(data, 'No se pudo guardar el usuario'))
@@ -309,21 +331,89 @@ function UsuarioModal({
               </div>
             </div>
 
-            {esEdicion && (
-              <div className="pt-2 border-t border-[#eef0f2]">
-                <p className="text-[11.5px] font-semibold text-[#5b626d] tracking-wide uppercase mb-2">Contraseña</p>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  loading={resettingPass}
-                  onClick={restablecerPassword}
-                >
-                  <KeyRound size={14} className="mr-1.5" />
-                  Generar contraseña temporal
-                </Button>
+            <div className="pt-2 border-t border-[#eef0f2]">
+              <p className="text-[11.5px] font-semibold text-[#5b626d] tracking-wide uppercase mb-1">Contraseña</p>
+              {!esEdicion && (
+                <p className="text-[11.5px] text-[#9aa1ab] mb-2">
+                  Asigná una contraseña permanente o dejá vacío para generar una temporal automáticamente.
+                </p>
+              )}
+              {esEdicion && (
+                <p className="text-[11.5px] text-[#9aa1ab] mb-2">
+                  Dejá los campos vacíos si no querés cambiar la contraseña actual.
+                </p>
+              )}
+
+              <div className="flex flex-col gap-3">
+                <div className="relative">
+                  <Input
+                    label="Nueva contraseña"
+                    type={showPassword ? 'text' : 'password'}
+                    value={nuevaPassword}
+                    onChange={(e) => setNuevaPassword(e.target.value)}
+                    placeholder={esEdicion ? 'Opcional' : 'Opcional — permanente'}
+                    autoComplete="new-password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute right-3 top-[34px] text-[#9aa1ab] hover:text-[#5b626d]"
+                    tabIndex={-1}
+                    aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+                <Input
+                  label="Confirmar contraseña"
+                  type={showPassword ? 'text' : 'password'}
+                  value={confirmarPassword}
+                  onChange={(e) => setConfirmarPassword(e.target.value)}
+                  placeholder="Repetir la contraseña"
+                  autoComplete="new-password"
+                />
+
+                {hayPasswordManual && (
+                  <label className="flex items-start gap-2 text-[12.5px] text-[#3a4150] cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="accent-[#E8650A] mt-0.5"
+                      checked={exigirCambio}
+                      onChange={(e) => setExigirCambio(e.target.checked)}
+                    />
+                    <span>
+                      Exigir cambio en primer acceso
+                      <span className="block text-[11px] text-[#9aa1ab] font-normal mt-0.5">
+                        Si no marcás esta opción, el usuario podrá usar la contraseña asignada de forma permanente.
+                      </span>
+                    </span>
+                  </label>
+                )}
+
+                {esEdicion && (
+                  <>
+                    <div className="flex items-center gap-3 text-[11px] text-[#9aa1ab] uppercase tracking-wide">
+                      <span className="flex-1 h-px bg-[#eef0f2]" />
+                      o
+                      <span className="flex-1 h-px bg-[#eef0f2]" />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      loading={resettingPass}
+                      onClick={restablecerPassword}
+                    >
+                      <KeyRound size={14} className="mr-1.5" />
+                      Generar contraseña temporal
+                    </Button>
+                    <p className="text-[11px] text-[#9aa1ab] -mt-1">
+                      Genera una clave aleatoria y exige cambio en el primer acceso.
+                    </p>
+                  </>
+                )}
               </div>
-            )}
+            </div>
 
             <div className="flex justify-end gap-2 pt-1">
               <Button variant="secondary" onClick={onClose} disabled={loading}>Cancelar</Button>

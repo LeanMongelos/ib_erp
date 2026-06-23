@@ -14,10 +14,18 @@
 
 import { NextResponse } from 'next/server'
 import { withAuth } from 'next-auth/middleware'
+import type { NextRequestWithAuth } from 'next-auth/middleware'
 import { applySecurityHeaders } from '@/lib/security/headers'
 
 export default withAuth(
-  function middleware() {
+  function middleware(req: NextRequestWithAuth) {
+    const exigirCambio = req.nextauth.token?.exigirCambioPassword === true
+    const enPerfil = req.nextUrl.pathname.startsWith('/perfil')
+    if (exigirCambio && !enPerfil) {
+      const destino = new URL('/perfil', req.url)
+      destino.searchParams.set('cambio', '1')
+      return applySecurityHeaders(NextResponse.redirect(destino))
+    }
     return applySecurityHeaders(NextResponse.next())
   },
   { pages: { signIn: '/login' } },

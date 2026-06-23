@@ -139,6 +139,7 @@ function buildAuthOptions(maxAge: number): NextAuthOptions {
             roles,
             permissions,
             avatarUrl: usuario.avatarUrl,
+            exigirCambioPassword: usuario.exigirCambioPassword,
           } as {
             id: string
             name: string
@@ -147,6 +148,7 @@ function buildAuthOptions(maxAge: number): NextAuthOptions {
             roles: string[]
             permissions: string[]
             avatarUrl: string | null
+            exigirCambioPassword: boolean
           }
         },
       }),
@@ -160,11 +162,17 @@ function buildAuthOptions(maxAge: number): NextAuthOptions {
           token.roles       = (user as { roles?: string[] }).roles ?? []
           token.permissions = (user as { permissions?: string[] }).permissions ?? []
           token.avatarUrl   = (user as { avatarUrl?: string | null }).avatarUrl ?? null
+          token.exigirCambioPassword = (user as { exigirCambioPassword?: boolean }).exigirCambioPassword ?? false
         }
         if (trigger === 'update' && session) {
-          const s = session as { name?: string; avatarUrl?: string | null }
+          const s = session as {
+            name?: string
+            avatarUrl?: string | null
+            exigirCambioPassword?: boolean
+          }
           if (s.name !== undefined) token.name = s.name
           if (s.avatarUrl !== undefined) token.avatarUrl = s.avatarUrl
+          if (s.exigirCambioPassword === false) token.exigirCambioPassword = false
         }
         return token
       },
@@ -177,6 +185,7 @@ function buildAuthOptions(maxAge: number): NextAuthOptions {
           session.user.permissions = token.permissions ?? []
           session.user.avatarUrl   = token.avatarUrl ?? null
           session.user.image       = token.avatarUrl ?? undefined
+          session.user.exigirCambioPassword = token.exigirCambioPassword ?? false
         }
         return session
       },

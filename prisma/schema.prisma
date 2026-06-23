@@ -181,9 +181,10 @@ model Usuario {
   rol          Rol       @default(TECNICO) // legado: rol principal. La autorización real usa `roles` (RBAC).
   telefono     String?
   avatarUrl    String?
-  activo       Boolean   @default(true)
-  ultimoAcceso DateTime?
-  creadoEn     DateTime  @default(now())
+  activo               Boolean   @default(true)
+  exigirCambioPassword Boolean   @default(false)
+  ultimoAcceso         DateTime?
+  creadoEn             DateTime  @default(now())
 
   ots   OrdenTrabajo[]
   roles UsuarioRol[]

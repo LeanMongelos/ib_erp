@@ -3,6 +3,10 @@ import { prisma } from '@/lib/prisma'
 import { requirePermission, handleApiError, ApiError } from '@/lib/api-auth'
 import { usuarioUpdateSchema } from '@/lib/validation'
 import { registrarAuditoria, getIp } from '@/lib/audit'
+import {
+  validarConfirmacionPassword,
+  validarYHashearPassword,
+} from '@/lib/usuarios/asignar-password'
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -30,6 +34,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     const body = await req.json()
     const data = usuarioUpdateSchema.parse(body)
+
+    validarConfirmacionPassword(data.password, data.confirmarPassword)
 
     // Cambiar roles requiere permiso específico
     if (data.roles) {
@@ -61,6 +67,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       }
     }
 
+    let passwordUpdate = {}
+    if (data.password) {
+      const passwordHash = await validarYHashearPassword(data.password)
+      passwordUpdate = {
+        password: passwordHash,
+        exigirCambioPassword: data.exigirCambioPassword ?? false,
+      }
+    } else if (data.exigirCambioPassword !== undefined) {
+      passwordUpdate = { exigirCambioPassword: data.exigirCambioPassword }
+    }
+
     const usuario = await prisma.usuario.update({
       where: { id },
       data: {
@@ -68,6 +85,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         ...(data.telefono !== undefined && { telefono: data.telefono }),
         ...(data.activo !== undefined && { activo: data.activo }),
         ...rolesUpdate,
+        ...passwordUpdate,
       },
       select: { id: true, nombre: true, email: true, activo: true },
     })

@@ -20,7 +20,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
 
     await prisma.usuario.update({
       where: { id },
-      data: { password: passwordHash },
+      data: { password: passwordHash, exigirCambioPassword: true },
     })
 
     await registrarAuditoria({

@@ -7,6 +7,10 @@ import { prisma } from '@/lib/prisma'
 import { requirePermission, handleApiError } from '@/lib/api-auth'
 import { usuarioCreateSchema } from '@/lib/validation'
 import { registrarAuditoria, getIp } from '@/lib/audit'
+import {
+  validarConfirmacionPassword,
+  validarYHashearPassword,
+} from '@/lib/usuarios/asignar-password'
 
 export async function GET() {
   try {
@@ -34,7 +38,10 @@ export async function POST(req: NextRequest) {
     const actor = await requirePermission('usuarios.create')
 
     const body = await req.json()
-    const { nombre, email, telefono, roles } = usuarioCreateSchema.parse(body)
+    const { nombre, email, telefono, roles, password, confirmarPassword, exigirCambioPassword } =
+      usuarioCreateSchema.parse(body)
+
+    validarConfirmacionPassword(password, confirmarPassword)
 
     // Validamos que los roles existan
     const rolesDb = await prisma.rolRBAC.findMany({ where: { clave: { in: roles } } })
@@ -42,16 +49,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Uno o más roles no existen' }, { status: 400 })
     }
 
-    // Contraseña temporal de un solo uso (hasta tener el flujo de invitación por email)
-    const passwordTemporal = randomBytes(6).toString('base64url')
-    const passwordHash = await bcrypt.hash(passwordTemporal, 10)
+    let passwordHash: string
+    let passwordTemporal: string | undefined
+    let exigirCambio = false
+
+    if (password) {
+      passwordHash = await validarYHashearPassword(password)
+      exigirCambio = exigirCambioPassword ?? false
+    } else {
+      passwordTemporal = randomBytes(6).toString('base64url')
+      passwordHash = await bcrypt.hash(passwordTemporal, 10)
+      exigirCambio = true
+    }
 
     const usuario = await prisma.usuario.create({
       data: {
         nombre,
         email,
         password: passwordHash,
-        rol: 'TECNICO', // valor legado; la autorización real es por `roles`
+        exigirCambioPassword: exigirCambio,
+        rol: 'TECNICO',
         telefono: telefono ?? null,
         roles: { create: rolesDb.map((r) => ({ rolId: r.id })) },
       },
