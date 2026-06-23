@@ -18,7 +18,7 @@ Los ítems de presupuesto y factura **guardan snapshot** del precio al crear el 
 
 ## Modelo
 
-- `ListaPrecios`: cabecera (código, tipo, moneda, descuento global, vigencia, predeterminada).
+- `ListaPrecios`: cabecera (código, tipo, moneda, ajuste global ±%, vigencia, notas, predeterminada).
 - `ListaPreciosItem`: precio por `inventarioId` + bonificación por ítem.
 - `Cliente`: `listaPreciosId?`, `esMayorista`, `monedaPreferida?`.
 

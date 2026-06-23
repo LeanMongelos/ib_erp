@@ -849,9 +849,10 @@ model ListaPrecios {
   nombre             String
   tipo               TipoListaPrecios
   moneda             String           @default("ARS")
-  descuentoGlobalPct Float            @default(0)
+  ajusteGlobalPct    Float            @default(0) // negativo = descuento, positivo = recargo
   vigenciaDesde      DateTime?
   vigenciaHasta      DateTime?
+  notas              String?
   activo             Boolean          @default(true)
   predeterminada     Boolean          @default(false)
   creadoEn           DateTime         @default(now())

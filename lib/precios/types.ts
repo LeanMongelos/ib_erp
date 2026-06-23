@@ -11,7 +11,21 @@ export interface PrecioResuelto {
   listaPreciosNombre?: string
   listaPreciosTipo?: TipoListaPrecios
   bonificacionPct?: number
-  descuentoGlobalPct?: number
+  ajusteGlobalPct?: number
+}
+
+/** Etiqueta legible para el ajuste global de una lista (descuento o recargo). */
+export function etiquetaAjusteGlobal(pct: number): string {
+  if (pct === 0) return 'Sin ajuste global'
+  if (pct < 0) return `Descuento global ${Math.abs(pct)}%`
+  return `Recargo global ${pct}%`
+}
+
+/** Formato corto con signo: -10%, +5%, 0% */
+export function formatearAjusteGlobal(pct: number): string {
+  if (pct === 0) return '0%'
+  const sign = pct > 0 ? '+' : ''
+  return `${sign}${pct}%`
 }
 
 export const ETIQUETA_ORIGEN_PRECIO: Record<OrigenPrecio, string> = {

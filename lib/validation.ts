@@ -447,9 +447,10 @@ export const listaPreciosCreateSchema = z.object({
   nombre: z.string().trim().min(2, 'El nombre debe tener al menos 2 caracteres').max(120),
   tipo: tipoListaPreciosEnum,
   moneda: monedaDocumentoEnum.default('ARS'),
-  descuentoGlobalPct: z.number().min(0).max(100).default(0),
+  ajusteGlobalPct: z.number().min(-100).max(100).default(0),
   vigenciaDesde: z.coerce.date().optional().nullable(),
   vigenciaHasta: z.coerce.date().optional().nullable(),
+  notas: z.string().trim().max(500).optional().nullable(),
   predeterminada: z.boolean().default(false),
   activo: z.boolean().default(true),
 })

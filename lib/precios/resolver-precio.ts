@@ -16,10 +16,10 @@ function itemVigente(item: ListaPreciosItem, ahora = new Date()): boolean {
   return vigente(item.vigenciaDesde, item.vigenciaHasta, ahora)
 }
 
-function aplicarDescuentos(precioBase: number, item: ListaPreciosItem, lista: ListaPrecios): number {
+function aplicarAjustes(precioBase: number, item: ListaPreciosItem, lista: ListaPrecios): number {
   let precio = precioBase
   if (item.bonificacionPct) precio *= 1 - item.bonificacionPct / 100
-  if (lista.descuentoGlobalPct) precio *= 1 - lista.descuentoGlobalPct / 100
+  if (lista.ajusteGlobalPct) precio *= 1 + lista.ajusteGlobalPct / 100
   return Math.round(precio * 100) / 100
 }
 
@@ -43,7 +43,7 @@ async function cargarListaConItem(listaId: string, inventarioId: string): Promis
 
 function precioDesdeLista(lista: ListaPrecios, item: ListaPreciosItem): PrecioResuelto {
   return {
-    precioUnit: aplicarDescuentos(item.precioUnit, item, lista),
+    precioUnit: aplicarAjustes(item.precioUnit, item, lista),
     moneda: lista.moneda,
     origen: 'LISTA' as OrigenPrecio,
     listaPreciosId: lista.id,
@@ -51,7 +51,7 @@ function precioDesdeLista(lista: ListaPrecios, item: ListaPreciosItem): PrecioRe
     listaPreciosNombre: lista.nombre,
     listaPreciosTipo: lista.tipo,
     bonificacionPct: item.bonificacionPct,
-    descuentoGlobalPct: lista.descuentoGlobalPct,
+    ajusteGlobalPct: lista.ajusteGlobalPct,
   }
 }
 

@@ -11,7 +11,7 @@ import { Select } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { useCan } from '@/components/auth/useCan'
 import { formatMontoMoneda } from '@/lib/moneda'
-import { ETIQUETA_TIPO_LISTA } from '@/lib/precios/types'
+import { ETIQUETA_TIPO_LISTA, etiquetaAjusteGlobal, formatearAjusteGlobal } from '@/lib/precios/types'
 import { mensajeErrorDesconocido, mensajeErrorJson, mensajeErrorRespuesta } from '@/lib/errores'
 
 interface ListaResumen {
@@ -20,7 +20,10 @@ interface ListaResumen {
   nombre: string
   tipo: keyof typeof ETIQUETA_TIPO_LISTA
   moneda: string
-  descuentoGlobalPct: number
+  ajusteGlobalPct: number
+  vigenciaDesde?: string | null
+  vigenciaHasta?: string | null
+  notas?: string | null
   activo: boolean
   predeterminada: boolean
   _count?: { items: number; clientes: number }
@@ -41,6 +44,22 @@ interface ItemLista {
 }
 
 const TIPOS_LISTA = Object.entries(ETIQUETA_TIPO_LISTA).map(([value, label]) => ({ value, label }))
+
+function toDateInputValue(d: string | Date | null | undefined): string {
+  if (!d) return ''
+  const date = typeof d === 'string' ? new Date(d) : d
+  if (Number.isNaN(date.getTime())) return ''
+  return date.toISOString().slice(0, 10)
+}
+
+function formatearVigencia(desde?: string | null, hasta?: string | null): string | null {
+  const d = toDateInputValue(desde)
+  const h = toDateInputValue(hasta)
+  if (!d && !h) return null
+  if (d && h) return `Vigente ${d} → ${h}`
+  if (d) return `Vigente desde ${d}`
+  return `Vigente hasta ${h}`
+}
 
 export function ListasPreciosManager({ inicial }: { inicial: ListaResumen[] }) {
   const router = useRouter()
@@ -179,8 +198,15 @@ export function ListasPreciosManager({ inicial }: { inicial: ListaResumen[] }) {
                     <h3 className="text-[13.5px] font-bold text-[#16181d]">{seleccionada.nombre}</h3>
                   </div>
                   <p className="text-[12px] text-[#6b7280] mt-1">
-                    {seleccionada.codigo} · {ETIQUETA_TIPO_LISTA[seleccionada.tipo]} · Desc. global {seleccionada.descuentoGlobalPct}%
+                    {seleccionada.codigo} · {ETIQUETA_TIPO_LISTA[seleccionada.tipo]} · {etiquetaAjusteGlobal(seleccionada.ajusteGlobalPct)}
                   </p>
+                  {(formatearVigencia(seleccionada.vigenciaDesde, seleccionada.vigenciaHasta) || seleccionada.notas) && (
+                    <p className="text-[11px] text-[#9aa1ab] mt-0.5">
+                      {[formatearVigencia(seleccionada.vigenciaDesde, seleccionada.vigenciaHasta), seleccionada.notas]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </p>
+                  )}
                 </div>
                 {puedeGestionar && (
                   <div className="flex gap-2">
@@ -294,7 +320,10 @@ function ListaModal({
     nombre: lista?.nombre ?? '',
     tipo: lista?.tipo ?? 'MINORISTA',
     moneda: lista?.moneda ?? 'ARS',
-    descuentoGlobalPct: lista?.descuentoGlobalPct != null ? String(lista.descuentoGlobalPct) : '0',
+    ajusteGlobalPct: lista?.ajusteGlobalPct != null ? String(lista.ajusteGlobalPct) : '0',
+    vigenciaDesde: toDateInputValue(lista?.vigenciaDesde),
+    vigenciaHasta: toDateInputValue(lista?.vigenciaHasta),
+    notas: lista?.notas ?? '',
     predeterminada: lista?.predeterminada ?? false,
   })
   const [loading, setLoading] = useState(false)
@@ -303,12 +332,24 @@ function ListaModal({
   async function guardar() {
     setLoading(true)
     try {
+      const ajuste = Number(form.ajusteGlobalPct)
+      if (Number.isNaN(ajuste) || ajuste < -100 || ajuste > 100) {
+        toast.error('El ajuste global debe estar entre -100 y +100')
+        return
+      }
+      if (form.vigenciaDesde && form.vigenciaHasta && form.vigenciaDesde > form.vigenciaHasta) {
+        toast.error('La fecha «vigente hasta» debe ser posterior a «vigente desde»')
+        return
+      }
       const payload = {
         codigo: form.codigo.trim(),
         nombre: form.nombre.trim(),
         tipo: form.tipo,
         moneda: form.moneda,
-        descuentoGlobalPct: Number(form.descuentoGlobalPct) || 0,
+        ajusteGlobalPct: ajuste,
+        vigenciaDesde: form.vigenciaDesde ? new Date(form.vigenciaDesde).toISOString() : null,
+        vigenciaHasta: form.vigenciaHasta ? new Date(form.vigenciaHasta).toISOString() : null,
+        notas: form.notas.trim() || null,
         predeterminada: form.predeterminada,
       }
       const res = await fetch(esEdicion ? `/api/listas-precios/${lista!.id}` : '/api/listas-precios', {
@@ -329,18 +370,53 @@ function ListaModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-      <div className="bg-white rounded-[14px] w-full max-w-md shadow-xl" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-[14px] w-full max-w-lg shadow-xl max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="px-5 py-4 border-b border-[#eef0f2]">
           <h3 className="text-[14px] font-bold">{esEdicion ? 'Editar lista' : 'Nueva lista de precios'}</h3>
+          <p className="text-[11.5px] text-[#7c828c] mt-1">
+            Definí canal, moneda y ajuste global sobre los precios por ítem.
+          </p>
         </div>
-        <div className="p-5 grid grid-cols-2 gap-3">
+        <div className="p-5 grid grid-cols-2 gap-3 overflow-y-auto">
           <Input label="Código" value={form.codigo} disabled={esEdicion} onChange={(e) => set('codigo', e.target.value)} placeholder="MIN-ARS" />
           <Select label="Moneda" value={form.moneda} onChange={(e) => set('moneda', e.target.value)} options={[{ value: 'ARS', label: 'ARS' }, { value: 'USD', label: 'USD' }]} />
           <div className="col-span-2">
             <Input label="Nombre" value={form.nombre} onChange={(e) => set('nombre', e.target.value)} placeholder="Lista minorista ARS" />
           </div>
-          <Select label="Tipo" value={form.tipo} onChange={(e) => set('tipo', e.target.value)} options={TIPOS_LISTA} />
-          <Input label="Desc. global %" type="number" value={form.descuentoGlobalPct} onChange={(e) => set('descuentoGlobalPct', e.target.value)} />
+          <Select label="Tipo de lista" value={form.tipo} onChange={(e) => set('tipo', e.target.value)} options={TIPOS_LISTA} />
+          <div>
+            <Input
+              label="Ajuste global (%)"
+              type="number"
+              min={-100}
+              max={100}
+              step="0.01"
+              value={form.ajusteGlobalPct}
+              onChange={(e) => set('ajusteGlobalPct', e.target.value)}
+              placeholder="0"
+            />
+            <p className="text-[10.5px] text-[#9aa1ab] mt-1">
+              Negativo = descuento · Positivo = recargo. Ej: -10 descuento, +5 recargo.
+              {form.ajusteGlobalPct && Number(form.ajusteGlobalPct) !== 0 && (
+                <span className="font-semibold text-[#6b7280]"> → {formatearAjusteGlobal(Number(form.ajusteGlobalPct))}</span>
+              )}
+            </p>
+          </div>
+          <Input label="Vigente desde" type="date" value={form.vigenciaDesde} onChange={(e) => set('vigenciaDesde', e.target.value)} />
+          <Input label="Vigente hasta" type="date" value={form.vigenciaHasta} onChange={(e) => set('vigenciaHasta', e.target.value)} />
+          <div className="col-span-2">
+            <label className="text-[11.5px] font-semibold text-[#5b626d] tracking-wide uppercase block mb-1.5">
+              Observaciones
+            </label>
+            <textarea
+              value={form.notas}
+              onChange={(e) => set('notas', e.target.value)}
+              rows={3}
+              maxLength={500}
+              placeholder="Notas internas: condiciones comerciales, acuerdos, restricciones…"
+              className="w-full bg-white border border-[#e4e7eb] rounded-[9px] px-3 py-2.5 text-[13px] text-[#1f242c] placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#E8650A]/40 focus:border-[#E8650A] resize-y min-h-[72px]"
+            />
+          </div>
           <label className="col-span-2 flex items-center gap-2 text-[12.5px] text-[#3a4150] cursor-pointer">
             <input type="checkbox" checked={form.predeterminada} onChange={(e) => set('predeterminada', e.target.checked)} />
             Predeterminada para su tipo y moneda
