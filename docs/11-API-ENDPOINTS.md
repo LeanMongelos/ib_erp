@@ -105,6 +105,7 @@ Usado por `SucursalUbicacionFields` y `SucursalRapidaModal` al validar direcció
 | Método | Ruta | Permiso | Descripción |
 |--------|------|---------|-------------|
 | GET | `/api/cobranzas` | `cobranzas.read` | Listar pagos |
+| GET | `/api/cobranzas/pagos` | `cobranzas.read` | Listar pagos (paginado; filtros: `clienteId`, `referencia`, `fechaDesde`, `fechaHasta`, `page`, `limit`) |
 | POST | `/api/cobranzas` | `cobranzas.register_payment` | Registrar pago |
 | GET | `/api/cobranzas/vencimientos` | `cobranzas.read` | Vencimientos |
 
