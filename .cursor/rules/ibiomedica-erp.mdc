@@ -1,0 +1,32 @@
+---
+description: Reglas obligatorias para agentes de IA en iBiomédica ERP. Leer docs/AI-MASTER.md antes de cualquier cambio.
+alwaysApply: true
+---
+
+# iBiomédica ERP — Reglas para IA
+
+**Antes de editar código:** leer [`docs/AI-MASTER.md`](docs/AI-MASTER.md) y [`AGENTS.md`](AGENTS.md).
+
+## No negociable
+
+1. Cambios mínimos — no refactorizar fuera del alcance.
+2. Toda API: `requirePermission` + `handleApiError`.
+3. Nunca importar `lib/prisma`, `lib/storage`, `lib/api-auth` en `'use client'`.
+4. Prisma solo vía `lib/prisma.ts`; tras schema change: migración + generate.
+5. UI y errores en español (`lib/errores.ts`).
+6. No commitear `.env`, `storage/`, `.next/`.
+7. Clientes UI = rutas `/crm/*` (no `/clientes/*`).
+
+## Docs canónicos
+
+| Tema | Archivo |
+|------|---------|
+| Flujos E2E | `docs/00-SISTEMA-PUNTA-A-PUNTA.md` |
+| Infra | `docs/00-INFRAESTRUCTURA.md` |
+| Evitar duplicados | `docs/00-INDICE-CANONICO.md` |
+| Permisos | `lib/rbac.ts` |
+| Modelo datos | `prisma/schema.prisma` |
+
+## Verificar antes de terminar
+
+`npx tsc --noEmit` · permiso RBAC · no server en client · doc canónico actualizado si cambió contrato.
