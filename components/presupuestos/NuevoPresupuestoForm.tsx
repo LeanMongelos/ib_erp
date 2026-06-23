@@ -330,6 +330,8 @@ export function NuevoPresupuestoForm({ clientes, emisores, clienteEventualId, cl
           <div className="flex flex-col sm:flex-row gap-2 sm:items-center w-full sm:w-auto">
             <InventarioPicker
               className="w-full sm:w-72"
+              clienteId={clienteId || undefined}
+              monedaDocumento={moneda}
               onSelect={(item: InventarioOption | null) => {
                 if (!item) return
                 const itemMoneda = (item.moneda ?? 'ARS') as MonedaDocumento

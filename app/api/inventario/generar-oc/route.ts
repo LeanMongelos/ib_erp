@@ -29,12 +29,12 @@ export async function POST(req: NextRequest) {
 
     for (const f of faltantes) {
       const prod = productosProv.find((p) => p.inventarioId === f.id)
-      const costo = prod?.costo ?? Number(f.precioUnit ?? 0)
+      if (!prod?.costo) continue
       items.push({
         inventarioId: f.id,
         descripcion: f.nombre,
         cantidad: f.faltante,
-        precioUnit: costo,
+        precioUnit: prod.costo,
       })
     }
 

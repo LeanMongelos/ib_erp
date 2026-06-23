@@ -163,6 +163,14 @@ enum EstadoOrdenCompra {
   CANCELADA
 }
 
+enum TipoListaPrecios {
+  MINORISTA
+  MAYORISTA
+  INSTITUCIONAL
+  PROMOCION
+  ESPECIAL
+}
+
 // ============ MODELOS ============
 
 model Usuario {
@@ -342,6 +350,12 @@ model Cliente {
 
   alicuotaIvaId String?
   alicuotaIva   AlicuotaIva? @relation(fields: [alicuotaIvaId], references: [id])
+
+  // Listas de precios comerciales (Fase 1)
+  listaPreciosId  String?
+  listaPrecios    ListaPrecios? @relation(fields: [listaPreciosId], references: [id])
+  esMayorista     Boolean       @default(false)
+  monedaPreferida String?
 
   equipos      Equipo[]
   ots          OrdenTrabajo[]
@@ -822,10 +836,46 @@ model Inventario {
   itemsPresupuesto ItemPresupuesto[]
   kitComoEquipo    InventarioKitItem[] @relation("KitEquipoPadre")
   kitComoIncluido  InventarioKitItem[] @relation("KitEquipoHijo")
+  itemsListaPrecios ListaPreciosItem[]
 
   alicuotaIva AlicuotaIva? @relation(fields: [alicuotaIvaId], references: [id])
 
   @@map("inventario")
+}
+
+model ListaPrecios {
+  id                 String           @id @default(cuid())
+  codigo             String           @unique
+  nombre             String
+  tipo               TipoListaPrecios
+  moneda             String           @default("ARS")
+  descuentoGlobalPct Float            @default(0)
+  vigenciaDesde      DateTime?
+  vigenciaHasta      DateTime?
+  activo             Boolean          @default(true)
+  predeterminada     Boolean          @default(false)
+  creadoEn           DateTime         @default(now())
+
+  items    ListaPreciosItem[]
+  clientes Cliente[]
+
+  @@map("listas_precios")
+}
+
+model ListaPreciosItem {
+  id              String    @id @default(cuid())
+  listaPreciosId  String
+  inventarioId    String
+  precioUnit      Float
+  bonificacionPct Float     @default(0)
+  vigenciaDesde   DateTime?
+  vigenciaHasta   DateTime?
+
+  listaPrecios ListaPrecios @relation(fields: [listaPreciosId], references: [id], onDelete: Cascade)
+  inventario   Inventario   @relation(fields: [inventarioId], references: [id])
+
+  @@unique([listaPreciosId, inventarioId])
+  @@map("lista_precios_items")
 }
 
 model InventarioKitItem {

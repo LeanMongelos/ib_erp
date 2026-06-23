@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Package, Search } from 'lucide-react'
 import { formatMontoMoneda } from '@/lib/moneda'
+import { etiquetaOrigenPrecio, type OrigenPrecio } from '@/lib/precios/types'
 
 export interface InventarioOption {
   id: string
@@ -20,6 +21,8 @@ export interface InventarioOption {
   marca: string | null
   modelo: string | null
   alicuotaIva?: { porcentaje: number } | null
+  precioOrigen?: OrigenPrecio
+  precioOrigenEtiqueta?: string
 }
 
 interface Props {
@@ -27,6 +30,8 @@ interface Props {
   placeholder?: string
   className?: string
   disabled?: boolean
+  clienteId?: string
+  monedaDocumento?: string
 }
 
 export function InventarioPicker({
@@ -34,11 +39,15 @@ export function InventarioPicker({
   placeholder = 'Buscar en inventario (nombre o SKU)…',
   className,
   disabled,
+  clienteId,
+  monedaDocumento = 'ARS',
 }: Props) {
   const [q, setQ] = useState('')
   const [items, setItems] = useState<InventarioOption[]>([])
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [resolviendo, setResolviendo] = useState(false)
+  const [ultimoOrigen, setUltimoOrigen] = useState<string | null>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -48,6 +57,10 @@ export function InventarioPicker({
     document.addEventListener('mousedown', onDoc)
     return () => document.removeEventListener('mousedown', onDoc)
   }, [])
+
+  useEffect(() => {
+    setUltimoOrigen(null)
+  }, [clienteId, monedaDocumento])
 
   useEffect(() => {
     if (q.trim().length < 2) {
@@ -71,11 +84,38 @@ export function InventarioPicker({
     return () => window.clearTimeout(t)
   }, [q])
 
-  function elegir(item: InventarioOption) {
-    onSelect(item)
-    setQ('')
-    setOpen(false)
-    setItems([])
+  async function resolverPrecioItem(item: InventarioOption): Promise<InventarioOption> {
+    if (!clienteId) return item
+    const params = new URLSearchParams({
+      inventarioId: item.id,
+      moneda: monedaDocumento,
+      clienteId,
+    })
+    const res = await fetch(`/api/precios/resolver?${params}`, { credentials: 'include' })
+    if (!res.ok) return item
+    const data = await res.json()
+    const etiqueta = etiquetaOrigenPrecio(data)
+    return {
+      ...item,
+      precioUnit: data.precioUnit,
+      moneda: data.moneda,
+      precioOrigen: data.origen,
+      precioOrigenEtiqueta: etiqueta,
+    }
+  }
+
+  async function elegir(item: InventarioOption) {
+    setResolviendo(true)
+    try {
+      const resuelto = await resolverPrecioItem(item)
+      setUltimoOrigen(resuelto.precioOrigenEtiqueta ?? null)
+      onSelect(resuelto)
+      setQ('')
+      setOpen(false)
+      setItems([])
+    } finally {
+      setResolviendo(false)
+    }
   }
 
   return (
@@ -85,17 +125,22 @@ export function InventarioPicker({
         <input
           type="text"
           value={q}
-          disabled={disabled}
+          disabled={disabled || resolviendo}
           onChange={(e) => {
             setQ(e.target.value)
             setOpen(true)
           }}
           onFocus={() => setOpen(true)}
-          placeholder={placeholder}
+          placeholder={resolviendo ? 'Resolviendo precio…' : placeholder}
           className="flex-1 text-[12px] bg-transparent outline-none placeholder:text-[#9aa1ab] min-w-0"
         />
         <Search size={13} className="text-[#9aa1ab] shrink-0" />
       </div>
+      {ultimoOrigen && (
+        <span className="inline-flex mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#FFF1E2] text-[#C4540A]">
+          {ultimoOrigen}
+        </span>
+      )}
       {open && q.trim().length >= 2 && (
         <div className="absolute z-30 top-full left-0 right-0 mt-1 bg-white border border-[#e4e7eb] rounded-[9px] shadow-lg max-h-52 overflow-y-auto">
           {loading && (
@@ -116,6 +161,7 @@ export function InventarioPicker({
                 {item.sku ? `SKU ${item.sku} · ` : ''}
                 Stock {item.stock}
                 {item.precioUnit != null ? ` · ${formatMontoMoneda(item.precioUnit, item.moneda ?? 'ARS')}` : ''}
+                {clienteId ? ' · precio sugerido al elegir' : ''}
               </p>
             </button>
           ))}

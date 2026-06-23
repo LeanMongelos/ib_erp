@@ -5,7 +5,7 @@ import { Header } from '@/components/layout/Header'
 import { Card } from '@/components/ui/card'
 import { useCan } from '@/components/auth/useCan'
 import {
-  Users, Building2, FileText, Plug, Boxes, Bell, Shield, History, ChevronRight, Settings, Terminal,
+  Users, Building2, FileText, Plug, Boxes, Bell, Shield, History, ChevronRight, Settings, Terminal, Tag,
 } from 'lucide-react'
 
 interface Item {
@@ -23,6 +23,7 @@ const ITEMS: Item[] = [
   { href: '/configuracion/emisores', titulo: 'Emisores / AFIP', desc: 'CUITs, puntos de venta y certificados', icon: Building2, permiso: 'emisores.read', disponible: true },
   { href: '/configuracion/plantillas', titulo: 'Plantillas de impresión', desc: 'Factura, presupuesto y remito editables', icon: FileText, permiso: 'config.manage_billing_templates', disponible: true },
   { href: '/configuracion/integraciones', titulo: 'Integraciones', desc: 'WhatsApp, Instagram, Facebook, correo y n8n', icon: Plug, permiso: 'config.manage_integrations', disponible: true },
+  { href: '/configuracion/listas-precios', titulo: 'Listas de precios', desc: 'Minorista, mayorista e ítems por producto', icon: Tag, permiso: 'listas_precios.read', disponible: true },
   { href: '/configuracion/catalogos', titulo: 'Catálogos / Maestros', desc: 'Categorías, depósitos, condiciones de pago', icon: Boxes, permiso: 'config.update', disponible: true },
   { href: '/configuracion/notificaciones', titulo: 'Notificaciones', desc: 'Plantillas y reglas de aviso', icon: Bell, permiso: 'config.update', disponible: true },
   { href: '/configuracion/seguridad', titulo: 'Seguridad', desc: 'Contraseñas, 2FA y sesiones', icon: Shield, permiso: 'config.update', disponible: true },

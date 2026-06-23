@@ -44,6 +44,7 @@ Componentes clave: `SucursalesEditor`, `ClienteHistorialInbox`, `InboxPanel`, `N
 | `/presupuestos` | `/api/presupuestos*` | — | `presupuestos.*` |
 | `/facturacion` | `/api/facturas` | — | `facturas.read` |
 | `/facturacion/nueva` | `POST /api/facturas` | `lib/facturas/validar-sucursal-equipo.ts` | `facturas.create` |
+| Picker precio sugerido | `GET /api/precios/resolver` | `lib/precios/resolver-precio.ts` | `presupuestos.read` o `facturas.read` |
 | Emitir AFIP | `POST .../emitir` | `lib/afip/` | `facturas.emit_afip` |
 | `/cobranzas` | `/api/cobranzas*` | `lib/cobranzas/` | `cobranzas.*` |
 
@@ -78,6 +79,7 @@ Componentes clave: `SucursalesEditor`, `ClienteHistorialInbox`, `InboxPanel`, `N
 | `/configuracion/usuarios` | `/api/usuarios`, `/api/roles` | `lib/rbac.ts` | `usuarios.*` |
 | `/configuracion/emisores` | `/api/emisores*` | `lib/afip/` | `emisores.*` |
 | `/configuracion/plantillas` | `/api/plantillas*` | `lib/plantillas/` | `config.manage_billing_templates` |
+| `/configuracion/listas-precios` | `/api/listas-precios*` | `lib/precios/` | `listas_precios.read` / `manage` |
 | `/configuracion/integraciones` | `/api/integraciones/*` | `lib/integraciones/` | `config.manage_integrations` |
 | `/configuracion/contabilidad` | `/api/contabilidad/*` | contabilidad AR | `config.manage_accounting` |
 | `/configuracion/auditoria` | `GET /api/auditoria` | `lib/audit.ts` | `auditoria.read` |

@@ -107,6 +107,9 @@ export const PERMISSIONS: Permiso[] = [
   { clave: 'auditoria.read', modulo: 'auditoria', descripcion: 'Ver auditoría' },
   // Logs del sistema
   { clave: 'logs.read', modulo: 'logs', descripcion: 'Ver logs de errores del sistema' },
+  // Listas de precios
+  { clave: 'listas_precios.read',   modulo: 'listas_precios', descripcion: 'Ver listas de precios' },
+  { clave: 'listas_precios.manage', modulo: 'listas_precios', descripcion: 'Gestionar listas de precios' },
 ]
 
 export const ROLE_DEFS: Record<string, string> = {
@@ -148,6 +151,8 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     'config.update',
     'auditoria.read',
     'logs.read',
+    'listas_precios.read',
+    'listas_precios.manage',
   ],
 
   ADMINISTRACION: [
@@ -174,6 +179,7 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     'presupuestos.read', 'presupuestos.create', 'presupuestos.update', 'presupuestos.send',
     'facturas.read', 'facturas.create',
     'inventario.read',
+    'listas_precios.read',
     'compras.read', 'compras.create',
     'servicio.read', 'servicio.create', 'servicio.update', 'servicio.assign',
     'preventivo.read', 'preventivo.schedule',
@@ -187,6 +193,7 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     'clientes.read',
     'presupuestos.read',
     'facturas.read', 'facturas.create', 'facturas.emit_afip', 'facturas.cancel', 'facturas.credit_note', 'facturas.export',
+    'listas_precios.read',
     'cobranzas.read', 'cobranzas.register_payment', 'cobranzas.reconcile',
     'crm.read', 'crm.reply',
     'reportes.read_financiero', 'reportes.read_fiscal',

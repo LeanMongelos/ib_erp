@@ -47,6 +47,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         ...data,
         ...(data.email !== undefined && { email: data.email || null }),
         ...(data.alicuotaIvaId !== undefined && { alicuotaIvaId: data.alicuotaIvaId }),
+        ...(data.listaPreciosId !== undefined && { listaPreciosId: data.listaPreciosId }),
+        ...(data.esMayorista !== undefined && { esMayorista: data.esMayorista }),
+        ...(data.monedaPreferida !== undefined && { monedaPreferida: data.monedaPreferida }),
       },
     })
 

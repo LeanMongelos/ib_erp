@@ -65,6 +65,9 @@ const clienteFieldsSchema = z.object({
   sitioWeb:      z.string().trim().max(200).optional(),
   notas:         z.string().trim().max(1000).optional(),
   alicuotaIvaId: z.string().min(1).optional().nullable(),
+  listaPreciosId: z.string().min(1).optional().nullable(),
+  esMayorista: z.boolean().optional(),
+  monedaPreferida: z.enum(['ARS', 'USD']).optional().nullable(),
   sucursales:    z.array(sucursalClienteSchema).optional(),
 })
 
@@ -431,4 +434,39 @@ export const eventoTrackingCreateSchema = z.object({
   nota: z.string().trim().max(500).optional(),
   otId: z.string().min(1).optional().nullable(),
   fecha: z.coerce.date().optional(),
+})
+
+// ============ LISTAS DE PRECIOS ============
+
+export const tipoListaPreciosEnum = z.enum([
+  'MINORISTA', 'MAYORISTA', 'INSTITUCIONAL', 'PROMOCION', 'ESPECIAL',
+])
+
+export const listaPreciosCreateSchema = z.object({
+  codigo: z.string().trim().min(2, 'El código debe tener al menos 2 caracteres').max(20),
+  nombre: z.string().trim().min(2, 'El nombre debe tener al menos 2 caracteres').max(120),
+  tipo: tipoListaPreciosEnum,
+  moneda: monedaDocumentoEnum.default('ARS'),
+  descuentoGlobalPct: z.number().min(0).max(100).default(0),
+  vigenciaDesde: z.coerce.date().optional().nullable(),
+  vigenciaHasta: z.coerce.date().optional().nullable(),
+  predeterminada: z.boolean().default(false),
+  activo: z.boolean().default(true),
+})
+
+export const listaPreciosUpdateSchema = listaPreciosCreateSchema.partial()
+
+export const listaPreciosItemSchema = z.object({
+  inventarioId: z.string().min(1),
+  precioUnit: z.number().nonnegative('El precio no puede ser negativo'),
+  bonificacionPct: z.number().min(0).max(100).default(0),
+  vigenciaDesde: z.coerce.date().optional().nullable(),
+  vigenciaHasta: z.coerce.date().optional().nullable(),
+})
+
+export const listaPreciosItemUpdateSchema = z.object({
+  precioUnit: z.number().nonnegative().optional(),
+  bonificacionPct: z.number().min(0).max(100).optional(),
+  vigenciaDesde: z.coerce.date().optional().nullable(),
+  vigenciaHasta: z.coerce.date().optional().nullable(),
 })

@@ -770,6 +770,10 @@ async function main() {
   })
   console.log('✅ Equipo demo MON-PAT-001 con kit de venta')
 
+  const { seedListasPrecios } = await import('../lib/precios/seed-listas-precios')
+  const listas = await seedListasPrecios(prisma)
+  console.log(`✅ Listas de precios seed (${listas.items} ítems en MIN-ARS / MAY-ARS)`)
+
   const { seedEmbudoIfEmpty } = await import('../lib/crm/embudo-seed')
   const embudoCount = await seedEmbudoIfEmpty(prisma)
   if (embudoCount > 0) console.log(`✅ ${embudoCount} negocios de ejemplo en embudo CRM`)

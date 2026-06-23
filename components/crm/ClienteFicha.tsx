@@ -26,6 +26,7 @@ import {
 } from '@/lib/clientes-metrics'
 import type { Cliente, Equipo, Factura, ContactoCliente } from '@/types'
 import { ClienteSucursalesPanel } from '@/components/crm/ClienteSucursalesPanel'
+import { ClientePreciosPanel } from '@/components/crm/ClientePreciosPanel'
 
 function BadgeEquipo({ estado }: { estado: string }) {
   const map: Record<string, { bg: string; text: string; label: string }> = {
@@ -289,6 +290,14 @@ export function ClienteFicha({
                   </div>
                 )}
                 </div>
+                <ClientePreciosPanel
+                  clienteId={cliente.id}
+                  listaPreciosId={(cliente as ClienteCompleto & { listaPreciosId?: string | null }).listaPreciosId}
+                  esMayorista={(cliente as ClienteCompleto & { esMayorista?: boolean }).esMayorista}
+                  monedaPreferida={(cliente as ClienteCompleto & { monedaPreferida?: string | null }).monedaPreferida}
+                  puedeEditar={puedeEditar}
+                  onSaved={() => router.refresh()}
+                />
                 <ClienteSucursalesPanel clienteId={cliente.id} puedeEditar={puedeEditar} />
               </div>
             )}

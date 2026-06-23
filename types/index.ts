@@ -49,6 +49,9 @@ export interface Cliente {
   notas?: string | null
   alicuotaIvaId?: string | null
   alicuotaIva?: { id: string; nombre: string; porcentaje: number } | null
+  listaPreciosId?: string | null
+  esMayorista?: boolean
+  monedaPreferida?: string | null
   _count?: {
     equipos: number
     ots: number
