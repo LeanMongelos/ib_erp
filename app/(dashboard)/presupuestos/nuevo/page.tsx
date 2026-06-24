@@ -8,6 +8,7 @@ import {
   ordenarClientesConEventual,
 } from '@/lib/clientes/eventual'
 import { requirePagePermission } from '@/lib/page-guard'
+import { obtenerPlantillaPredeterminadaResumen } from '@/lib/plantillas/resolver-plantilla'
 
 export default async function NuevoPresupuestoPage({
   searchParams,
@@ -63,6 +64,7 @@ export default async function NuevoPresupuestoPage({
   ])
 
   const clientes = ordenarClientesConEventual(clientesRaw, clienteEventual.id)
+  const plantillaPresupuesto = await obtenerPlantillaPredeterminadaResumen('PRESUPUESTO')
 
   const subtitle = ot
     ? `Desde OT ${ot.numero} · ${ot.descripcion.slice(0, 60)}`
@@ -78,6 +80,7 @@ export default async function NuevoPresupuestoPage({
           clienteEventualId={clienteEventual.id}
           clienteInicialId={clienteIdParam ?? ot?.clienteId ?? ''}
           otPrefill={ot ? plain(ot) : null}
+          plantillaPresupuesto={plain(plantillaPresupuesto)}
         />
       </div>
     </>
