@@ -139,6 +139,21 @@ async function main() {
     }
   }
 
+  // --- Snapshots plantilla (docs recientes) ---
+  try {
+    const [sinPlantillaFacturas, sinPlantillaPresup] = await Promise.all([
+      prisma.factura.count({ where: { plantillaId: null } }),
+      prisma.presupuesto.count({ where: { plantillaId: null } }),
+    ])
+    if (sinPlantillaFacturas === 0 && sinPlantillaPresup === 0) {
+      pass('Todos los documentos tienen plantillaId (snapshot)')
+    } else {
+      note(`${sinPlantillaFacturas} factura(s) y ${sinPlantillaPresup} presupuesto(s) sin plantillaId — correr backfill`)
+    }
+  } catch (e) {
+    fail('Conteo plantillaId', e)
+  }
+
   // --- Validación sucursal equipo ---
   try {
     const equipoInv = await prisma.inventario.findFirst({ where: { tipoArticulo: 'EQUIPO' }, select: { id: true, nombre: true } })

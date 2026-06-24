@@ -4,6 +4,8 @@ import { prisma } from '@/lib/prisma'
 import { requirePermission, handleApiError, ApiError } from '@/lib/api-auth'
 import { itemFacturaSchema } from '@/lib/validation'
 import { calcularTotales } from '@/lib/documentos'
+import { validarSucursalesInstalacionEquipo } from '@/lib/facturas/validar-sucursal-equipo'
+import { datosItemsFacturaCreate } from '@/lib/facturas/datos-items-factura'
 import { plain } from '@/lib/serialize'
 import { registrarAuditoria, getIp } from '@/lib/audit'
 
@@ -63,23 +65,26 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
 
     if (data.items) {
+      await validarSucursalesInstalacionEquipo(actual.clienteId, data.items)
+
       const bonif = data.bonificacionPct ?? Number(actual.bonificacionPct)
-      const { itemsCalculados, subtotal, iva, total } = calcularTotales(data.items, bonif)
+      const { itemsCalculados, subtotal, iva, total } = calcularTotales(
+        data.items,
+        bonif,
+        actual.alicuotaIvaPct ?? 21,
+      )
       updateData = { ...updateData, subtotal, iva, total, bonificacionPct: bonif }
       await prisma.itemFactura.deleteMany({ where: { facturaId: id } })
       await prisma.itemFactura.createMany({
-        data: itemsCalculados.map((i) => ({
-          facturaId: id,
-          codigo: i.codigo ?? null,
-          descripcion: i.descripcion,
-          descripcionLarga: i.descripcionLarga ?? null,
-          fotoUrl: i.fotoUrl || null,
-          cantidad: i.cantidad,
-          precioUnit: i.precioUnit,
-          bonificacionPct: i.bonificacionPct ?? 0,
-          subtotal: i.subtotal,
-          inventarioId: i.inventarioId ?? null,
-        })),
+        data: datosItemsFacturaCreate(
+          id,
+          itemsCalculados,
+          data.items.map((i) => ({
+            numeroSerie: i.numeroSerie,
+            proximoPreventivo: i.proximoPreventivo,
+            sucursalInstalacionId: i.sucursalInstalacionId,
+          })),
+        ),
       })
     }
 

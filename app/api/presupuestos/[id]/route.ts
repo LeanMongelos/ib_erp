@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requirePermission, handleApiError, ApiError } from '@/lib/api-auth'
 import { presupuestoUpdateSchema } from '@/lib/validation'
-import { calcularTotales } from '@/lib/documentos'
+import { calcularTotalesPresupuesto } from '@/lib/presupuestos/calcular-total-presupuesto'
 import { plain } from '@/lib/serialize'
 import { registrarAuditoria, getIp } from '@/lib/audit'
 import { resolverCotizacionUsdDocumento, CotizacionUsdFaltanteError } from '@/lib/moneda'
@@ -78,11 +78,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       if (!['BORRADOR', 'ENVIADO'].includes(actual.estado)) {
         throw new ApiError(400, 'Solo se pueden editar ítems en presupuestos BORRADOR o ENVIADO')
       }
-      const { itemsCalculados, subtotal, iva, total } = calcularTotales(
-        items,
-        actual.bonificacionPct ?? 0,
-        actual.alicuotaIvaPct ?? 21,
-      )
+      const { itemsCalculados, subtotal, iva, interesFinanciacion, total } =
+        calcularTotalesPresupuesto({
+          items,
+          bonificacionPct: actual.bonificacionPct ?? 0,
+          alicuotaIvaPct: actual.alicuotaIvaPct ?? 21,
+          condicionPago: actual.condicionPago,
+          tasaFinanciacionPct: actual.tasaFinanciacionPct ?? 0,
+        })
       const p = await prisma.$transaction(async (tx) => {
         await tx.itemPresupuesto.deleteMany({ where: { presupuestoId: id } })
         return tx.presupuesto.update({
@@ -95,6 +98,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
               : {}),
             subtotal,
             iva,
+            interesFinanciacion,
             total,
             items: {
               create: itemsCalculados.map((i) => ({

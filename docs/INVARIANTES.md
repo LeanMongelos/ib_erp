@@ -18,6 +18,7 @@ Documento de referencia para desarrollo, code review y agentes. Si un cambio vio
 | ID | Invariante | Resolvedor | Test |
 |----|------------|------------|------|
 | Pr1 | Presupuesto **no** exige `sucursalInstalacionId`; la sucursal se valida al **facturar** (F2) | `itemPresupuestoSchema` | `npm run test:validaciones` |
+| Pr2 | Total presupuesto = subtotal + IVA + interés (POST y PATCH usan `calcularTotalesPresupuesto`) | `lib/presupuestos/calcular-total-presupuesto.ts` | `npm run test:validaciones` |
 
 ## Clientes
 
@@ -31,6 +32,7 @@ Documento de referencia para desarrollo, code review y agentes. Si un cambio vio
 |----|------------|------------|------|
 | F1 | Totales siempre desde `calcularTotales` (API); la UI no es fuente de verdad | `lib/documentos.ts` | — |
 | F2 | Validación sucursal para equipos: misma regla UI ↔ API (`tipoArticulo === 'EQUIPO'`) | `lib/facturas/equipo-instalacion-client.ts` | `npm run test:validaciones` |
+| F2b | PATCH factura con ítems valida equipos y persiste sucursal/serie | `validar-sucursal-equipo.ts` + `datos-items-factura.ts` | — |
 | F3 | Emisión AFIP vía `procesarEmisionFactura`; no duplicar lógica CAE en routes | `lib/afip/emitir.ts` | — |
 | F4 | PDF factura incluye `moneda` y `cotizacionUsd` en `buildDatosFactura` | `lib/plantillas/build-datos.ts` | — |
 | F5 | Documento USD exige cotización: mismo mensaje UI ↔ API | `lib/moneda-documento-client.ts` | `npm run test:validaciones` |

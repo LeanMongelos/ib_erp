@@ -2,14 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAuth, requirePermission, handleApiError, ApiError } from '@/lib/api-auth'
 import { presupuestoCreateSchema } from '@/lib/validation'
-import { calcularTotales } from '@/lib/documentos'
+import { calcularTotalesPresupuesto } from '@/lib/presupuestos/calcular-total-presupuesto'
+import { formatCondicionPago, parsePlazosCobranza } from '@/lib/cobranzas/plazos'
+import { resolverPlantillaIdEmision } from '@/lib/plantillas/resolver-plantilla'
+import { resolverCotizacionUsdDocumento, CotizacionUsdFaltanteError } from '@/lib/moneda'
 import { siguienteNumeroPresupuesto, crearConNumeroUnico } from '@/lib/sequences'
 import { plain } from '@/lib/serialize'
 import { registrarAuditoria, getIp } from '@/lib/audit'
-import { parsePlazosCobranza, formatCondicionPago } from '@/lib/cobranzas/plazos'
-import { calcularInteresFinanciacion } from '@/lib/cobranzas/financiacion'
-import { resolverPlantillaIdEmision } from '@/lib/plantillas/resolver-plantilla'
-import { resolverCotizacionUsdDocumento, CotizacionUsdFaltanteError } from '@/lib/moneda'
 
 export async function GET(req: NextRequest) {
   try {
@@ -55,24 +54,28 @@ export async function POST(req: NextRequest) {
       emisorId = def?.id ?? null
     }
 
-    const { itemsCalculados, subtotal, iva, alicuotaIvaPct } = calcularTotales(
-      data.items,
-      data.bonificacionPct ?? 0,
-      data.alicuotaIvaPct ?? 21,
-    )
+    const {
+      itemsCalculados,
+      subtotal,
+      iva,
+      interesFinanciacion,
+      total,
+      alicuotaIvaPct,
+      plazos,
+    } = calcularTotalesPresupuesto({
+      items: data.items,
+      bonificacionPct: data.bonificacionPct,
+      alicuotaIvaPct: data.alicuotaIvaPct,
+      plazosCobranza: data.plazosCobranza,
+      condicionPago: data.condicionPago,
+      tasaFinanciacionPct: data.tasaFinanciacionPct,
+      interesFinanciacion: data.interesFinanciacion,
+    })
 
-    const plazos =
-      data.plazosCobranza?.length
-        ? parsePlazosCobranza(data.plazosCobranza)
-        : parsePlazosCobranza(data.condicionPago)
     const condicionPago =
       data.condicionPago?.trim() ||
       (plazos.length > 0 ? formatCondicionPago(plazos) : null)
     const tasaFinanciacionPct = data.tasaFinanciacionPct ?? 0
-    const interesFinanciacion =
-      data.interesFinanciacion ??
-      calcularInteresFinanciacion(subtotal + iva, plazos, tasaFinanciacionPct)
-    const total = subtotal + iva + interesFinanciacion
 
     const moneda = data.moneda ?? 'ARS'
     let cotizacionUsd: number | null = null

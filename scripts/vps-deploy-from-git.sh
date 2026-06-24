@@ -55,6 +55,9 @@ npx prisma generate
 npx prisma migrate deploy
 npm run build
 
+echo "==> Test invariantes (sin DB)..."
+npm run test:invariants
+
 echo "==> PM2..."
 pm2 restart ibiomedica 2>/dev/null || pm2 start npm --name ibiomedica -- start
 pm2 save
