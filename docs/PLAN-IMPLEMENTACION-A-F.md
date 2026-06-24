@@ -103,8 +103,8 @@
 | 1 F | `c3024d0` | ✅ Completada |
 | 2 E | `8c0db34` | ✅ Completada |
 | 3 B | `d2a04ee` | ✅ Completada |
-| 4 A | (este run) | ✅ Completada |
-| 5 C | (este run) | ✅ Completada |
-| 6 D | (este run) | ✅ Completada |
+| 4 A | `821ac52` | ✅ Completada |
+| 5 C | `85c7d5a` | ✅ Completada |
+| 6 D | `4759cc9` | ✅ Completada |
 
 Actualizar esta tabla al completar cada fase.
