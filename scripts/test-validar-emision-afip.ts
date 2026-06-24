@@ -5,6 +5,7 @@
 import {
   emisorTieneCertificados,
   esAmbienteProduccion,
+  estadoPreparacionAfip,
   validarEmisionAfip,
 } from '../lib/afip/validar-emision'
 import { validarEnvProd } from '../lib/env/validar-prod'
@@ -54,6 +55,23 @@ function main() {
 
   if (validarEmisionAfip(null) === null) fail('sin emisor debe fallar')
   else pass('sin emisor: bloqueado')
+
+  if (estadoPreparacionAfip(homo) !== 'homologacion_sin_cert') fail('estado homo sin cert')
+  else pass('estadoPreparacionAfip: homologacion_sin_cert')
+
+  if (estadoPreparacionAfip(prodSinCert) !== 'produccion_sin_certificados') fail('estado prod sin cert')
+  else pass('estadoPreparacionAfip: produccion_sin_certificados')
+
+  if (estadoPreparacionAfip(prodConCert) !== 'listo_produccion') fail('estado prod con cert')
+  else pass('estadoPreparacionAfip: listo_produccion')
+
+  const homoConCert = {
+    ambiente: 'HOMOLOGACION' as const,
+    certificadoPath: 'emisores/cert.crt',
+    clavePrivadaPath: 'emisores/key.key',
+  }
+  if (estadoPreparacionAfip(homoConCert) !== 'listo_cambiar_a_produccion') fail('estado homo listo cambiar')
+  else pass('estadoPreparacionAfip: listo_cambiar_a_produccion')
 
   const envOk = validarEnvProd({
     NODE_ENV: 'production',

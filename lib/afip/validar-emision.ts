@@ -29,3 +29,18 @@ export function validarEmisionAfip(emisor: EmisorAfipCampos | null | undefined):
   }
   return null
 }
+
+/** Estado de preparación fiscal para UI / checklist go-live */
+export type EstadoPreparacionAfip =
+  | 'listo_produccion'
+  | 'listo_cambiar_a_produccion'
+  | 'produccion_sin_certificados'
+  | 'homologacion_sin_cert'
+
+export function estadoPreparacionAfip(emisor: EmisorAfipCampos): EstadoPreparacionAfip {
+  const certs = emisorTieneCertificados(emisor)
+  if (esAmbienteProduccion(emisor)) {
+    return certs ? 'listo_produccion' : 'produccion_sin_certificados'
+  }
+  return certs ? 'listo_cambiar_a_produccion' : 'homologacion_sin_cert'
+}

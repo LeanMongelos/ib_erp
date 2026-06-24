@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { CONDICION_IVA } from '@/lib/form-options'
+import { estadoPreparacionAfip } from '@/lib/afip/validar-emision'
 import { useCan } from '@/components/auth/useCan'
 import { mensajeErrorDesconocido, mensajeErrorJson, mensajeErrorRespuesta } from '@/lib/errores'
 
@@ -25,6 +26,7 @@ interface Emisor {
   email: string | null
   certificadoAlias: string | null
   certificadoPath: string | null
+  clavePrivadaPath: string | null
   ambiente: 'HOMOLOGACION' | 'PRODUCCION'
   puntoVenta: number
   predeterminado: boolean
@@ -56,7 +58,9 @@ export function EmisoresManager({ emisores }: { emisores: Emisor[] }) {
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        {emisores.map((e) => (
+        {emisores.map((e) => {
+          const prep = estadoPreparacionAfip(e)
+          return (
           <Card key={e.id}>
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 rounded-[9px] bg-[#FFF1E2] flex items-center justify-center flex-shrink-0">
@@ -69,9 +73,28 @@ export function EmisoresManager({ emisores }: { emisores: Emisor[] }) {
                   <Badge variant={e.ambiente === 'PRODUCCION' ? 'success' : 'gray'}>
                     {e.ambiente === 'PRODUCCION' ? 'Producción' : 'Homologación'}
                   </Badge>
+                  {prep === 'produccion_sin_certificados' && (
+                    <Badge className="bg-red-100 text-red-800 border border-red-200">No listo: sin certificados</Badge>
+                  )}
+                  {prep === 'listo_cambiar_a_produccion' && (
+                    <Badge className="bg-blue-50 text-blue-800 border border-blue-200">Listo para Producción</Badge>
+                  )}
+                  {prep === 'listo_produccion' && (
+                    <Badge className="bg-green-50 text-green-800 border border-green-200">Listo para facturar</Badge>
+                  )}
                 </div>
                 <p className="text-[12px] text-[#6b7280] mt-1">CUIT {e.cuit} · {e.condicionIva}</p>
                 <p className="text-[12px] text-[#9aa1ab]">Pto. venta {e.puntoVenta}{e.ciudad ? ` · ${e.ciudad}` : ''}</p>
+                {prep === 'produccion_sin_certificados' && (
+                  <p className="text-[11.5px] mt-1.5 text-red-700 font-medium">
+                    Emisor en Producción sin certificado AFIP — la emisión fiscal está bloqueada hasta subir .crt y .key.
+                  </p>
+                )}
+                {prep === 'listo_cambiar_a_produccion' && (
+                  <p className="text-[11.5px] mt-1.5 text-blue-800 font-medium">
+                    Certificados cargados en homologación. Al tener certificados de producción en AFIP, cambiar ambiente a Producción.
+                  </p>
+                )}
                 <p className="text-[11.5px] mt-1">
                   {e.certificadoPath || e.certificadoAlias
                     ? <span className="text-green-700 font-medium">Certificado AFIP cargado</span>
@@ -95,7 +118,8 @@ export function EmisoresManager({ emisores }: { emisores: Emisor[] }) {
               </div>
             </div>
           </Card>
-        ))}
+          )
+        })}
         {emisores.length === 0 && (
           <Card className="col-span-2 text-center py-8 text-[12.5px] text-[#9aa1ab]">Sin emisores cargados.</Card>
         )}

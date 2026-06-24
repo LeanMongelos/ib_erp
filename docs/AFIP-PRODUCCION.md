@@ -4,6 +4,25 @@
 
 ---
 
+## 0. Checklist unificado (antes de todo)
+
+En el VPS, con `.env` de producción cargado:
+
+```bash
+cd /opt/ibiomedica
+npm run go-live:check
+```
+
+Ejecuta en orden: validación de entorno (`FORCE_PROD=1`), estado de emisores AFIP en BD (ambiente + certificados) e integridad de datos (`integridad:prod`). Salida **PASS / WARN / FAIL** en español. **Cualquier FAIL bloquea** la primera factura real.
+
+Opcional tras cargar certificados en homologación:
+
+```bash
+npm run smoke:afip-homolog   # WSAA/WSFE sin emitir comprobante
+```
+
+---
+
 ## 1. Antes del primer comprobante real
 
 | Paso | Acción |
@@ -14,7 +33,7 @@
 | Ambiente | Cambiar emisor de `HOMOLOGACION` → `PRODUCCION` **solo** cuando certificados estén cargados |
 | Punto de venta | Verificar PtoVta habilitado en AFIP para Web Services |
 | Worker | `pm2 start npm --name worker-afip -- run worker:afip` + `REDIS_URL` |
-| Validación | `FORCE_PROD=1 npm run validar:env-prod` y `npm run integridad:prod` |
+| Validación | `FORCE_PROD=1 npm run validar:env-prod` y `npm run integridad:prod` (o `npm run go-live:check` unificado) |
 
 **Guardia en código:** si el emisor está en `PRODUCCION` sin certificados, la API **bloquea** la emisión (no llega a estado `EMITIDA`). En `HOMOLOGACION` sigue permitido CAE simulado para pruebas.
 

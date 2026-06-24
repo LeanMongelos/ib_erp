@@ -98,12 +98,14 @@ npm run build
 pm2 start npm --name ibiomedica -- start
 pm2 save
 
-# 7. Workers PM2 (cada uno en proceso separado; requieren REDIS_URL para AFIP/cobranzas)
-pm2 start npm --name worker-afip -- run worker:afip          # cola emisión AFIP (obligatorio si facturás)
-pm2 start npm --name worker-cobranzas -- run worker:cobranzas
-# pm2 start npm --name worker-crm-email -- run worker:crm-email   # si CRM email activo
-# pm2 start npm --name worker-crm-graph -- run worker:crm-graph     # si Microsoft Graph activo
-pm2 save
+# 7. Workers PM2 (primera vez — script idempotente)
+bash scripts/vps-start-workers.sh
+# Equivalente manual:
+# pm2 start npm --name worker-afip -- run worker:afip
+# pm2 start npm --name worker-cobranzas -- run worker:cobranzas
+# pm2 start npm --name worker-crm-email -- run worker:crm-email
+# pm2 start npm --name worker-crm-graph -- run worker:crm-graph
+# pm2 save
 
 # 8. Permisos nuevos (si aplica)
 npx tsx --env-file=.env scripts/sync-logs-permiso.ts
@@ -114,6 +116,15 @@ npx tsx --env-file=.env scripts/sync-logs-permiso.ts
 ## 5. Actualizaciones (releases)
 
 En el VPS, el flujo habitual es **`bash scripts/vps-deploy-from-git.sh`** (también vía GitHub Actions). Ese script incluye: pull, `validar:env-prod`, build, `test:invariants`, `integridad:prod`, reinicio de `ibiomedica` y —si están registrados en PM2— `worker-afip` / `worker-cobranzas` / `worker-crm-email` / `worker-crm-graph`, y Caddy.
+
+**Primera vez (workers aún no en PM2):** en lugar de iniciar cada worker manualmente, usar el script idempotente:
+
+```bash
+cd /opt/ibiomedica
+bash scripts/vps-start-workers.sh
+```
+
+Registra `worker-afip`, `worker-cobranzas`, `worker-crm-email` y `worker-crm-graph` solo si no existen en PM2; luego `pm2 save`.
 
 Al final intenta instalar `/etc/cron.d/ibiomedica-cron` con `vps-install-cron.sh` si el proceso tiene root o `sudo` sin contraseña sobre `/etc/cron.d/`; si no, imprime `cron: manual — run sudo bash scripts/vps-install-cron.sh` y continúa.
 
