@@ -52,10 +52,11 @@ export async function limpiarDatosDemo(): Promise<LimpiezaDemoResult> {
     await tx.vencimientoCobranza.deleteMany()
 
     await tx.itemFactura.updateMany({ data: { equipoGeneradoId: null } })
+    await tx.itemFactura.deleteMany()
     counts.facturas = (await tx.factura.deleteMany()).count
 
-    counts.presupuestos = (await tx.itemPresupuesto.deleteMany()).count
-    counts.presupuestos += (await tx.presupuesto.deleteMany()).count
+    await tx.itemPresupuesto.deleteMany()
+    counts.presupuestos = (await tx.presupuesto.deleteMany()).count
 
     counts.pagos = (await tx.pago.deleteMany()).count
 
