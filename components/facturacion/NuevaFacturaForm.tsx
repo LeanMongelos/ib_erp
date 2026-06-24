@@ -28,6 +28,7 @@ import { ClienteCombobox } from '@/components/clientes/ClienteCombobox'
 import { Select } from '@/components/ui/select'
 import { SucursalRapidaModal, type SucursalOption } from '@/components/clientes/SucursalRapidaModal'
 import { AfipEmisionAlerta } from '@/components/facturacion/AfipEmisionAlerta'
+import { AyudaInline } from '@/components/ui/AyudaInline'
 import { validarEmisionAfip } from '@/lib/afip/validar-emision'
 import { validarSucursalesInstalacionEquipoCliente } from '@/lib/facturas/validar-sucursal-equipo-client'
 
@@ -372,12 +373,22 @@ export function NuevaFacturaForm({
             initialOptions={clientes}
           />
 
-          <Select
-            label="Emisor / CUIT"
-            value={emisorId}
-            onChange={(e) => setEmisorId(e.target.value)}
-            options={emisores.map((e) => ({ value: e.id, label: e.razonSocial }))}
-          />
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center gap-1.5">
+              <label className="text-[11.5px] font-semibold text-[#5b626d] tracking-wide uppercase">
+                Emisor / CUIT
+              </label>
+              <AyudaInline label="Ayuda emisor AFIP">
+                Elegí el CUIT con certificado cargado y ambiente correcto (Homologación o Producción).
+                En Producción sin .crt/.key la emisión queda bloqueada. Ver checklist en docs/AFIP-PRODUCCION.md del servidor.
+              </AyudaInline>
+            </div>
+            <Select
+              value={emisorId}
+              onChange={(e) => setEmisorId(e.target.value)}
+              options={emisores.map((e) => ({ value: e.id, label: e.razonSocial }))}
+            />
+          </div>
 
           <div className="flex flex-col gap-1.5">
             <label className="text-[11.5px] font-semibold text-[#5b626d] tracking-wide uppercase">Tipo de comprobante</label>
@@ -661,15 +672,21 @@ export function NuevaFacturaForm({
         <Button variant="outline" onClick={() => guardar(false)} loading={loading}>
           Guardar borrador
         </Button>
-        <Button
-          variant="primary"
-          onClick={() => guardar(true)}
-          loading={loading}
-          disabled={Boolean(errorEmisionAfip)}
-          title={errorEmisionAfip ?? undefined}
-        >
-          Crear y emitir AFIP
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="primary"
+            onClick={() => guardar(true)}
+            loading={loading}
+            disabled={Boolean(errorEmisionAfip)}
+            title={errorEmisionAfip ?? undefined}
+          >
+            Crear y emitir AFIP
+          </Button>
+          <AyudaInline label="Ayuda emisión AFIP">
+            Guardá borrador para revisar sin AFIP. «Crear y emitir» pide CAE real si el emisor está en Producción con certificados.
+            Antes del primer comprobante real: npm run go-live:check en el servidor (docs/AFIP-PRODUCCION.md).
+          </AyudaInline>
+        </div>
       </div>
 
       {clienteId && (

@@ -6,6 +6,9 @@ import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Select } from '@/components/ui/select'
 import { ConfigPageShell } from '@/components/configuracion/ConfigPageShell'
+import { ExportAuditoriaButton } from '@/components/configuracion/ExportAuditoriaButton'
+import { usePermisos } from '@/components/auth/useCan'
+import { AUDITORIA_EXPORT_PERMISSIONS } from '@/lib/page-permissions'
 import { etiquetaAccion } from '@/lib/config/config-labels'
 import { formatFechaHora } from '@/lib/utils'
 import { mensajeErrorDesconocido, mensajeErrorRespuesta } from '@/lib/errores'
@@ -23,6 +26,10 @@ interface LogRow {
 }
 
 export function AuditoriaManager() {
+  const userPermisos = usePermisos()
+  const puedeExportar =
+    userPermisos.includes('*') ||
+    AUDITORIA_EXPORT_PERMISSIONS.some((p) => userPermisos.includes(p))
   const [logs, setLogs] = useState<LogRow[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -70,6 +77,16 @@ export function AuditoriaManager() {
       <p className="text-[12.5px] text-[#7c828c]">
         Registro inmutable de acciones en el ERP: {total.toLocaleString('es-AR')} eventos en total.
       </p>
+
+      {puedeExportar && (
+        <Card className="p-4">
+          <p className="text-[12px] font-semibold text-[#16181d] mb-2">Exportar auditoría (CSV)</p>
+          <p className="text-[11.5px] text-[#7c828c] mb-3">
+            Hasta 10.000 registros por rango de fechas. Requiere permiso de configuración o auditoría.
+          </p>
+          <ExportAuditoriaButton />
+        </Card>
+      )}
 
       <Card className="p-4">
         <form onSubmit={buscar} className="flex flex-wrap gap-3 items-end">

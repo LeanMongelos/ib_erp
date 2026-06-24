@@ -13,6 +13,7 @@ import { CONDICION_IVA } from '@/lib/form-options'
 import { estadoPreparacionAfip } from '@/lib/afip/validar-emision'
 import { requiereConfirmacionProduccion } from '@/lib/emisores/validar-produccion'
 import { useCan } from '@/components/auth/useCan'
+import { AyudaInline } from '@/components/ui/AyudaInline'
 import { mensajeErrorDesconocido, mensajeErrorJson, mensajeErrorRespuesta } from '@/lib/errores'
 
 interface Emisor {
@@ -50,7 +51,13 @@ export function EmisoresManager({ emisores }: { emisores: Emisor[] }) {
   return (
     <div className="flex flex-col gap-4 max-w-4xl">
       <div className="flex items-center justify-between">
-        <p className="text-[12.5px] text-[#7c828c]">Cargá uno o más CUIT. El emisor predeterminado se usa por defecto al facturar.</p>
+        <p className="text-[12.5px] text-[#7c828c] flex items-center gap-1.5">
+          Cargá uno o más CUIT. El emisor predeterminado se usa por defecto al facturar.
+          <AyudaInline label="Ayuda certificados AFIP">
+            Subí certificado (.crt) y clave (.key) de AFIP antes de pasar a Producción.
+            Punto de venta debe coincidir con el habilitado en AFIP. Checklist: docs/AFIP-PRODUCCION.md en el servidor.
+          </AyudaInline>
+        </p>
         {puedeCrear && (
           <Button variant="primary" size="sm" onClick={() => setModal('nuevo')}>
             <Plus size={15} /> Nuevo emisor
@@ -219,6 +226,14 @@ function EmisorModal({ emisor, onClose, onSaved }: { emisor?: Emisor; onClose: (
               { value: 'PRODUCCION', label: 'Producción' },
             ]}
           />
+          <div className="col-span-2 flex items-start gap-2 text-[11.5px] text-[#6b7280] bg-[#F4F6F9] rounded-[8px] px-3 py-2">
+            <AyudaInline label="Ayuda ambiente AFIP">
+              Homologación: pruebas con CAE simulado. Producción: exige certificados reales; sin ellos la API bloquea la emisión.
+            </AyudaInline>
+            <span>
+              Cambiá a Producción solo tras cargar certificados de AFIP producción y verificar el punto de venta (ver docs/AFIP-PRODUCCION.md).
+            </span>
+          </div>
           {pideConfirmProduccion && (
             <div className="col-span-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
               <p className="text-[12px] text-amber-900 font-medium mb-2">

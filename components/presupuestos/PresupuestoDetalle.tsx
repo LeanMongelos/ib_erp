@@ -101,6 +101,7 @@ export function PresupuestoDetalle({ presupuesto: p }: PresupuestoDetalleProps) 
   }
 
   const puedeFacturar = !p.factura && ['BORRADOR', 'ENVIADO', 'APROBADO'].includes(p.estado)
+  const listoConvertir = !p.factura && ['ENVIADO', 'APROBADO'].includes(p.estado)
 
   return (
     <div className="max-w-4xl mx-auto flex flex-col gap-4">
@@ -121,7 +122,28 @@ export function PresupuestoDetalle({ presupuesto: p }: PresupuestoDetalleProps) 
         <BadgeEstadoPresupuesto estado={p.estado} />
       </div>
 
-      {puedeFacturar && (
+      {listoConvertir && (
+        <div className="bg-gradient-to-r from-[#FFF7ED] to-[#FFEDD5] border-2 border-[#E8650A] rounded-[12px] px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 shadow-sm">
+          <div>
+            <p className="text-[14px] font-extrabold text-[#9A3412]">Convertir a factura</p>
+            <p className="text-[12.5px] text-[#C2410C] mt-1">
+              Presupuesto {p.estado === 'APROBADO' ? 'aprobado' : 'enviado'} — abrí facturación con cliente, ítems y montos ya cargados.
+            </p>
+          </div>
+          <Button
+            variant="primary"
+            size="md"
+            className="shrink-0 text-[13.5px] px-5"
+            onClick={aprobarYFacturar}
+            loading={loading === 'facturar'}
+          >
+            <Receipt size={18} />
+            Convertir a factura
+          </Button>
+        </div>
+      )}
+
+      {puedeFacturar && !listoConvertir && (
         <div className="bg-[#FFF7ED] border border-[#FDBA74] rounded-[10px] px-4 py-3 flex items-center justify-between gap-4">
           <div>
             <p className="text-[13px] font-bold text-[#9A3412]">Listo para facturar</p>
@@ -131,7 +153,7 @@ export function PresupuestoDetalle({ presupuesto: p }: PresupuestoDetalleProps) 
           </div>
           <Button onClick={aprobarYFacturar} loading={loading === 'facturar'}>
             <Receipt size={16} />
-            {p.estado === 'APROBADO' ? 'Continuar facturación' : 'Aprobar y facturar'}
+            Aprobar y facturar
           </Button>
         </div>
       )}

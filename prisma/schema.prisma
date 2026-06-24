@@ -297,6 +297,7 @@ model AuditLog {
 
   @@index([entidad, entidadId])
   @@index([usuarioId])
+  @@index([fecha])
   @@map("audit_logs")
 }
 
@@ -776,6 +777,8 @@ model Factura {
   pagos       PagoFactura[]
   vencimientos VencimientoCobranza[]
 
+  @@index([fechaEmision])
+  @@index([estado, fechaEmision])
   @@map("facturas")
 }
 

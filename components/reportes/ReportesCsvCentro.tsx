@@ -5,6 +5,7 @@ import { Download, FileSpreadsheet } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle } from '@/components/ui/card'
 import { usePermisos } from '@/components/auth/useCan'
+import { AUDITORIA_EXPORT_PERMISSIONS } from '@/lib/page-permissions'
 
 type ExportDef = {
   id: string
@@ -57,6 +58,13 @@ const EXPORTES: ExportDef[] = [
     href: '/api/reportes/fiscal/export',
     permisos: ['reportes.read_fiscal'],
   },
+  {
+    id: 'auditoria',
+    titulo: 'Auditoría del sistema',
+    descripcion: 'Acciones registradas en el ERP (usuario, entidad, IP) por rango de fechas.',
+    href: '',
+    permisos: [...AUDITORIA_EXPORT_PERMISSIONS],
+  },
 ]
 
 function puedeExportar(userPermisos: string[], requeridos: string[]): boolean {
@@ -86,7 +94,9 @@ export function ReportesCsvCentro() {
           const href =
             exp.id === 'movimientos-stock'
               ? `/api/reportes/movimientos-stock?desde=${desde}&hasta=${hasta}`
-              : exp.href
+              : exp.id === 'auditoria'
+                ? `/api/reportes/auditoria?desde=${desde}&hasta=${hasta}`
+                : exp.href
 
           return (
             <li

@@ -5,6 +5,8 @@ import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { useEmbudoSidebar } from '@/components/layout/SidebarContext'
+import { usePermisos } from '@/components/auth/useCan'
+import { puedeAccederReportes } from '@/lib/page-permissions'
 import {
   LayoutDashboard,
   Users,
@@ -25,7 +27,7 @@ import {
 const navItems = [
   { label: 'Dashboard',         href: '/dashboard',                   icon: LayoutDashboard },
   { label: 'CRM',               href: '/crm',                         icon: Users           },
-  { label: 'Reportes',          href: '/reportes',                    icon: BarChart3       },
+  { label: 'Reportes',          href: '/reportes',                    icon: BarChart3, reportes: true },
   { label: 'Servicio Técnico',  href: '/servicio-tecnico',            icon: Wrench          },
   { label: 'Preventivo',        href: '/servicio-tecnico/preventivo', icon: Calendar        },
   { label: 'ERP / Inventario',  href: '/inventario',                  icon: Package         },
@@ -41,10 +43,14 @@ const navItems = [
 export function Sidebar({ stockBajoCount = null }: { stockBajoCount?: number | null }) {
   const pathname = usePathname()
   const { sidebarHidden } = useEmbudoSidebar()
+  const permisos = usePermisos()
+  const verReportes = puedeAccederReportes(permisos)
 
   function isActive(href: string) {
     return pathname === href || pathname.startsWith(href + '/')
   }
+
+  const itemsVisibles = navItems.filter((item) => !('reportes' in item && item.reportes) || verReportes)
 
   return (
     <aside
@@ -79,7 +85,7 @@ export function Sidebar({ stockBajoCount = null }: { stockBajoCount?: number | n
           Principal
         </p>
 
-        {navItems.map(({ label, href, icon: Icon }) => {
+        {itemsVisibles.map(({ label, href, icon: Icon }) => {
           const active = isActive(href)
           const badge =
             href === '/compras' && stockBajoCount != null && stockBajoCount > 0
