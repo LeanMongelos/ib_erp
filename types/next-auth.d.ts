@@ -38,6 +38,7 @@ declare module 'next-auth/jwt' {
     permissions?: string[]
     avatarUrl?: string | null
     exigirCambioPassword?: boolean
+    devAlertasUi?: boolean
     sesionEpoch?: number
   }
 }
