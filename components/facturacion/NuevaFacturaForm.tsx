@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import { Card, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { formatMontoMoneda, etiquetaMoneda, type MonedaDocumento } from '@/lib/moneda'
+import { validarMonedaDocumentoCliente } from '@/lib/moneda-documento-client'
 import { MonedaDocumentoPanel } from '@/components/fiscal/MonedaDocumentoPanel'
 import { calcularTotales, resumenIvaPorAlicuota } from '@/lib/documentos'
 import { formatCondicionPago } from '@/lib/cobranzas/plazos'
@@ -249,6 +250,12 @@ export function NuevaFacturaForm({
     )
     if (errSucursal) {
       toast.error(errSucursal)
+      return
+    }
+
+    const errMoneda = validarMonedaDocumentoCliente(moneda, cotizacionUsd)
+    if (errMoneda) {
+      toast.error(errMoneda)
       return
     }
 

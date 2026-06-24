@@ -33,6 +33,7 @@ Documento de referencia para desarrollo, code review y agentes. Si un cambio vio
 | F2 | Validación sucursal para equipos: misma regla UI ↔ API (`tipoArticulo === 'EQUIPO'`) | `lib/facturas/equipo-instalacion-client.ts` | `npm run test:validaciones` |
 | F3 | Emisión AFIP vía `procesarEmisionFactura`; no duplicar lógica CAE en routes | `lib/afip/emitir.ts` | — |
 | F4 | PDF factura incluye `moneda` y `cotizacionUsd` en `buildDatosFactura` | `lib/plantillas/build-datos.ts` | — |
+| F5 | Documento USD exige cotización: mismo mensaje UI ↔ API | `lib/moneda-documento-client.ts` | `npm run test:validaciones` |
 
 ## Auth y permisos
 

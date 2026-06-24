@@ -5,6 +5,7 @@
 import { z } from 'zod'
 import type { PrismaClient } from '@prisma/client'
 import { numeroALetras } from '@/lib/plantillas/numero-a-letras'
+import { MENSAJE_COTIZACION_USD_FALTANTE } from '@/lib/moneda-documento-client'
 
 export const MONEDAS_DOCUMENTO = ['ARS', 'USD'] as const
 export type MonedaDocumento = (typeof MONEDAS_DOCUMENTO)[number]
@@ -88,9 +89,7 @@ export async function resolverCotizacionUsd(
 
 export class CotizacionUsdFaltanteError extends Error {
   constructor() {
-    super(
-      'La cotización USD es obligatoria para documentos en dólares. Configurala en Contabilidad o ingresala manualmente.',
-    )
+    super(MENSAJE_COTIZACION_USD_FALTANTE)
     this.name = 'CotizacionUsdFaltanteError'
   }
 }

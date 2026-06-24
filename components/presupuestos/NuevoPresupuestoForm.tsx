@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import { Card, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { formatMontoMoneda, etiquetaMoneda, type MonedaDocumento } from '@/lib/moneda'
+import { validarMonedaDocumentoCliente } from '@/lib/moneda-documento-client'
 import { MonedaDocumentoPanel } from '@/components/fiscal/MonedaDocumentoPanel'
 import { calcularTotales, resumenIvaPorAlicuota } from '@/lib/documentos'
 import { AlicuotaSelector } from '@/components/fiscal/AlicuotaSelector'
@@ -183,6 +184,12 @@ export function NuevoPresupuestoForm({
   async function guardar() {
     if (!clienteId) { toast.error('Seleccioná un cliente'); return }
     if (items.every((i) => !i.descripcion)) { toast.error('Agregá al menos un ítem'); return }
+
+    const errMoneda = validarMonedaDocumentoCliente(moneda, cotizacionUsd)
+    if (errMoneda) {
+      toast.error(errMoneda)
+      return
+    }
 
     setLoading(true)
     try {
