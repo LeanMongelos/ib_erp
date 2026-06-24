@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { requirePermission, handleApiError, ApiError } from '@/lib/api-auth'
 import { presupuestoUpdateSchema } from '@/lib/validation'
 import { calcularTotalesPresupuesto } from '@/lib/presupuestos/calcular-total-presupuesto'
+import { aplicarPreciosResueltosItems } from '@/lib/precios/aplicar-precios-documento'
 import { plain } from '@/lib/serialize'
 import { registrarAuditoria, getIp } from '@/lib/audit'
 import { resolverCotizacionUsdDocumento, CotizacionUsdFaltanteError } from '@/lib/moneda'
@@ -78,9 +79,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       if (!['BORRADOR', 'ENVIADO'].includes(actual.estado)) {
         throw new ApiError(400, 'Solo se pueden editar ítems en presupuestos BORRADOR o ENVIADO')
       }
+      const monedaItems = monedaPatch ?? actual.moneda
+      const itemsConPrecio = await aplicarPreciosResueltosItems(items, {
+        clienteId: actual.clienteId,
+        moneda: monedaItems,
+      })
       const { itemsCalculados, subtotal, iva, interesFinanciacion, total } =
         calcularTotalesPresupuesto({
-          items,
+          items: itemsConPrecio,
           bonificacionPct: actual.bonificacionPct ?? 0,
           alicuotaIvaPct: actual.alicuotaIvaPct ?? 21,
           condicionPago: actual.condicionPago,

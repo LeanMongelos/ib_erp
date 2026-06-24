@@ -1,9 +1,9 @@
 import type { EtapaEmbudo, Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import type { EmbudoStats } from '@/lib/crm/embudo-utils'
-import { extractMontoFromDatos, extractProximaAccionFecha, getTransitionForm } from '@/lib/crm/embudo-forms'
+import { extractMontoFromDatos, extractProximaAccionFecha, getTransitionForm, validateForm } from '@/lib/crm/embudo-forms'
 import type { EtapaKey } from '@/lib/crm/embudo-constants'
-import { etapaOrder, isAdjacentForward, isForwardMove } from '@/lib/crm/embudo-constants'
+import { validarMovimientoEmbudoCliente } from '@/lib/crm/embudo-movimiento-client'
 import { ApiError } from '@/lib/api-auth'
 import { crearPresupuestoDesdePropuesta } from '@/lib/crm/embudo-presupuesto'
 
@@ -32,20 +32,8 @@ export function calcularStatsDb(negocios: { etapa: EtapaEmbudo; monto: number; c
 }
 
 export function validarMovimiento(desde: EtapaEmbudo, hasta: EtapaEmbudo, retroceso?: boolean) {
-  if (desde === hasta) throw new ApiError(400, 'El negocio ya está en esa etapa')
-  const forward = isForwardMove(desde as EtapaKey, hasta as EtapaKey)
-  if (forward && !isAdjacentForward(desde as EtapaKey, hasta as EtapaKey)) {
-    throw new ApiError(400, 'Solo se puede avanzar una etapa a la vez')
-  }
-  if (!forward && !retroceso) {
-    throw new ApiError(400, 'Los retrocesos deben confirmarse con motivo')
-  }
-  if (retroceso && forward) {
-    throw new ApiError(400, 'Movimiento inválido')
-  }
-  if (!forward && etapaOrder(hasta as EtapaKey) >= etapaOrder(desde as EtapaKey)) {
-    throw new ApiError(400, 'Movimiento inválido')
-  }
+  const err = validarMovimientoEmbudoCliente(desde as EtapaKey, hasta as EtapaKey, retroceso)
+  if (err) throw new ApiError(400, err)
 }
 
 export async function moverNegocioEmbudo(opts: {
@@ -65,6 +53,11 @@ export async function moverNegocioEmbudo(opts: {
   const form = getTransitionForm(desde as EtapaKey, hasta as EtapaKey, !!opts.retroceso)
   const datos = (opts.datos ?? {}) as Record<string, unknown>
   const fields = form?.fields ?? []
+
+  if (fields.length > 0) {
+    const errForm = validateForm(fields, datos)
+    if (errForm) throw new ApiError(400, errForm)
+  }
 
   let monto = negocio.monto
   const nuevoMonto = extractMontoFromDatos(fields, datos)

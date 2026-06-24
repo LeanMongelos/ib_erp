@@ -7,7 +7,8 @@ import { toast } from 'sonner'
 import { useCan } from '@/components/auth/useCan'
 import { useEmbudoSidebar } from '@/components/layout/SidebarContext'
 import { mensajeErrorDesconocido } from '@/lib/errores'
-import { ETAPAS, type EtapaKey, etapaOrder, isForwardMove } from '@/lib/crm/embudo-constants'
+import { ETAPAS, type EtapaKey, etapaOrder } from '@/lib/crm/embudo-constants'
+import { validarMovimientoEmbudoCliente } from '@/lib/crm/embudo-movimiento-client'
 import {
   getTransitionForm,
   NUEVO_NEGOCIO_FIELDS,
@@ -125,11 +126,12 @@ export function EmbudoKanbanApp() {
     const etapaDesde = (optimisticEtapa[negocioId] ?? negocio.etapa) as EtapaKey
     if (etapaDesde === etapaHasta) return
 
-    const forward = isForwardMove(etapaDesde, etapaHasta)
-    const retroceso = !forward
+    const forward = etapaOrder(etapaHasta) === etapaOrder(etapaDesde) + 1
+    const retroceso = etapaOrder(etapaHasta) < etapaOrder(etapaDesde)
 
-    if (forward && etapaOrder(etapaHasta) !== etapaOrder(etapaDesde) + 1) {
-      toast.error('Solo se puede avanzar una etapa a la vez')
+    const errMov = validarMovimientoEmbudoCliente(etapaDesde, etapaHasta, retroceso)
+    if (errMov) {
+      toast.error(errMov)
       return
     }
 

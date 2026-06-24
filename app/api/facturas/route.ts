@@ -11,6 +11,7 @@ import { sincronizarVencimientosCobranza } from '@/lib/cobranzas/vencimientos'
 import { resolverCotizacionUsdDocumento, CotizacionUsdFaltanteError } from '@/lib/moneda'
 import { validarSucursalesInstalacionEquipo } from '@/lib/facturas/validar-sucursal-equipo'
 import { datosItemsFacturaNestedCreate } from '@/lib/facturas/datos-items-factura'
+import { aplicarPreciosResueltosItems } from '@/lib/precios/aplicar-precios-documento'
 import { resolverPlantillaIdEmision } from '@/lib/plantillas/resolver-plantilla'
 
 export async function GET() {
@@ -36,6 +37,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const data = facturaCreateSchema.parse(body)
     await validarSucursalesInstalacionEquipo(data.clienteId, data.items)
+
     let otId = data.otId ?? null
 
     let emisorId = data.emisorId ?? null
@@ -43,20 +45,6 @@ export async function POST(req: NextRequest) {
       const def = await prisma.emisor.findFirst({ where: { predeterminado: true, activo: true } })
       emisorId = def?.id ?? null
     }
-
-    const { itemsCalculados, subtotal, iva, total, alicuotaIvaPct } = calcularTotales(
-      data.items,
-      data.bonificacionPct ?? 0,
-      data.alicuotaIvaPct ?? 21,
-    )
-
-    const plazos =
-      data.plazosCobranza?.length
-        ? parsePlazosCobranza(data.plazosCobranza)
-        : parsePlazosCobranza(data.condicionPago)
-    const condicionPago =
-      data.condicionPago?.trim() ||
-      (plazos.length > 0 ? formatCondicionPago(plazos) : null)
 
     let moneda = data.moneda ?? 'ARS'
     let cotizacionExplicita = data.cotizacionUsd ?? null
@@ -78,6 +66,25 @@ export async function POST(req: NextRequest) {
       if (!data.moneda) moneda = pres.moneda as typeof moneda
       if (cotizacionExplicita == null) cotizacionExplicita = pres.cotizacionUsd
     }
+
+    const itemsConPrecio = await aplicarPreciosResueltosItems(data.items, {
+      clienteId: data.clienteId,
+      moneda,
+    })
+
+    const { itemsCalculados, subtotal, iva, total, alicuotaIvaPct } = calcularTotales(
+      itemsConPrecio,
+      data.bonificacionPct ?? 0,
+      data.alicuotaIvaPct ?? 21,
+    )
+
+    const plazos =
+      data.plazosCobranza?.length
+        ? parsePlazosCobranza(data.plazosCobranza)
+        : parsePlazosCobranza(data.condicionPago)
+    const condicionPago =
+      data.condicionPago?.trim() ||
+      (plazos.length > 0 ? formatCondicionPago(plazos) : null)
 
     let cotizacionUsd: number | null = null
     try {

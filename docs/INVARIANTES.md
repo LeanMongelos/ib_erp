@@ -13,6 +13,13 @@ Documento de referencia para desarrollo, code review y agentes. Si un cambio vio
 | P5 | La predeterminada por tipo es **única** (`predeterminado: true` en BD) | `PlantillasManager` + API plantillas | — |
 | P6 | Al **crear** presupuesto se persiste `plantillaId` y la UI muestra el modelo | `NuevoPresupuestoForm` + `resolverPlantillaIdEmision` | — |
 
+## CRM / Embudo
+
+| ID | Invariante | Resolvedor | Test |
+|----|------------|------------|------|
+| E1 | Movimiento entre etapas: misma regla UI (drag) y API | `lib/crm/embudo-movimiento-client.ts` | `npm run test:validaciones` |
+| E2 | Formularios de transición validados en UI y API | `validateForm` en `embudo-forms.ts` | `test:validaciones` |
+
 ## Presupuestos
 
 | ID | Invariante | Resolvedor | Test |
@@ -36,6 +43,7 @@ Documento de referencia para desarrollo, code review y agentes. Si un cambio vio
 | F3 | Emisión AFIP vía `procesarEmisionFactura`; no duplicar lógica CAE en routes | `lib/afip/emitir.ts` | — |
 | F4 | PDF factura incluye `moneda` y `cotizacionUsd` en `buildDatosFactura` | `lib/plantillas/build-datos.ts` | — |
 | F5 | Documento USD exige cotización: mismo mensaje UI ↔ API | `lib/moneda-documento-client.ts` | `npm run test:validaciones` |
+| F6 | Ítems con `inventarioId`: precio re-resuelto en API al guardar | `lib/precios/aplicar-precios-documento.ts` | — |
 
 ## Auth y permisos
 

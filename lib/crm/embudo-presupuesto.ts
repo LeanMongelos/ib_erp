@@ -4,7 +4,7 @@
 
 import type { NegocioEmbudo } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
-import { calcularTotales } from '@/lib/documentos'
+import { calcularTotalesPresupuesto } from '@/lib/presupuestos/calcular-total-presupuesto'
 import { siguienteNumeroPresupuesto, crearConNumeroUnico } from '@/lib/sequences'
 import { ApiError } from '@/lib/api-auth'
 import { resolverPlantillaIdEmision } from '@/lib/plantillas/resolver-plantilla'
@@ -107,11 +107,11 @@ export async function crearPresupuestoDesdePropuesta(
   const emisor = await prisma.emisor.findFirst({ where: { predeterminado: true, activo: true } })
   const plantillaId = await resolverPlantillaIdEmision('PRESUPUESTO', null)
 
-  const { itemsCalculados, subtotal, iva, total, alicuotaIvaPct: alic } = calcularTotales(
-    [{ descripcion, cantidad: 1, precioUnit: precioNeto }],
-    0,
+  const { itemsCalculados, subtotal, iva, total, alicuotaIvaPct: alic } = calcularTotalesPresupuesto({
+    items: [{ descripcion, cantidad: 1, precioUnit: precioNeto }],
     alicuotaIvaPct,
-  )
+    condicionPago,
+  })
 
   const vence = new Date(fechaEnvio)
   vence.setDate(vence.getDate() + vigenciaDias)

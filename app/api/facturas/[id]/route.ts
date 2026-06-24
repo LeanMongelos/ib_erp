@@ -6,6 +6,7 @@ import { itemFacturaSchema } from '@/lib/validation'
 import { calcularTotales } from '@/lib/documentos'
 import { validarSucursalesInstalacionEquipo } from '@/lib/facturas/validar-sucursal-equipo'
 import { datosItemsFacturaCreate } from '@/lib/facturas/datos-items-factura'
+import { aplicarPreciosResueltosItems } from '@/lib/precios/aplicar-precios-documento'
 import { plain } from '@/lib/serialize'
 import { registrarAuditoria, getIp } from '@/lib/audit'
 
@@ -68,8 +69,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       await validarSucursalesInstalacionEquipo(actual.clienteId, data.items)
 
       const bonif = data.bonificacionPct ?? Number(actual.bonificacionPct)
+      const itemsConPrecio = await aplicarPreciosResueltosItems(data.items, {
+        clienteId: actual.clienteId,
+        moneda: actual.moneda,
+      })
       const { itemsCalculados, subtotal, iva, total } = calcularTotales(
-        data.items,
+        itemsConPrecio,
         bonif,
         actual.alicuotaIvaPct ?? 21,
       )

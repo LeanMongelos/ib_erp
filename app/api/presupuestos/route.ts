@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { requireAuth, requirePermission, handleApiError, ApiError } from '@/lib/api-auth'
 import { presupuestoCreateSchema } from '@/lib/validation'
 import { calcularTotalesPresupuesto } from '@/lib/presupuestos/calcular-total-presupuesto'
+import { aplicarPreciosResueltosItems } from '@/lib/precios/aplicar-precios-documento'
 import { formatCondicionPago, parsePlazosCobranza } from '@/lib/cobranzas/plazos'
 import { resolverPlantillaIdEmision } from '@/lib/plantillas/resolver-plantilla'
 import { resolverCotizacionUsdDocumento, CotizacionUsdFaltanteError } from '@/lib/moneda'
@@ -54,6 +55,13 @@ export async function POST(req: NextRequest) {
       emisorId = def?.id ?? null
     }
 
+    const moneda = data.moneda ?? 'ARS'
+
+    const itemsConPrecio = await aplicarPreciosResueltosItems(data.items, {
+      clienteId: data.clienteId,
+      moneda,
+    })
+
     const {
       itemsCalculados,
       subtotal,
@@ -63,7 +71,7 @@ export async function POST(req: NextRequest) {
       alicuotaIvaPct,
       plazos,
     } = calcularTotalesPresupuesto({
-      items: data.items,
+      items: itemsConPrecio,
       bonificacionPct: data.bonificacionPct,
       alicuotaIvaPct: data.alicuotaIvaPct,
       plazosCobranza: data.plazosCobranza,
@@ -77,7 +85,6 @@ export async function POST(req: NextRequest) {
       (plazos.length > 0 ? formatCondicionPago(plazos) : null)
     const tasaFinanciacionPct = data.tasaFinanciacionPct ?? 0
 
-    const moneda = data.moneda ?? 'ARS'
     let cotizacionUsd: number | null = null
     try {
       cotizacionUsd = await resolverCotizacionUsdDocumento(prisma, moneda, data.cotizacionUsd)
