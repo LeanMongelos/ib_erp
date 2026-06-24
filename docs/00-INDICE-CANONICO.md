@@ -52,7 +52,8 @@
 
 | Necesidad | Script | NO usar |
 |-----------|--------|---------|
-| Smoke DB | `npm run smoke` → `e2e-smoke.ts` | `e2e-smoke.mjs` (legacy HTTP) |
+| Smoke DB | `npm run smoke` → `e2e-smoke.ts` | — |
+| Smoke HTTP | `npm run smoke:http` → `e2e-smoke.mjs` (servidor levantado) | — |
 | E2E HTTP | `npm run e2e` → `e2e-revision.ts` | — |
 | Dev estable | `npm run dev:reset` | borrar node_modules sin motivo |
 | Deploy VPS | GitHub Actions → `vps-deploy-from-git.sh` | `vps-deploy-remote.js` (bootstrap inicial) |

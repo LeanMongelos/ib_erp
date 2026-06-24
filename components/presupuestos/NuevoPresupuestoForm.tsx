@@ -216,6 +216,7 @@ export function NuevoPresupuestoForm({
             precioUnit: i.precioUnit,
             alicuotaIvaPct: i.alicuotaIvaPct,
             inventarioId: i.inventarioId ?? null,
+            tipoArticulo: i.tipoArticulo ?? null,
             codigo: i.codigo ?? undefined,
             fotoUrl: i.fotoUrl ?? undefined,
             numeroSerie: i.numeroSerie?.trim() || null,

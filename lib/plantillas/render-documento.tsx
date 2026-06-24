@@ -275,15 +275,9 @@ function DocPDF({ cfg, datos }: { cfg: PlantillaConfig; datos: DatosDocumentoRen
   )
 }
 
-export type RenderDocumentoPdfOpts = {
-  /** Vista previa en UI: react-pdf (layout), sin Puppeteer/HTML. */
-  forPreview?: boolean
-}
-
 export async function renderDocumentoPDF(
   cfg: PlantillaConfig,
   datos: DatosDocumentoRender,
-  opts?: RenderDocumentoPdfOpts,
 ): Promise<Buffer> {
   const cfgNorm = prepararConfigRender(cfg, datos.tipo as 'FACTURA' | 'PRESUPUESTO' | 'REMITO')
 
@@ -292,24 +286,22 @@ export async function renderDocumentoPDF(
     return renderToBuffer(<DocPDF cfg={cfgNorm} datos={datos} />)
   }
 
-  if (!opts?.forPreview) {
-    let html = cfgNorm.html?.trim()
-    if (!html && (cfgNorm.tipo === 'FACTURA' || cfgNorm.tipo === 'PRESUPUESTO')) {
-      const { htmlDefaultPorTipo } = await import('./html-templates')
-      html = htmlDefaultPorTipo(cfgNorm.tipo)
-    }
-    if (html) {
-      try {
-        const { renderHtmlDocumento } = await import('./render-html')
-        const { htmlToPdf } = await import('./html-to-pdf.server')
-        const { isValidPdfBuffer } = await import('./pdf-valid')
-        const rendered = renderHtmlDocumento(html, datos)
-        const pdf = await htmlToPdf(rendered, cfgNorm.papel)
-        if (isValidPdfBuffer(pdf)) return pdf
-        console.error('[plantillas] Puppeteer devolvió PDF inválido, usando react-pdf')
-      } catch (error) {
-        console.error('[plantillas] HTML/Puppeteer falló, usando react-pdf:', error)
-      }
+  let html = cfgNorm.html?.trim()
+  if (!html && (cfgNorm.tipo === 'FACTURA' || cfgNorm.tipo === 'PRESUPUESTO')) {
+    const { htmlDefaultPorTipo } = await import('./html-templates')
+    html = htmlDefaultPorTipo(cfgNorm.tipo)
+  }
+  if (html) {
+    try {
+      const { renderHtmlDocumento } = await import('./render-html')
+      const { htmlToPdf } = await import('./html-to-pdf.server')
+      const { isValidPdfBuffer } = await import('./pdf-valid')
+      const rendered = renderHtmlDocumento(html, datos)
+      const pdf = await htmlToPdf(rendered, cfgNorm.papel)
+      if (isValidPdfBuffer(pdf)) return pdf
+      console.error('[plantillas] Puppeteer devolvió PDF inválido, usando react-pdf')
+    } catch (error) {
+      console.error('[plantillas] HTML/Puppeteer falló, usando react-pdf:', error)
     }
   }
   return renderToBuffer(<DocPDF cfg={cfgNorm} datos={datos} />)

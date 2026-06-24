@@ -159,6 +159,10 @@ export const itemFacturaSchema = z.object({
   sucursalInstalacionId: z.string().min(1).optional().nullable(),
 })
 
+/** Ítems de presupuesto: sin sucursal (se exige al facturar, invariante Pr1). */
+export const itemPresupuestoSchema = itemFacturaSchema.omit({ sucursalInstalacionId: true })
+
+/** @deprecated Usar itemFacturaSchema o itemPresupuestoSchema según el documento. */
 export const itemDocumentoSchema = itemFacturaSchema
 
 export const facturaCreateSchema = z.object({
@@ -197,7 +201,7 @@ export const presupuestoCreateSchema = z.object({
   garantia:              z.string().trim().max(120).optional(),
   bonificacionPct:       z.number().min(0).max(100).optional(),
   alicuotaIvaPct:        z.number().min(0).max(100).optional(),
-  items:                 z.array(itemDocumentoSchema).min(1),
+  items:                 z.array(itemPresupuestoSchema).min(1),
 })
 
 export const presupuestoUpdateSchema = z.object({
@@ -210,7 +214,7 @@ export const presupuestoUpdateSchema = z.object({
   formaPago:       z.string().trim().max(120).optional(),
   plazoEntrega:    z.string().trim().max(120).optional(),
   garantia:        z.string().trim().max(120).optional(),
-  items:           z.array(itemDocumentoSchema).min(1).optional(),
+  items:           z.array(itemPresupuestoSchema).min(1).optional(),
 }).refine((d) => Object.keys(d).length > 0, { message: 'Nada para actualizar' })
 
 export const pagoCreateSchema = z.object({
