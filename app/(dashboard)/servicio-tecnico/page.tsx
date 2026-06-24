@@ -27,7 +27,7 @@ async function getOTs() {
       clienteId: true,
       cliente: { select: { nombre: true } },
       equipo: { select: { nombre: true } },
-      tecnico: { select: { nombre: true } },
+      tecnico: { select: { id: true, nombre: true } },
     },
   })
 }

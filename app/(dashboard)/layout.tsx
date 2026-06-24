@@ -23,7 +23,7 @@ export default async function DashboardLayout({
 
   let stockBajoCount: number | null = null
   const user = await getSessionUser()
-  if (user && tienePermiso(user.permissions, 'compras.read')) {
+  if (user && (tienePermiso(user.permissions, 'compras.read') || tienePermiso(user.permissions, 'inventario.read'))) {
     stockBajoCount = await contarArticulosStockBajo()
   }
 

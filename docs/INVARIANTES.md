@@ -89,6 +89,14 @@ Documento de referencia para desarrollo, code review y agentes. Si un cambio vio
 | F10 | Cuotas cobranza se crean al **crear** factura con plazos (`sincronizarVencimientosCobranza`), no al emitir AFIP | `app/api/facturas/route.ts` POST | — |
 | F11 | Tras emisión `EMITIDA`, email al cliente con PDF adjunto si tiene email y no opt-out (`[no-email-factura]` en notas); no bloquea emisión | `lib/facturas/notify-cliente-emitida.ts` · `FACTURA_EMAIL_CLIENTE` | smoke manual · SystemLog `factura-cliente-email` |
 
+## Operación (OT / inventario)
+
+| ID | Invariante | Dónde | Test |
+|----|------------|-------|------|
+| O1 | Filtros técnico/SLA en listado OT son solo UI (`OTsTable`); no alteran API `/api/servicio-tecnico` | `components/servicio-tecnico/OTsTable.tsx` | manual |
+| O2 | Badge stock bajo en nav Inventario y Compras usa `contarArticulosStockBajo()` | `app/(dashboard)/layout.tsx` · `Sidebar.tsx` | manual |
+| O3 | Import inventario CSV idempotente por SKU (actualiza existente) | `lib/inventario/import-csv.ts` | `npm run test:invariants` |
+
 ## Auth y permisos
 
 | ID | Invariante |

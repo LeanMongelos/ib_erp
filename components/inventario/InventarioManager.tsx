@@ -386,7 +386,7 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
             {faltantesCount} ítem{faltantesCount !== 1 ? 's' : ''} requieren reposición.
           </p>
           <Link href="/compras">
-            <Button variant="outline" size="sm">Ir a Compras</Button>
+            <Button variant="outline" size="sm">Generar OC en Compras</Button>
           </Link>
         </div>
       )}

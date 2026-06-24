@@ -88,7 +88,7 @@ export function Sidebar({ stockBajoCount = null }: { stockBajoCount?: number | n
         {itemsVisibles.map(({ label, href, icon: Icon }) => {
           const active = isActive(href)
           const badge =
-            href === '/compras' && stockBajoCount != null && stockBajoCount > 0
+            stockBajoCount != null && stockBajoCount > 0 && (href === '/compras' || href === '/inventario')
               ? stockBajoCount
               : null
           return (
