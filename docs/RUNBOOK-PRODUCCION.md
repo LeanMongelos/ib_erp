@@ -10,6 +10,7 @@
 |------|------------------|
 | Checklist unificado | `npm run go-live:check` |
 | **Go-live AFIP paso a paso (VPS)** | [`GO-LIVE-AFIP-VPS.md`](GO-LIVE-AFIP-VPS.md) |
+| **CRM en producción (VPS)** | [`CRM-PRODUCCION-VPS.md`](CRM-PRODUCCION-VPS.md) |
 | Detalle AFIP | [`AFIP-PRODUCCION.md`](AFIP-PRODUCCION.md) |
 | Variables `.env` | [`16-DESPLIEGUE-PRODUCCION.md`](16-DESPLIEGUE-PRODUCCION.md) §3 |
 | Usuarios demo | **No** usar seed en prod — crear admin real |

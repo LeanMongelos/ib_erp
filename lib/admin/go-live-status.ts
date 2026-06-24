@@ -130,6 +130,11 @@ function graphListo(cfg: EmailGraphConfig): boolean {
   return base && auth && Boolean(cfg.mailboxEmail?.trim())
 }
 
+function nivelCrmIncompleto(activo: boolean): GoLiveNivel {
+  if (!activo) return 'warn'
+  return process.env.FORCE_PROD === '1' ? 'fail' : 'warn'
+}
+
 async function validarCrmGoLive(items: GoLiveItem[], env: NodeJS.ProcessEnv) {
   const ignorarPoll = ['CRM_EMAIL_POLL_MS', 'CRM_GRAPH_POLL_MS']
   if (envParcialPrefijo(env, 'CRM_EMAIL_', ignorarPoll)) {
@@ -168,7 +173,7 @@ async function validarCrmGoLive(items: GoLiveItem[], env: NodeJS.ProcessEnv) {
       addItem(
         items,
         'crm',
-        'warn',
+        nivelCrmIncompleto(Boolean(imapCanal.activo)),
         `Canal EMAIL_IMAP incompleto — faltan: ${faltantes.join(', ')}`,
         'crm_imap_parcial',
       )
@@ -215,7 +220,7 @@ async function validarCrmGoLive(items: GoLiveItem[], env: NodeJS.ProcessEnv) {
       addItem(
         items,
         'crm',
-        'warn',
+        nivelCrmIncompleto(Boolean(graphCanal.activo)),
         `Canal EMAIL_GRAPH incompleto — faltan: ${faltantes.join(', ')}`,
         'crm_graph_parcial',
       )
@@ -263,7 +268,7 @@ async function validarCrmGoLive(items: GoLiveItem[], env: NodeJS.ProcessEnv) {
       addItem(
         items,
         'crm',
-        'warn',
+        nivelCrmIncompleto(true),
         'Canal N8N activo con configuración parcial — webhook o N8N_API_KEY incompletos',
         'crm_n8n_parcial',
       )
