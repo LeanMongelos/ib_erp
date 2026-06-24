@@ -161,7 +161,12 @@ npm run integridad:reparar
 
 # 3. Solo si el operador confirma — aplicar fixes automáticos seguros
 npm run integridad:reparar -- --execute
+
+# Deploy VPS: solo I2 y Pr3 (idempotente, post integridad:prod)
+npm run integridad:reparar -- --execute --only I2,Pr3
 ```
+
+Headers HTTP de seguridad: `next.config.mjs` (global) + `lib/security/headers.ts` (middleware dashboard).
 
 | Código | Auto-reparable | Acción |
 |--------|----------------|--------|

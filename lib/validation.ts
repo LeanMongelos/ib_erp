@@ -473,6 +473,7 @@ export const emisorCreateSchema = z.object({
   ambiente:          z.enum(['HOMOLOGACION', 'PRODUCCION']).default('HOMOLOGACION'),
   puntoVenta:        z.number().int().positive().default(1),
   predeterminado:    z.boolean().default(false),
+  confirmarProduccion: z.boolean().optional(),
 })
 
 export const emisorUpdateSchema = emisorCreateSchema.partial().extend({

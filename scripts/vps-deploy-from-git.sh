@@ -107,6 +107,11 @@ npx tsx --env-file=.env scripts/sync-listas-precios.ts
 echo "==> Integridad post-deploy..."
 npm run integridad:prod
 
+echo "==> Reparación segura I2/Pr3 (idempotente)..."
+npm run integridad:reparar -- --execute --only I2,Pr3 || {
+  echo "WARN: reparación integridad I2/Pr3 falló; revisar logs."
+}
+
 echo "==> Caddy (dominio + HTTPS, no sobrescribir con HTTP plano)..."
 bash scripts/vps-caddy-apply.sh
 

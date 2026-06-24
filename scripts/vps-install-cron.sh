@@ -48,6 +48,9 @@ PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 # Alertas stock mínimo — diario 07:00
 0 7 * * * ${CRON_USER} bash -c 'set -a; source ${APP_DIR}/.env; set +a; curl -sf -X POST ${APP_URL}/api/cron/stock-minimo -H "Authorization: Bearer \$CRON_SECRET"' >> /var/log/ibiomedica-cron.log 2>&1
+
+# Resumen semanal admin — domingo 08:00
+0 8 * * 0 ${CRON_USER} bash -c 'set -a; source ${APP_DIR}/.env; set +a; curl -sf -X POST ${APP_URL}/api/cron/resumen-semanal -H "Authorization: Bearer \$CRON_SECRET"' >> /var/log/ibiomedica-cron.log 2>&1
 EOF
 
 chmod 644 "$CRON_FILE"
@@ -57,7 +60,7 @@ echo ""
 echo "Genera /etc/cron.d/ibiomedica-cron con:"
 echo "  - backup PostgreSQL (03:00) → scripts/vps-backup-postgres.sh"
 echo "  - backup off-site (03:30) → scripts/vps-backup-offsite.sh (BACKUP_OFFSITE_* en .env)"
-echo "  - logs:purge (04:00), OT SLA (cada hora), presupuestos (05:00), cobranzas (06:00), stock mínimo (07:00)"
+echo "  - logs:purge (04:00), OT SLA (cada hora), presupuestos (05:00), cobranzas (06:00), stock mínimo (07:00), resumen semanal (dom 08:00)"
 echo ""
 echo "Verificá CRON_SECRET en $APP_DIR/.env y probá manualmente:"
 echo "  curl -sf -X POST ${APP_URL}/api/cron/ots-vencidas -H \"Authorization: Bearer \$CRON_SECRET\""

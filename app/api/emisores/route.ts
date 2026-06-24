@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requirePermission, handleApiError } from '@/lib/api-auth'
 import { emisorCreateSchema } from '@/lib/validation'
+import { validarConfirmacionProduccion } from '@/lib/emisores/validar-produccion'
 import { registrarAuditoria, getIp } from '@/lib/audit'
 import { plain } from '@/lib/serialize'
 
@@ -23,13 +24,22 @@ export async function POST(req: NextRequest) {
     const actor = await requirePermission('emisores.create')
     const body = await req.json()
     const data = emisorCreateSchema.parse(body)
+    const { confirmarProduccion, ...dataSinConfirm } = data
+
+    const errConfirm = validarConfirmacionProduccion(
+      dataSinConfirm.ambiente,
+      'HOMOLOGACION',
+      confirmarProduccion,
+    )
+    if (errConfirm) {
+      return NextResponse.json({ error: errConfirm }, { status: 400 })
+    }
 
     const emisor = await prisma.$transaction(async (tx) => {
-      // Solo un emisor puede ser predeterminado a la vez
-      if (data.predeterminado) {
+      if (dataSinConfirm.predeterminado) {
         await tx.emisor.updateMany({ data: { predeterminado: false } })
       }
-      return tx.emisor.create({ data: { ...data, email: data.email || null } })
+      return tx.emisor.create({ data: { ...dataSinConfirm, email: dataSinConfirm.email || null } })
     })
 
     await registrarAuditoria({
@@ -37,7 +47,7 @@ export async function POST(req: NextRequest) {
       accion: 'emisor.create',
       entidad: 'Emisor',
       entidadId: emisor.id,
-      despues: { razonSocial: data.razonSocial, cuit: data.cuit },
+      despues: { razonSocial: dataSinConfirm.razonSocial, cuit: dataSinConfirm.cuit },
       ip: getIp(req),
     })
 

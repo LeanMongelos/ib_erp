@@ -150,8 +150,9 @@ Ver [`17-OBSERVABILIDAD-Y-LOGS.md`](17-OBSERVABILIDAD-Y-LOGS.md).
 | 2 | `requirePermission()` | Cada `app/api/**/route.ts` | **Sí** |
 | 3 | `requirePagePermission()` | Server pages | Redirect si falta permiso |
 | 4 | `useCan()` | Componentes cliente | Solo UX (ocultar botones) |
-| 5 | Headers CSP / X-Frame-Options | `lib/security/headers.ts` | PDF vía blob, no iframe |
+| 5 | Headers CSP / X-Frame-Options | `next.config.mjs` + `lib/security/headers.ts` | PDF vía blob; HSTS solo prod |
 | 6 | Rate limit login | Redis + `lib/auth/login-rate-limit.ts` | Brute-force |
+| 6b | Rate limit cron | `lib/cron/rate-limit.ts` + `lib/cron/auth.ts` | Anti brute-force `CRON_SECRET` |
 | 7 | API keys | n8n (`N8N_API_KEY`), cron (`CRON_SECRET`) | Rutas públicas acotadas |
 | 8 | Webhooks Meta | Verify token + firma | `/api/webhooks/*` |
 

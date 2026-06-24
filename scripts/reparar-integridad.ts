@@ -5,6 +5,7 @@
  * Uso:
  *   npm run integridad:reparar              # dry-run (default)
  *   npm run integridad:reparar -- --execute # aplicar fixes seguros
+ *   npm run integridad:reparar -- --execute --only I2,Pr3
  */
 import { prisma } from '../lib/prisma'
 import { actualizarOTsVencidas } from '../lib/ots'
@@ -185,11 +186,34 @@ async function aplicarReparaciones() {
   console.log('')
 }
 
+function parseOnlyCodes(): string[] | null {
+  const idx = process.argv.indexOf('--only')
+  if (idx >= 0) {
+    const next = process.argv[idx + 1]
+    if (next && !next.startsWith('--')) {
+      return next.split(',').map((s) => s.trim()).filter(Boolean)
+    }
+  }
+  const combined = process.argv.find((a) => a.startsWith('--only='))
+  if (combined) {
+    return combined.slice('--only='.length).split(',').map((s) => s.trim()).filter(Boolean)
+  }
+  const prefixed = process.argv.find((a) => a.startsWith('--only') && a.length > 6 && a !== '--only')
+  if (prefixed) {
+    return prefixed.replace('--only', '').split(',').map((s) => s.trim()).filter(Boolean)
+  }
+  return null
+}
+
 async function main() {
   const execute = process.argv.includes('--execute')
-  const mode = execute ? 'EJECUCIÓN' : 'DRY-RUN (solo informe)'
+  const onlyCodes = parseOnlyCodes()
+  const shouldRun = (codigo: string) => !onlyCodes || onlyCodes.includes(codigo)
 
-  console.log(`\n=== Reparar integridad I2–I5 · ${mode} ===\n`)
+  const mode = execute ? 'EJECUCIÓN' : 'DRY-RUN (solo informe)'
+  const onlyLabel = onlyCodes ? ` · solo ${onlyCodes.join(',')}` : ''
+
+  console.log(`\n=== Reparar integridad I2–I5 · ${mode}${onlyLabel} ===\n`)
 
   if (execute) {
     console.log('⚠️  Modo --execute: se aplicarán solo correcciones automáticas seguras.\n')
@@ -197,11 +221,11 @@ async function main() {
     console.log('Modo dry-run. Para aplicar fixes seguros: npm run integridad:reparar -- --execute\n')
   }
 
-  await checkI2()
-  await checkPr3()
-  await checkI3()
-  await checkI4()
-  await checkI5()
+  if (shouldRun('I2')) await checkI2()
+  if (shouldRun('Pr3')) await checkPr3()
+  if (shouldRun('I3')) await checkI3()
+  if (shouldRun('I4')) await checkI4()
+  if (shouldRun('I5')) await checkI5()
 
   const auto = hallazgos.filter((h) => h.autoReparable)
   const manual = hallazgos.filter((h) => !h.autoReparable)

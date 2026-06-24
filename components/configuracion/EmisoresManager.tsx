@@ -11,6 +11,7 @@ import { Select } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { CONDICION_IVA } from '@/lib/form-options'
 import { estadoPreparacionAfip } from '@/lib/afip/validar-emision'
+import { requiereConfirmacionProduccion } from '@/lib/emisores/validar-produccion'
 import { useCan } from '@/components/auth/useCan'
 import { mensajeErrorDesconocido, mensajeErrorJson, mensajeErrorRespuesta } from '@/lib/errores'
 
@@ -153,13 +154,27 @@ function EmisorModal({ emisor, onClose, onSaved }: { emisor?: Emisor; onClose: (
     predeterminado: emisor?.predeterminado ?? false,
   })
   const [loading, setLoading] = useState(false)
+  const [confirmarProduccion, setConfirmarProduccion] = useState(false)
   const set = (k: string, v: any) => setForm((f) => ({ ...f, [k]: v }))
+
+  const pideConfirmProduccion = requiereConfirmacionProduccion(
+    form.ambiente,
+    emisor?.ambiente,
+  )
 
   async function guardar() {
     if (!form.razonSocial || !form.cuit) { toast.error('Razón social y CUIT son obligatorios'); return }
+    if (pideConfirmProduccion && !confirmarProduccion) {
+      toast.error('Confirmá certificados cargados y punto de venta verificado antes de activar Producción')
+      return
+    }
     setLoading(true)
     try {
-      const payload = { ...form, puntoVenta: Number(form.puntoVenta) }
+      const payload = {
+        ...form,
+        puntoVenta: Number(form.puntoVenta),
+        ...(pideConfirmProduccion ? { confirmarProduccion: true } : {}),
+      }
       const res = esEdicion
         ? await fetch(`/api/emisores/${emisor!.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
         : await fetch('/api/emisores', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
@@ -195,12 +210,31 @@ function EmisorModal({ emisor, onClose, onSaved }: { emisor?: Emisor; onClose: (
           <Select
             label="Ambiente"
             value={form.ambiente}
-            onChange={(e) => set('ambiente', e.target.value)}
+            onChange={(e) => {
+              set('ambiente', e.target.value)
+              if (e.target.value !== 'PRODUCCION') setConfirmarProduccion(false)
+            }}
             options={[
               { value: 'HOMOLOGACION', label: 'Homologación' },
               { value: 'PRODUCCION', label: 'Producción' },
             ]}
           />
+          {pideConfirmProduccion && (
+            <div className="col-span-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
+              <p className="text-[12px] text-amber-900 font-medium mb-2">
+                Vas a activar el ambiente de Producción AFIP. Verificá certificados y punto de venta antes de continuar.
+              </p>
+              <label className="flex items-start gap-2 text-[12.5px] text-[#3a4150]">
+                <input
+                  type="checkbox"
+                  className="accent-[#E8650A] mt-0.5"
+                  checked={confirmarProduccion}
+                  onChange={(e) => setConfirmarProduccion(e.target.checked)}
+                />
+                Confirmo certificados cargados y PtoVta verificado
+              </label>
+            </div>
+          )}
           <label className="col-span-2 flex items-center gap-2 text-[12.5px] text-[#3a4150]">
             <input type="checkbox" className="accent-[#E8650A]" checked={form.predeterminado} onChange={(e) => set('predeterminado', e.target.checked)} />
             Usar como emisor predeterminado
@@ -210,7 +244,14 @@ function EmisorModal({ emisor, onClose, onSaved }: { emisor?: Emisor; onClose: (
           </p>
           <div className="col-span-2 flex justify-end gap-2 pt-1">
             <Button variant="secondary" onClick={onClose} disabled={loading}>Cancelar</Button>
-            <Button variant="primary" onClick={guardar} loading={loading}>{esEdicion ? 'Guardar' : 'Crear emisor'}</Button>
+            <Button
+              variant="primary"
+              onClick={guardar}
+              loading={loading}
+              disabled={pideConfirmProduccion && !confirmarProduccion}
+            >
+              {esEdicion ? 'Guardar' : 'Crear emisor'}
+            </Button>
           </div>
         </div>
       </div>

@@ -3,6 +3,7 @@ import { NivelLog } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { requirePermission, handleApiError } from '@/lib/api-auth'
 import { emisorUpdateSchema } from '@/lib/validation'
+import { validarConfirmacionProduccion } from '@/lib/emisores/validar-produccion'
 import { registrarAuditoria, getIp } from '@/lib/audit'
 import { registrarError } from '@/lib/error-log'
 import { plain } from '@/lib/serialize'
@@ -13,6 +14,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const { id } = await params
     const body = await req.json()
     const data = emisorUpdateSchema.parse(body)
+    const { confirmarProduccion, ...dataSinConfirm } = data
 
     const anterior = await prisma.emisor.findUnique({
       where: { id },
@@ -22,26 +24,38 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       return NextResponse.json({ error: 'Emisor no encontrado' }, { status: 404 })
     }
 
+    const errConfirm = validarConfirmacionProduccion(
+      data.ambiente,
+      anterior.ambiente,
+      confirmarProduccion,
+    )
+    if (errConfirm) {
+      return NextResponse.json({ error: errConfirm }, { status: 400 })
+    }
+
     const emisor = await prisma.$transaction(async (tx) => {
-      if (data.predeterminado) {
+      if (dataSinConfirm.predeterminado) {
         await tx.emisor.updateMany({ data: { predeterminado: false } })
       }
       return tx.emisor.update({
         where: { id },
-        data: { ...data, ...(data.email !== undefined && { email: data.email || null }) },
+        data: {
+          ...dataSinConfirm,
+          ...(dataSinConfirm.email !== undefined && { email: dataSinConfirm.email || null }),
+        },
       })
     })
 
     const ip = getIp(req)
     const ambienteCambia =
-      data.ambiente !== undefined && data.ambiente !== anterior.ambiente
+      dataSinConfirm.ambiente !== undefined && dataSinConfirm.ambiente !== anterior.ambiente
 
     await registrarAuditoria({
       usuarioId: actor.id,
       accion: 'emisor.update',
       entidad: 'Emisor',
       entidadId: id,
-      despues: data,
+      despues: dataSinConfirm,
       ip,
     })
 
@@ -52,19 +66,19 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         entidad: 'Emisor',
         entidadId: id,
         antes: { ambiente: anterior.ambiente },
-        despues: { ambiente: data.ambiente },
+        despues: { ambiente: dataSinConfirm.ambiente },
         ip,
       })
       await registrarError({
         nivel: NivelLog.WARN,
         origen: 'api',
-        mensaje: `Emisor "${anterior.razonSocial}": ambiente ${anterior.ambiente} → ${data.ambiente}`,
+        mensaje: `Emisor "${anterior.razonSocial}": ambiente ${anterior.ambiente} → ${dataSinConfirm.ambiente}`,
         usuarioId: actor.id,
         ip,
         metadata: {
           emisorId: id,
           ambienteAnterior: anterior.ambiente,
-          ambienteNuevo: data.ambiente,
+          ambienteNuevo: dataSinConfirm.ambiente,
           accion: 'emisor.ambiente_change',
         },
       })
