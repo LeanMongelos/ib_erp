@@ -2,7 +2,7 @@
 
 import { Fragment, useCallback, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { Search, ChevronDown, ChevronRight, AlertTriangle } from 'lucide-react'
+import { Search, ChevronDown, ChevronRight, AlertTriangle, FileSpreadsheet } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Select } from '@/components/ui/select'
@@ -89,6 +89,16 @@ export function LogsManager() {
     cargar(1)
   }
 
+  function exportarExcel() {
+    const params = new URLSearchParams()
+    if (q.trim()) params.set('q', q.trim())
+    if (nivel) params.set('nivel', nivel)
+    if (origen) params.set('origen', origen)
+    if (usuarioId) params.set('usuarioId', usuarioId)
+    if (dia) params.set('dia', dia)
+    window.open(`/api/logs/export?${params}`, '_blank')
+  }
+
   function nivelColor(n: string): string {
     if (n === 'ERROR') return 'text-red-600 bg-red-50'
     if (n === 'WARN') return 'text-amber-700 bg-amber-50'
@@ -171,6 +181,17 @@ export function LogsManager() {
             className="min-w-[180px]"
           />
           <Button type="submit" variant="primary" size="sm">Filtrar</Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={exportarExcel}
+            disabled={loading || total === 0}
+            title="Descarga Excel con los filtros actuales (hasta 5000 filas, incluye stack y metadata)"
+          >
+            <FileSpreadsheet size={14} className="mr-1.5" />
+            Exportar Excel
+          </Button>
         </form>
       </Card>
 

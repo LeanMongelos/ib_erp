@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { NivelLog } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { requirePermission, handleApiError } from '@/lib/api-auth'
 import { plain } from '@/lib/serialize'
-import { LOG_RETENTION_DAYS, diaLocal, rangoDiaLocal } from '@/lib/error-log'
+import { LOG_RETENTION_DAYS, diaLocal } from '@/lib/error-log'
+import { buildLogsWhere, parseLogsFilterParams } from '@/lib/logs-export'
+import { NivelLog } from '@prisma/client'
 
 const NIVELES = Object.values(NivelLog)
 
@@ -11,11 +12,7 @@ export async function GET(req: NextRequest) {
   try {
     await requirePermission('logs.read')
     const { searchParams } = new URL(req.url)
-    const q = searchParams.get('q')?.trim() ?? ''
-    const nivel = searchParams.get('nivel')?.trim() ?? ''
-    const origen = searchParams.get('origen')?.trim() ?? ''
-    const usuarioId = searchParams.get('usuarioId')?.trim() ?? ''
-    const dia = searchParams.get('dia')?.trim() ?? ''
+    const filterParams = parseLogsFilterParams(searchParams)
     const page = Math.max(1, Number(searchParams.get('page') ?? 1))
     const limit = Math.min(100, Math.max(10, Number(searchParams.get('limit') ?? 40)))
     const skip = (page - 1) * limit
@@ -24,19 +21,7 @@ export async function GET(req: NextRequest) {
     desde.setDate(desde.getDate() - LOG_RETENTION_DAYS)
     desde.setHours(0, 0, 0, 0)
 
-    const where: Record<string, unknown> = { fecha: { gte: desde } }
-    if (NIVELES.includes(nivel as NivelLog)) where.nivel = nivel
-    if (origen) where.origen = origen
-    if (usuarioId) where.usuarioId = usuarioId
-    if (dia) where.fecha = rangoDiaLocal(dia)
-    if (q) {
-      where.OR = [
-        { mensaje: { contains: q, mode: 'insensitive' } },
-        { ruta: { contains: q, mode: 'insensitive' } },
-        { origen: { contains: q, mode: 'insensitive' } },
-        { stack: { contains: q, mode: 'insensitive' } },
-      ]
-    }
+    const where = buildLogsWhere(filterParams)
 
     const [total, logs, usuarios, origenes, recientes] = await Promise.all([
       prisma.systemLog.count({ where }),
