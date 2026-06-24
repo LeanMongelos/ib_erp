@@ -27,6 +27,8 @@ import { InventarioPicker, type InventarioOption } from '@/components/inventario
 import { ClienteCombobox } from '@/components/clientes/ClienteCombobox'
 import { Select } from '@/components/ui/select'
 import { SucursalRapidaModal, type SucursalOption } from '@/components/clientes/SucursalRapidaModal'
+import { AfipEmisionAlerta } from '@/components/facturacion/AfipEmisionAlerta'
+import { validarEmisionAfip } from '@/lib/afip/validar-emision'
 import { validarSucursalesInstalacionEquipoCliente } from '@/lib/facturas/validar-sucursal-equipo-client'
 
 interface ItemRow {
@@ -89,7 +91,14 @@ interface PresupuestoPrefill {
 
 interface Props {
   clientes: ClienteOption[]
-  emisores: { id: string; razonSocial: string; predeterminado?: boolean }[]
+  emisores: {
+    id: string
+    razonSocial: string
+    predeterminado?: boolean
+    ambiente: 'HOMOLOGACION' | 'PRODUCCION'
+    certificadoPath?: string | null
+    clavePrivadaPath?: string | null
+  }[]
   otPrefill: any | null
   presupuestoPrefill?: PresupuestoPrefill | null
   plantillaFactura: { id: string | null; nombre: string; origen: string }
@@ -229,6 +238,9 @@ export function NuevaFacturaForm({
 
   const totalACobrar = totales.total + interesFinanciacion
 
+  const emisorSeleccionado = emisores.find((e) => e.id === emisorId) ?? null
+  const errorEmisionAfip = validarEmisionAfip(emisorSeleccionado)
+
   function addItem() {
     setItems([...items, { id: `new-${Date.now()}`, descripcion: '', cantidad: 1, precioUnit: 0 }])
   }
@@ -257,6 +269,14 @@ export function NuevaFacturaForm({
     if (errMoneda) {
       toast.error(errMoneda)
       return
+    }
+
+    if (emitirAfip) {
+      const errAfip = validarEmisionAfip(emisorSeleccionado)
+      if (errAfip) {
+        toast.error(errAfip)
+        return
+      }
     }
 
     setLoading(true)
@@ -396,6 +416,10 @@ export function NuevaFacturaForm({
             onCotizacionUsdChange={setCotizacionUsd}
             totalDocumento={totalACobrar}
           />
+        </div>
+
+        <div className="mt-3">
+          <AfipEmisionAlerta emisor={emisorSeleccionado} />
         </div>
 
         <div className="mt-4 pt-4 border-t border-[#f0f1f4]">
@@ -637,7 +661,13 @@ export function NuevaFacturaForm({
         <Button variant="outline" onClick={() => guardar(false)} loading={loading}>
           Guardar borrador
         </Button>
-        <Button variant="primary" onClick={() => guardar(true)} loading={loading}>
+        <Button
+          variant="primary"
+          onClick={() => guardar(true)}
+          loading={loading}
+          disabled={Boolean(errorEmisionAfip)}
+          title={errorEmisionAfip ?? undefined}
+        >
           Crear y emitir AFIP
         </Button>
       </div>

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { Card, CardTitle } from '@/components/ui/card'
 import { AlertTriangle, CheckCircle2, CircleAlert, Loader2, Server } from 'lucide-react'
 import type { GoLiveItem, GoLiveStatus } from '@/lib/admin/go-live-status'
+import { runbookUrlForGoLiveItem } from '@/lib/admin/go-live-runbook-links'
 
 const NIVEL_ICON = {
   pass: CheckCircle2,
@@ -19,10 +20,26 @@ const NIVEL_COLOR = {
 
 function ItemRow({ item }: { item: GoLiveItem }) {
   const Icon = NIVEL_ICON[item.nivel]
+  const runbookUrl = runbookUrlForGoLiveItem(item)
   return (
     <li className="flex items-start gap-2 text-[12px] text-[#3a4150]">
       <Icon size={14} className={`mt-0.5 flex-shrink-0 ${NIVEL_COLOR[item.nivel]}`} />
-      <span>{item.msg}</span>
+      <span>
+        {item.msg}
+        {runbookUrl && (
+          <>
+            {' '}
+            <a
+              href={runbookUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#E8650A] font-semibold hover:underline whitespace-nowrap"
+            >
+              Ver runbook →
+            </a>
+          </>
+        )}
+      </span>
     </li>
   )
 }

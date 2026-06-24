@@ -25,7 +25,14 @@ async function getData(otId?: string, presupuestoId?: string) {
     }),
     prisma.emisor.findMany({
       where: { activo: true },
-      select: { id: true, razonSocial: true, predeterminado: true },
+      select: {
+        id: true,
+        razonSocial: true,
+        predeterminado: true,
+        ambiente: true,
+        certificadoPath: true,
+        clavePrivadaPath: true,
+      },
     }),
     otId
       ? prisma.ordenTrabajo.findUnique({

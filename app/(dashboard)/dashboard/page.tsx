@@ -3,6 +3,7 @@ import { KPICard } from '@/components/dashboard/KPICard'
 import { OTsChart } from '@/components/dashboard/OTsChart'
 import { RecentOTsTable } from '@/components/dashboard/RecentOTsTable'
 import { ExportVentasMesButton } from '@/components/dashboard/ExportVentasMesButton'
+import { ExportCobranzasMesButton } from '@/components/cobranzas/ExportCobranzasMesButton'
 import { Card, CardHeader, CardTitle } from '@/components/ui/card'
 import { ClipboardList, ShieldCheck, FileText, Users, AlertCircle, TrendingUp, Clock } from 'lucide-react'
 import { formatMonto } from '@/lib/utils'
@@ -20,6 +21,9 @@ export default async function DashboardPage() {
   const puedeExportarVentas =
     tienePermiso(user.permissions, 'facturas.read') ||
     tienePermiso(user.permissions, 'reportes.read_comercial')
+  const puedeExportarCobranzas =
+    tienePermiso(user.permissions, 'cobranzas.read') ||
+    tienePermiso(user.permissions, 'reportes.read_financiero')
 
   const estadoMap: Record<string, number> = data.estadosCounts
     ? Object.fromEntries(
@@ -43,11 +47,12 @@ export default async function DashboardPage() {
       />
 
       <div className="flex-1 overflow-y-auto bg-[#F4F6F9] p-6 flex flex-col gap-[18px]">
-        {puedeExportarVentas && visibility.facturas && (
-          <div className="flex justify-end">
-            <ExportVentasMesButton />
+        {(puedeExportarVentas && visibility.facturas) || puedeExportarCobranzas ? (
+          <div className="flex justify-end gap-2">
+            {puedeExportarVentas && visibility.facturas && <ExportVentasMesButton />}
+            {puedeExportarCobranzas && <ExportCobranzasMesButton />}
           </div>
-        )}
+        ) : null}
         {!tieneMetricas && (
           <Card>
             <p className="text-[13px] text-[#7c828c]">

@@ -25,6 +25,29 @@ async function getCliente(id: string) {
   })
 }
 
+async function getResumenOperativo(clienteId: string) {
+  const [otsAbiertas, saldoCobranza] = await Promise.all([
+    prisma.ordenTrabajo.count({
+      where: {
+        clienteId,
+        estado: { in: ['ABIERTA', 'EN_PROCESO', 'VENCIDA'] },
+      },
+    }),
+    prisma.vencimientoCobranza.aggregate({
+      where: {
+        estado: { in: ['PENDIENTE', 'AVISO_ENVIADO'] },
+        factura: { clienteId },
+      },
+      _sum: { monto: true },
+    }),
+  ])
+
+  return {
+    otsAbiertas,
+    saldoCobranza: saldoCobranza._sum.monto ?? 0,
+  }
+}
+
 export default async function ClienteFichaPage({
   params,
 }: {
@@ -34,6 +57,8 @@ export default async function ClienteFichaPage({
   const { id } = await params
   const cliente = await getCliente(id)
   if (!cliente) notFound()
+
+  const resumenOperativo = await getResumenOperativo(id)
 
   const metricas = calcularMetricasCliente(
     cliente.facturas.map((f) => ({
@@ -57,6 +82,7 @@ export default async function ClienteFichaPage({
         <ClienteFicha
           cliente={JSON.parse(JSON.stringify(cliente))}
           metricas={JSON.parse(JSON.stringify(metricas))}
+          resumenOperativo={JSON.parse(JSON.stringify(resumenOperativo))}
         />
       </div>
     </>

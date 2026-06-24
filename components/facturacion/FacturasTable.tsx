@@ -10,6 +10,7 @@ import { BadgeEstadoFactura } from '@/components/ui/badge'
 import { formatFecha } from '@/lib/utils'
 import { formatMontoMoneda } from '@/lib/moneda'
 import { mensajeErrorDesconocido, mensajeErrorJson } from '@/lib/errores'
+import { validarEmisionAfip } from '@/lib/afip/validar-emision'
 
 const ESTADOS_FACTURA = [
   { value: 'TODOS',    label: 'Todos los estados' },
@@ -45,6 +46,11 @@ interface FacturaRow {
   moneda?: string
   cae?: string | null
   cliente?: { nombre: string }
+  emisor?: {
+    ambiente: 'HOMOLOGACION' | 'PRODUCCION'
+    certificadoPath?: string | null
+    clavePrivadaPath?: string | null
+  } | null
   vencimientos?: VencimientoRow[]
 }
 
@@ -83,10 +89,16 @@ export function FacturasTable({ facturas }: { facturas: FacturaRow[] }) {
     return matchSearch && matchEstado
   })
 
-  async function emitirAfip(id: string) {
-    setEmitiendo(id)
+  async function emitirAfip(f: FacturaRow) {
+    const errAfip = validarEmisionAfip(f.emisor)
+    if (errAfip) {
+      toast.error(errAfip)
+      return
+    }
+
+    setEmitiendo(f.id)
     try {
-      const res = await fetch(`/api/facturas/${id}/emitir`, { method: 'POST' })
+      const res = await fetch(`/api/facturas/${f.id}/emitir`, { method: 'POST' })
       const data = await res.json()
       if (!res.ok) throw new Error(mensajeErrorJson(data, 'No se pudo emitir el comprobante en AFIP'))
       toast.success(data.simulado ? 'CAE simulado (sin certificado)' : 'Factura emitida en AFIP')
@@ -172,16 +184,19 @@ export function FacturasTable({ facturas }: { facturas: FacturaRow[] }) {
                       >
                         <FileText size={15} />
                       </button>
-                      {['BORRADOR', 'PENDIENTE', 'RECHAZADA'].includes(f.estado) && (
+                      {['BORRADOR', 'PENDIENTE', 'RECHAZADA'].includes(f.estado) && (() => {
+                        const bloqueado = Boolean(validarEmisionAfip(f.emisor))
+                        return (
                         <button
-                          onClick={() => emitirAfip(f.id)}
-                          disabled={emitiendo === f.id}
+                          onClick={() => emitirAfip(f)}
+                          disabled={emitiendo === f.id || bloqueado}
                           className="p-1.5 text-[#6b7280] hover:text-[#E8650A] rounded disabled:opacity-50"
-                          title="Emitir AFIP"
+                          title={bloqueado ? (validarEmisionAfip(f.emisor) ?? 'Emitir AFIP') : 'Emitir AFIP'}
                         >
                           <Zap size={15} />
                         </button>
-                      )}
+                        )
+                      })()}
                     </div>
                   </td>
                 </tr>

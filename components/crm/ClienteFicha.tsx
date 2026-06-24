@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import {
   MapPin, Phone, Mail, Wrench, Pencil, X, TrendingUp, Clock, AlertTriangle, CircleDollarSign,
+  ClipboardList, FileText,
 } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -72,9 +73,11 @@ type Tab = typeof TABS[number]
 export function ClienteFicha({
   cliente,
   metricas,
+  resumenOperativo,
 }: {
   cliente: ClienteCompleto
   metricas: MetricasCliente
+  resumenOperativo?: { otsAbiertas: number; saldoCobranza: number }
 }) {
   const router = useRouter()
   const puedeEditar = useCan('clientes.update')
@@ -127,6 +130,49 @@ export function ClienteFicha({
           </Button>
         </div>
       </Card>
+
+      {/* Resumen operativo rápido */}
+      {resumenOperativo && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <Card className="p-3.5">
+            <div className="flex items-center gap-2 mb-1">
+              <ClipboardList size={14} className="text-[#E8650A]" />
+              <p className="text-[10.5px] font-bold text-[#8a909a] uppercase tracking-wide">OTs abiertas</p>
+            </div>
+            <p className="text-[20px] font-extrabold text-[#16181d]">{resumenOperativo.otsAbiertas}</p>
+          </Card>
+          <Card className="p-3.5">
+            <div className="flex items-center gap-2 mb-1">
+              <CircleDollarSign size={14} className="text-[#E8650A]" />
+              <p className="text-[10.5px] font-bold text-[#8a909a] uppercase tracking-wide">Saldo cobranza</p>
+            </div>
+            <p className={`text-[20px] font-extrabold ${resumenOperativo.saldoCobranza > 0 ? 'text-[#C2261B]' : 'text-[#15803D]'}`}>
+              {formatMonto(resumenOperativo.saldoCobranza)}
+            </p>
+          </Card>
+          <Card className="p-3.5">
+            <div className="flex items-center gap-2 mb-2">
+              <FileText size={14} className="text-[#E8650A]" />
+              <p className="text-[10.5px] font-bold text-[#8a909a] uppercase tracking-wide">Últimas facturas</p>
+            </div>
+            {cliente.facturas.length === 0 ? (
+              <p className="text-[12px] text-[#9aa1ab]">Sin facturas</p>
+            ) : (
+              <ul className="flex flex-col gap-1">
+                {cliente.facturas.slice(0, 3).map((f) => (
+                  <li key={f.id} className="flex items-center justify-between gap-2 text-[12px]">
+                    <Link href={`/facturacion?highlight=${f.id}`} className="font-semibold text-[#E8650A] hover:underline">
+                      {f.numero}
+                    </Link>
+                    <span className="text-[#6b7280]">{formatMonto(Number(f.total))}</span>
+                    <BadgeEstadoFactura estado={f.estado as any} />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+        </div>
+      )}
 
       {/* KPIs de comportamiento */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

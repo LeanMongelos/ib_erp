@@ -10,6 +10,13 @@ async function getFacturas() {
     orderBy: { creadoEn: 'desc' },
     include: {
       cliente: { select: { nombre: true } },
+      emisor: {
+        select: {
+          ambiente: true,
+          certificadoPath: true,
+          clavePrivadaPath: true,
+        },
+      },
       vencimientos: { orderBy: { numeroCuota: 'asc' } },
     },
   })
