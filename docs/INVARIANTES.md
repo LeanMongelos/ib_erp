@@ -38,6 +38,7 @@ Documento de referencia para desarrollo, code review y agentes. Si un cambio vio
 | N2 | POST n8n responder usa `mensajeN8nResponderSchema` (= `crmMensajeContenidoSchema`) | `lib/validation.ts` | `npm run test:validaciones` |
 | N3 | POST n8n etiquetar usa `conversacionEtiquetasN8nSchema` | `lib/validation.ts` | `npm run test:validaciones` |
 | N4 | POST n8n crear lead usa `leadN8nCreateSchema` | `lib/validation.ts` | `npm run test:validaciones` |
+| N5 | **Todas** las rutas `/api/n8n/*` validan `verifyN8nApiKey` (Bearer `N8N_API_KEY`) | `lib/crm/n8n.ts` · `validateN8nBearerToken` | `npm run test:invariants` (`test-n8n-api-security.ts`) |
 
 ## Operaciones / deploy
 
@@ -85,6 +86,7 @@ Documento de referencia para desarrollo, code review y agentes. Si un cambio vio
 | F8 | POST generar OC desde faltantes usa `generarOcFaltantesSchema` | `lib/validation.ts` | `npm run test:invariants` |
 | F9 | Tras emisión `EMITIDA` con CAE, PDF disponible on-demand vía `GET /api/facturas/[id]/pdf` (`renderDocumentoPDF`) | `app/api/facturas/[id]/pdf/route.ts` | smoke manual post go-live |
 | F10 | Cuotas cobranza se crean al **crear** factura con plazos (`sincronizarVencimientosCobranza`), no al emitir AFIP | `app/api/facturas/route.ts` POST | — |
+| F11 | Tras emisión `EMITIDA`, email al cliente con PDF adjunto si tiene email y no opt-out (`[no-email-factura]` en notas); no bloquea emisión | `lib/facturas/notify-cliente-emitida.ts` · `FACTURA_EMAIL_CLIENTE` | smoke manual · SystemLog `factura-cliente-email` |
 
 ## Auth y permisos
 

@@ -9,10 +9,17 @@ import { prisma } from '@/lib/prisma'
 import { decryptCanalConfig } from '@/lib/integraciones/canal-config'
 import type { EmailImapConfig } from '@/lib/crm/config'
 
+export type SystemMailAttachment = {
+  filename: string
+  content: Buffer | string
+  contentType?: string
+}
+
 export type SystemMailPayload = {
   to: string | string[]
   subject: string
   text: string
+  attachments?: SystemMailAttachment[]
 }
 
 async function buildTransporter(): Promise<Transporter | null> {
@@ -68,6 +75,11 @@ export async function sendSystemEmail(payload: SystemMailPayload): Promise<boole
       to: Array.isArray(payload.to) ? payload.to.join(', ') : payload.to,
       subject: payload.subject,
       text: payload.text,
+      attachments: payload.attachments?.map((a) => ({
+        filename: a.filename,
+        content: a.content,
+        contentType: a.contentType ?? 'application/octet-stream',
+      })),
     })
     return true
   } catch (err) {

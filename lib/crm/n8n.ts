@@ -18,8 +18,14 @@ export async function verifyN8nApiKey(authHeader: string | null): Promise<boolea
   const config = await getN8nConfig()
   const expected = config?.apiKey ?? process.env.N8N_API_KEY
   if (!expected) return false
+  return validateN8nBearerToken(authHeader, expected)
+}
+
+/** Valida Bearer token n8n (helper puro — testeable sin BD). */
+export function validateN8nBearerToken(authHeader: string | null, expectedKey: string): boolean {
+  if (!expectedKey) return false
   if (!authHeader?.startsWith('Bearer ')) return false
-  return authHeader.slice(7) === expected
+  return authHeader.slice(7) === expectedKey
 }
 
 export async function emitN8nEvento(evento: N8nEvento, payload: Record<string, unknown>) {

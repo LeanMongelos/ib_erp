@@ -113,5 +113,11 @@ export async function procesarEmisionFactura(facturaId: string, usuarioId?: stri
     })
   }
 
+  void import('@/lib/facturas/notify-cliente-emitida').then(({ notifyClienteFacturaEmitida }) =>
+    notifyClienteFacturaEmitida(facturaId).catch((err) =>
+      console.error('[factura-cliente-email] Error no bloqueante:', err),
+    ),
+  )
+
   return { ok: true, factura: updated, qrDataUrl, simulado: resultado.simulado, provision }
 }

@@ -224,11 +224,25 @@ Alternativa local en el VPS (sin HTTP): `cd /opt/ibiomedica && npm run cron:ots-
 ## 10. Verificación post-deploy
 
 ```bash
+curl -sf https://erp.tudominio.com/api/health | jq
 curl -I https://erp.tudominio.com/login
 npm run smoke
 npm run e2e        # opcional en staging
 ```
 
+**Health check (`GET /api/health`):** respuesta JSON pública (sin secretos) para UptimeRobot u otros monitores.
+
+| Campo | Significado |
+|-------|-------------|
+| `ok` | `true` si la BD responde |
+| `db` | `ok` / `error` |
+| `redis` | `ok` / `skipped` (sin `REDIS_URL`) / `error` |
+| `version` | Versión del package |
+| `commit` | SHA corto del deploy (`.git` o `GIT_COMMIT_SHA`) |
+| `ts` | Timestamp ISO |
+
+HTTP **503** si `db` falla. Configurar UptimeRobot: URL `https://erp.tudominio.com/api/health`, keyword `ok` o status 200.
+
 Login con usuario real → Configuración → Logs del sistema (si hay permiso `logs.read`).
 
-Ver también: [`18-RUNBOOK-OPERACIONES.md`](18-RUNBOOK-OPERACIONES.md), [`17-OBSERVABILIDAD-Y-LOGS.md`](17-OBSERVABILIDAD-Y-LOGS.md).
+Ver también: [`RUNBOOK-PRODUCCION.md`](RUNBOOK-PRODUCCION.md), [`18-RUNBOOK-OPERACIONES.md`](18-RUNBOOK-OPERACIONES.md), [`17-OBSERVABILIDAD-Y-LOGS.md`](17-OBSERVABILIDAD-Y-LOGS.md).

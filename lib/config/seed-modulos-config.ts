@@ -45,6 +45,13 @@ const PLANTILLAS = [
     asunto: 'Vencimiento — {{componente}}',
     cuerpo: 'El componente «{{componente}}» del equipo {{equipo}} vence el {{fecha}}.',
   },
+  {
+    codigo: 'FACTURA_EMITIDA',
+    nombre: 'Factura emitida al cliente',
+    canal: 'EMAIL',
+    asunto: 'Comprobante {{numero}} — {{emisor}}',
+    cuerpo: 'Estimado/a {{cliente}},\n\nAdjuntamos el comprobante fiscal {{numero}} emitido el {{fecha}}.\nCAE: {{cae}}\nImporte total: {{total}}\n\n— {{emisor}}',
+  },
 ]
 
 const REGLAS = [
@@ -84,6 +91,15 @@ export async function seedModulosConfigIfEmpty() {
         },
       })
     }
+  }
+
+  const facturaEmitida = PLANTILLAS.find((p) => p.codigo === 'FACTURA_EMITIDA')
+  if (facturaEmitida) {
+    await prisma.plantillaNotificacion.upsert({
+      where: { codigo: 'FACTURA_EMITIDA' },
+      update: {},
+      create: facturaEmitida,
+    })
   }
 }
 
