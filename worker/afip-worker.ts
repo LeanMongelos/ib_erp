@@ -5,6 +5,7 @@
  */
 
 import { procesarEmisionFactura } from '@/lib/afip/emitir'
+import { notifyAfipFalloEmision } from '@/lib/afip/notify-fallo-emision'
 import { registrarErrorDesdeExcepcion } from '@/lib/error-log'
 
 const REDIS_URL = process.env.REDIS_URL
@@ -44,10 +45,19 @@ async function runWorker() {
 
     worker.on('failed', async (job, err) => {
       const data = job?.data as { facturaId?: string; usuarioId?: string } | undefined
+      const facturaId = data?.facturaId
       await registrarErrorDesdeExcepcion('worker-afip', err, {
         usuarioId: data?.usuarioId ?? null,
-        metadata: { facturaId: data?.facturaId },
+        metadata: { facturaId },
       })
+      if (facturaId && job && job.attemptsMade >= (job.opts.attempts ?? 1)) {
+        void notifyAfipFalloEmision({
+          facturaId,
+          observaciones: err instanceof Error ? err.message : String(err),
+          usuarioId: data?.usuarioId ?? null,
+          origenFallo: 'worker',
+        })
+      }
     })
 
     console.log('[afip-worker] Escuchando cola afip-emision…')

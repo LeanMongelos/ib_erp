@@ -9,6 +9,7 @@ import { emitirCAEFactura, buildQrFiscal } from './client'
 import { validarEmisionAfip } from './validar-emision'
 import { afipMonedaId } from '@/lib/moneda'
 import { registrarAuditoria } from '@/lib/audit'
+import { notifyAfipFalloEmision } from '@/lib/afip/notify-fallo-emision'
 
 const TIPO_CMP: Record<string, number> = { A: 1, B: 6, C: 11 }
 
@@ -35,9 +36,16 @@ export async function procesarEmisionFactura(facturaId: string, usuarioId?: stri
   const resultado = await emitirCAEFactura(facturaId)
 
   if (!resultado.ok) {
+    const obs = resultado.observaciones ?? 'Rechazada'
     await prisma.factura.update({
       where: { id: facturaId },
-      data: { estado: 'RECHAZADA', afipObservaciones: resultado.observaciones ?? 'Rechazada' },
+      data: { estado: 'RECHAZADA', afipObservaciones: obs },
+    })
+    void notifyAfipFalloEmision({
+      facturaId,
+      observaciones: obs,
+      usuarioId,
+      origenFallo: 'emision',
     })
     return { ok: false, observaciones: resultado.observaciones }
   }

@@ -7,6 +7,7 @@ import { useCan } from '@/components/auth/useCan'
 import {
   Users, Building2, FileText, Plug, Boxes, Bell, Shield, History, ChevronRight, Settings, Terminal, Tag,
 } from 'lucide-react'
+import { GoLiveStatusCard } from '@/components/configuracion/GoLiveStatusCard'
 
 interface Item {
   href: string
@@ -36,6 +37,7 @@ export default function ConfiguracionPage() {
     <>
       <Header title="Configuración" subtitle="Ajustes del sistema" />
       <div className="flex-1 overflow-y-auto bg-[#F4F6F9] p-6">
+        <GoLiveStatusCard />
         <div className="grid grid-cols-3 gap-4 max-w-5xl">
           {ITEMS.map((item) => (
             <ConfigCard key={item.href} item={item} />

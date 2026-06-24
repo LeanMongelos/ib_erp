@@ -87,3 +87,29 @@ pm2 logs worker-afip
 ```
 
 El deploy (`vps-deploy-from-git.sh`) reinicia `worker-afip` si está registrado en PM2.
+
+---
+
+## 6. Monitoreo post primera factura
+
+Tras el go-live, revisar periódicamente:
+
+| Control | Dónde |
+|---------|--------|
+| Checklist go-live | Configuración → tarjeta **Estado go-live / AFIP** o `GET /api/admin/go-live-status` |
+| CLI completo (incl. integridad) | `npm run go-live:check` en el VPS |
+| Rechazos AFIP | Facturación (estado `RECHAZADA`), Logs (`origen: afip-notify` o `worker-afip`) |
+| Alerta email admin | `ADMIN_NOTIFY_EMAIL` — un correo por factura rechazada (sin spam) |
+| Cambio de ambiente emisor | Auditoría (`emisor.ambiente_change`) + Logs WARN (`emisor.ambiente_change` en metadata) |
+
+**Qué hace el sistema automáticamente:**
+
+- Al pasar un emisor de `HOMOLOGACION` ↔ `PRODUCCION`, se registra en auditoría y SystemLog (WARN) con usuario, emisor y valores anterior/nuevo.
+- Cuando AFIP rechaza una factura o el worker agota reintentos, se envía **un** email a `ADMIN_NOTIFY_EMAIL` (o SUPERADMIN/GERENTE si no hay env) y queda traza en SystemLog (`origen: afip-notify`).
+
+**Operador — verificación semanal sugerida:**
+
+1. Tarjeta go-live en Configuración: sin FAIL; worker `online` si usás cola Redis.
+2. Logs: filtrar `afip-notify` y `worker-afip` por ERROR/WARN.
+3. Auditoría: buscar `emisor.ambiente_change` si hubo cambios de ambiente.
+4. Facturas `RECHAZADA` pendientes de corrección y reemisión.
