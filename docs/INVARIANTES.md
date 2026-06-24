@@ -19,6 +19,7 @@ Documento de referencia para desarrollo, code review y agentes. Si un cambio vio
 |----|------------|------------|------|
 | E1 | Movimiento entre etapas: misma regla UI (drag) y API | `lib/crm/embudo-movimiento-client.ts` | `npm run test:validaciones` |
 | E2 | Formularios de transición validados en UI y API | `validateForm` en `embudo-forms.ts` | `test:validaciones` |
+| E3 | POST/PATCH/mover embudo usan schemas de `lib/validation.ts` | `embudoNegocioCreateSchema`, `embudoNegocioPatchSchema`, `embudoMoverSchema` | `npm run test:invariants` |
 
 ## Servicio técnico (OT)
 
@@ -42,6 +43,10 @@ Documento de referencia para desarrollo, code review y agentes. Si un cambio vio
 | ID | Invariante | Resolvedor | Test |
 |----|------------|------------|------|
 | I1 | Post-deploy: integridad de datos (plantillas, equipos, OT stock, config) | `scripts/integridad-prod.ts` | `npm run integridad:prod` |
+| I2 | OT ABIERTA/EN_PROCESO con SLA vencido debe pasar a VENCIDA (`actualizarOTsVencidas`) | `lib/ots.ts` | `integridad:prod` (warn) |
+| I3 | Conversaciones CRM abiertas deben vincularse a cliente (`clienteId`) | bandeja CRM / crear-lead n8n | `integridad:prod` (warn) |
+| I4 | Predeterminado activo **único** por tipo (plantilla, emisor, lista precios) | APIs config + `integridad-prod.ts` | `integridad:prod` (warn) |
+| I5 | Negocios embudo activos (≠ CIERRE) con `clienteId` en BD cuando hay cliente real | formulario embudo | `integridad:prod` (warn) |
 
 ## Presupuestos
 

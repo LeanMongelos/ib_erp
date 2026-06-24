@@ -145,6 +145,47 @@ export const leadN8nCreateSchema = z.object({
   conversacionId: z.string().min(1).optional(),
 })
 
+// ============ CRM EMBUDO ============
+
+export const etapaEmbudoEnum = z.enum([
+  'ENTRADA', 'CONTACTO', 'DOCUMENTACION', 'PROPUESTA', 'SEGUIMIENTO', 'ANALISIS', 'ENTREGA', 'CIERRE',
+])
+
+export const urgenciaEmbudoEnum = z.enum(['NORMAL', 'URGENTE'])
+
+/** POST /api/crm/embudo — crear negocio en el embudo. */
+export const embudoNegocioCreateSchema = z.object({
+  nombre: z.string().min(1),
+  cliente: z.string().min(1),
+  clienteId: z.string().min(1).optional().nullable(),
+  productoServicio: z.string().min(1),
+  inventarioId: z.string().min(1).optional().nullable(),
+  monto: z.number().optional(),
+  vendedor: z.string().min(1),
+  urgencia: urgenciaEmbudoEnum.optional(),
+  etapa: etapaEmbudoEnum.optional(),
+  notas: z.string().optional(),
+})
+
+/** PATCH /api/crm/embudo/[id] — actualizar negocio. */
+export const embudoNegocioPatchSchema = z.object({
+  nombre: z.string().min(1).optional(),
+  cliente: z.string().min(1).optional(),
+  productoServicio: z.string().optional(),
+  monto: z.number().optional(),
+  vendedor: z.string().optional(),
+  urgencia: urgenciaEmbudoEnum.optional(),
+  notas: z.string().optional(),
+  proximaAccionFecha: z.string().optional().nullable(),
+})
+
+/** POST /api/crm/embudo/[id]/mover — transición de etapa. */
+export const embudoMoverSchema = z.object({
+  etapaHasta: etapaEmbudoEnum,
+  retroceso: z.boolean().optional(),
+  datos: z.record(z.string(), z.unknown()).optional(),
+})
+
 export const otUpdateSchema = z
   .object({
     estado:      estadoOTEnum.optional(),
