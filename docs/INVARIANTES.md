@@ -54,6 +54,7 @@ Documento de referencia para desarrollo, code review y agentes. Si un cambio vio
 | I4 | Predeterminado activo **único** por tipo (plantilla, emisor, lista precios) | APIs config + `integridad-prod.ts` | `integridad:prod` (warn) |
 | I5 | Negocios embudo activos (≠ CIERRE) con `clienteId` en BD cuando hay cliente real | formulario embudo | `integridad:prod` (warn) |
 | I9 | Cuotas vencidas deben pasar a `AVISO_ENVIADO` (cron cobranzas idempotente) | `procesarVencimientosDelDia` · `POST /api/cron/cobranzas-vencimientos` | `integridad:prod` (warn) |
+| I9b | Cuotas impagas vencidas marcan factura `EMITIDA` → `VENCIDA`; recordatorio cliente deduplicado | `marcarFacturasVencidasPorCuota` · `notify-cliente-recordatorio.ts` | cron manual |
 | I10 | Emisor `PRODUCCION` activo exige `ADMIN_NOTIFY_EMAIL` + SMTP (o EMAIL_IMAP) para alertas AFIP | `lib/admin/go-live-status.ts` · `validar-env-prod` | `go-live:check` (warn/fail) |
 
 ## Presupuestos

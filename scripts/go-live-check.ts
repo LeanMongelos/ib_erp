@@ -92,7 +92,10 @@ async function main() {
   console.log('\n--- 2b. Worker AFIP ---\n')
   for (const item of status.items.filter((i) => i.seccion === 'worker')) printItem(item)
 
-  console.log('\n--- 2c. Alertas AFIP / correo ---\n')
+  console.log('\n--- 2c. Worker cobranzas ---\n')
+  for (const item of status.items.filter((i) => i.seccion === 'worker_cobranzas')) printItem(item)
+
+  console.log('\n--- 2d. Alertas AFIP / correo ---\n')
   for (const item of status.items.filter((i) => i.seccion === 'alertas')) printItem(item)
 
   const allItems = [...status.items]

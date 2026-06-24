@@ -16,7 +16,9 @@ export async function POST(req: NextRequest) {
     void registrarError({
       nivel: NivelLog.INFO,
       origen: 'cron-cobranzas',
-      mensaje: `vencimientos procesados: ${result.enviados}/${result.revisados} aviso(s)`,
+      mensaje: `vencimientos procesados: ${result.enviados}/${result.revisados} aviso(s) internos; ` +
+        `${result.facturasMarcadasVencidas} factura(s) VENCIDA; ` +
+        `cliente vencido ${result.recordatoriosClienteVencidos}, próximo ${result.recordatoriosClienteProximos}`,
       metadata: result,
     })
 

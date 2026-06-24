@@ -10,9 +10,18 @@ const INTERVAL_MS = Number(process.env.COBRANZA_POLL_MS ?? 3_600_000)
 
 async function tick() {
   try {
-    const { enviados, revisados } = await procesarVencimientosDelDia()
-    if (revisados > 0) {
-      console.log(`[cobranzas-worker] ${enviados}/${revisados} aviso(s) enviado(s)`)
+    const result = await procesarVencimientosDelDia()
+    if (
+      result.revisados > 0 ||
+      result.facturasMarcadasVencidas > 0 ||
+      result.recordatoriosClienteVencidos > 0 ||
+      result.recordatoriosClienteProximos > 0
+    ) {
+      console.log(
+        `[cobranzas-worker] internos ${result.enviados}/${result.revisados} · ` +
+          `facturas VENCIDA ${result.facturasMarcadasVencidas} · ` +
+          `cliente vencido ${result.recordatoriosClienteVencidos} · próximo ${result.recordatoriosClienteProximos}`,
+      )
     }
   } catch (err) {
     console.error('[cobranzas-worker]', err instanceof Error ? err.message : err)

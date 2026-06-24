@@ -22,6 +22,7 @@ export type DashboardMetrics = {
   otsVencidas: number | null
   clientesActivos: number | null
   facturasPendientesMonto: number | null
+  cuotasVencidas: number | null
   equiposEnGarantia: number | null
   cumplimientoSLA: number | null
   ultimasOTs: OrdenTrabajo[] | null
@@ -47,6 +48,7 @@ export async function getDashboardMetrics(permissions: string[]): Promise<Dashbo
     otsVencidas: null,
     clientesActivos: null,
     facturasPendientesMonto: null,
+    cuotasVencidas: null,
     equiposEnGarantia: null,
     cumplimientoSLA: null,
     ultimasOTs: null,
@@ -69,6 +71,7 @@ export async function getDashboardMetrics(permissions: string[]): Promise<Dashbo
     otsVencidas,
     clientesActivos,
     facturasPendientes,
+    cuotasVencidas,
     equiposEnGarantia,
     ultimasOTs,
     otsCerradas,
@@ -83,7 +86,19 @@ export async function getDashboardMetrics(permissions: string[]): Promise<Dashbo
       ? prisma.cliente.count({ where: { activo: true } })
       : Promise.resolve(null),
     visibility.facturas
-      ? prisma.factura.aggregate({ where: { estado: 'PENDIENTE' }, _sum: { total: true } })
+      ? prisma.factura.aggregate({
+          where: { estado: { in: ['PENDIENTE', 'EMITIDA', 'VENCIDA'] } },
+          _sum: { total: true },
+        })
+      : Promise.resolve(null),
+    visibility.facturas
+      ? prisma.vencimientoCobranza.count({
+          where: {
+            estado: { in: ['PENDIENTE', 'AVISO_ENVIADO'] },
+            fechaVencimiento: { lt: ahora },
+            factura: { estado: { in: ['EMITIDA', 'VENCIDA', 'PENDIENTE'] } },
+          },
+        })
       : Promise.resolve(null),
     visibility.servicio
       ? prisma.equipo.count({
@@ -147,6 +162,7 @@ export async function getDashboardMetrics(permissions: string[]): Promise<Dashbo
     facturasPendientesMonto: facturasPendientes
       ? Number(facturasPendientes._sum.total ?? 0)
       : null,
+    cuotasVencidas,
     equiposEnGarantia,
     cumplimientoSLA,
     ultimasOTs: ultimasOTs

@@ -3,7 +3,7 @@ import { KPICard } from '@/components/dashboard/KPICard'
 import { OTsChart } from '@/components/dashboard/OTsChart'
 import { RecentOTsTable } from '@/components/dashboard/RecentOTsTable'
 import { Card, CardHeader, CardTitle } from '@/components/ui/card'
-import { ClipboardList, ShieldCheck, FileText, Users } from 'lucide-react'
+import { ClipboardList, ShieldCheck, FileText, Users, AlertCircle } from 'lucide-react'
 import { formatMonto } from '@/lib/utils'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -24,7 +24,7 @@ export default async function DashboardPage() {
 
   const kpiCount =
     (visibility.servicio ? 2 : 0) +
-    (visibility.facturas ? 1 : 0) +
+    (visibility.facturas ? 2 : 0) +
     (visibility.clientes ? 1 : 0)
 
   const tieneMetricas = kpiCount > 0 || visibility.servicio
@@ -65,9 +65,17 @@ export default async function DashboardPage() {
             )}
             {visibility.facturas && data.facturasPendientesMonto !== null && (
               <KPICard
-                title="Facturas pendientes"
+                title="Facturas pendientes cobro"
                 value={formatMonto(data.facturasPendientesMonto)}
                 icon={FileText}
+                variant="orange"
+              />
+            )}
+            {visibility.facturas && data.cuotasVencidas !== null && (
+              <KPICard
+                title="Cuotas vencidas"
+                value={data.cuotasVencidas}
+                icon={AlertCircle}
                 variant="orange"
               />
             )}

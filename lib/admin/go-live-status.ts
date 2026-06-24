@@ -74,6 +74,30 @@ export function detectarWorkerAfipPm2(): WorkerAfipStatus {
   }
 }
 
+export function detectarWorkerCobranzasPm2(): WorkerAfipStatus {
+  try {
+    const out = execSync('pm2 jlist', { encoding: 'utf8', timeout: 4000 })
+    const list = JSON.parse(out) as Array<{
+      name?: string
+      pm2_env?: { status?: string }
+    }>
+    const worker = list.find((p) => p.name === 'worker-cobranzas')
+    if (!worker) {
+      return { detectado: false, msg: 'worker-cobranzas no registrado en PM2' }
+    }
+    const estado = worker.pm2_env?.status ?? 'desconocido'
+    const online = estado === 'online'
+    return {
+      detectado: true,
+      online,
+      estado,
+      msg: online ? 'worker-cobranzas online' : `worker-cobranzas ${estado}`,
+    }
+  } catch {
+    return { detectado: false, msg: 'PM2 no disponible en este host' }
+  }
+}
+
 export async function obtenerGoLiveStatus(): Promise<GoLiveStatus> {
   const items: GoLiveItem[] = []
   const fecha = new Date().toISOString()
@@ -218,6 +242,23 @@ export async function obtenerGoLiveStatus(): Promise<GoLiveStatus> {
     addItem(items, 'worker', 'pass', workerAfip.msg)
   } else {
     addItem(items, 'worker', 'fail', workerAfip.msg, 'worker_offline')
+  }
+
+  const workerCobranzas = detectarWorkerCobranzasPm2()
+  if (process.env.REDIS_URL?.trim()) {
+    if (!workerCobranzas.detectado) {
+      addItem(
+        items,
+        'worker_cobranzas',
+        'warn',
+        `${workerCobranzas.msg} — alternativa: cron POST /api/cron/cobranzas-vencimientos`,
+        'worker_cobranzas_no_pm2',
+      )
+    } else if (workerCobranzas.online) {
+      addItem(items, 'worker_cobranzas', 'pass', workerCobranzas.msg)
+    } else {
+      addItem(items, 'worker_cobranzas', 'warn', workerCobranzas.msg, 'worker_cobranzas_offline')
+    }
   }
 
   const pass = items.filter((i) => i.nivel === 'pass').length

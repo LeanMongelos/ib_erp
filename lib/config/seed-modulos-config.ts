@@ -52,10 +52,19 @@ const PLANTILLAS = [
     asunto: 'Comprobante {{numero}} — {{emisor}}',
     cuerpo: 'Estimado/a {{cliente}},\n\nAdjuntamos el comprobante fiscal {{numero}} emitido el {{fecha}}.\nCAE: {{cae}}\nImporte total: {{total}}\n\n— {{emisor}}',
   },
+  {
+    codigo: 'COBRANZA_RECORDATORIO',
+    nombre: 'Recordatorio de pago al cliente',
+    canal: 'EMAIL',
+    asunto: 'Recordatorio de pago — Factura {{numero}}',
+    cuerpo:
+      'Estimado/a {{cliente}},\n\nLe recordamos que la cuota {{cuota}} de la factura {{numero}} está {{situacion}} ({{fecha}}).\nMonto de la cuota: {{monto}}\n\n— Ingeniería Biomédica',
+  },
 ]
 
 const REGLAS = [
   { codigo: 'REGLA_COBRANZA', nombre: 'Aviso factura vencida', evento: 'cobranza.vencida', diasAnticipacion: 0, plantillaCodigo: 'COBRANZA_VENCIDA' },
+  { codigo: 'REGLA_COBRANZA_PROXIMO', nombre: 'Recordatorio cuota próxima', evento: 'cobranza.proximo', diasAnticipacion: 3, plantillaCodigo: 'COBRANZA_RECORDATORIO' },
   { codigo: 'REGLA_OT_SLA', nombre: 'Aviso SLA de OT', evento: 'ot.sla_proximo', diasAnticipacion: 1, plantillaCodigo: 'OT_SLA' },
   { codigo: 'REGLA_PREVENTIVO', nombre: 'Aviso preventivo', evento: 'preventivo.proximo', diasAnticipacion: 7, plantillaCodigo: 'PREVENTIVO_PROXIMO' },
   { codigo: 'REGLA_COMPONENTE', nombre: 'Aviso componente', evento: 'equipo.componente_vence', diasAnticipacion: 30, plantillaCodigo: 'COMPONENTE_VENCE' },
@@ -93,12 +102,33 @@ export async function seedModulosConfigIfEmpty() {
     }
   }
 
-  const facturaEmitida = PLANTILLAS.find((p) => p.codigo === 'FACTURA_EMITIDA')
-  if (facturaEmitida) {
-    await prisma.plantillaNotificacion.upsert({
-      where: { codigo: 'FACTURA_EMITIDA' },
+  for (const codigo of ['FACTURA_EMITIDA', 'COBRANZA_RECORDATORIO'] as const) {
+    const plantilla = PLANTILLAS.find((p) => p.codigo === codigo)
+    if (plantilla) {
+      await prisma.plantillaNotificacion.upsert({
+        where: { codigo },
+        update: {},
+        create: plantilla,
+      })
+    }
+  }
+
+  const reglaProximo = REGLAS.find((r) => r.codigo === 'REGLA_COBRANZA_PROXIMO')
+  if (reglaProximo) {
+    const plantilla = await prisma.plantillaNotificacion.findUnique({
+      where: { codigo: reglaProximo.plantillaCodigo },
+      select: { id: true },
+    })
+    await prisma.reglaNotificacion.upsert({
+      where: { codigo: reglaProximo.codigo },
       update: {},
-      create: facturaEmitida,
+      create: {
+        codigo: reglaProximo.codigo,
+        nombre: reglaProximo.nombre,
+        evento: reglaProximo.evento,
+        diasAnticipacion: reglaProximo.diasAnticipacion,
+        plantillaId: plantilla?.id ?? null,
+      },
     })
   }
 }

@@ -46,9 +46,31 @@ Detalle: [`16-DESPLIEGUE-PRODUCCION.md`](16-DESPLIEGUE-PRODUCCION.md) §5–§8.
 
 ## Monitoreo (UptimeRobot / similar)
 
-**URL:** `GET https://tu-dominio/api/health`
+**URL:** `GET https://erp-ibiomedica.com.ar/api/health`
 
-Respuesta esperada: `"ok": true`, `"db": "ok"`. HTTP 503 = base de datos caída.
+**Respuesta esperada (HTTP 200):**
+
+```json
+{
+  "ok": true,
+  "db": "ok",
+  "redis": "ok",
+  "version": "0.1.0",
+  "commit": "36a15d0abcd",
+  "ts": "2026-06-24T12:00:00.000Z"
+}
+```
+
+- `"ok": false` o HTTP **503** → PostgreSQL caído (alerta inmediata).
+- `"redis": "skipped"` → normal si no hay `REDIS_URL`.
+- `"redis": "error"` → cola AFIP afectada; revisar Redis/PM2.
+
+| Campo UptimeRobot | Valor |
+|-------------------|-------|
+| Tipo | HTTP(s) |
+| URL | `https://erp-ibiomedica.com.ar/api/health` |
+| Intervalo | 5 min |
+| Alerta | Si HTTP ≠ 200 o `"ok"` ≠ true |
 
 | Campo | Qué mirar |
 |-------|-----------|
@@ -122,6 +144,24 @@ Tras emisión `EMITIDA`, el ERP envía PDF al email del cliente (si tiene email 
 | Fallo de envío | No bloquea emisión — ver Logs (`factura-cliente-email`) |
 
 Plantilla editable: Configuración → Notificaciones → `FACTURA_EMITIDA`.
+
+---
+
+## Email recordatorio cobranza al cliente
+
+El cron/worker de cobranzas envía recordatorio al email del cliente cuando una cuota **vence** o está **próxima** (N días antes, regla `cobranza.proximo` o `COBRANZA_RECORDATORIO_DIAS`).
+
+| Control | Cómo |
+|---------|------|
+| Desactivar global | `COBRANZA_EMAIL_CLIENTE=false` en `.env` |
+| Opt-out por cliente | `[no-email-cobranza]` o `[no-email-factura]` en notas del cliente |
+| Sin email | No envía — revisar ficha cliente o contacto principal |
+| Fallo de envío | No bloquea cron — ver Logs (`cobranza-cliente-email`) |
+| Dedup | Una vez por cuota y tipo (vencido / próximo) vía SystemLog |
+
+Plantilla editable: Configuración → Notificaciones → `COBRANZA_RECORDATORIO`.
+
+Aviso **interno** a cobranzas (Guillermo/Lucas) sigue con `COBRANZA_NOTIFY_EMAIL`.
 
 ---
 

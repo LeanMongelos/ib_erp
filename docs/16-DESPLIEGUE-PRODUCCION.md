@@ -224,13 +224,26 @@ Alternativa local en el VPS (sin HTTP): `cd /opt/ibiomedica && npm run cron:ots-
 ## 10. Verificación post-deploy
 
 ```bash
-curl -sf https://erp.tudominio.com/api/health | jq
-curl -I https://erp.tudominio.com/login
+curl -sf https://erp-ibiomedica.com.ar/api/health | jq
+curl -I https://erp-ibiomedica.com.ar/login
 npm run smoke
 npm run e2e        # opcional en staging
 ```
 
 **Health check (`GET /api/health`):** respuesta JSON pública (sin secretos) para UptimeRobot u otros monitores.
+
+Ejemplo producción (`https://erp-ibiomedica.com.ar/api/health`):
+
+```json
+{
+  "ok": true,
+  "db": "ok",
+  "redis": "ok",
+  "version": "0.1.0",
+  "commit": "36a15d0abcd",
+  "ts": "2026-06-24T12:00:00.000Z"
+}
+```
 
 | Campo | Significado |
 |-------|-------------|
@@ -241,7 +254,9 @@ npm run e2e        # opcional en staging
 | `commit` | SHA corto del deploy (`.git` o `GIT_COMMIT_SHA`) |
 | `ts` | Timestamp ISO |
 
-HTTP **503** si `db` falla. Configurar UptimeRobot: URL `https://erp.tudominio.com/api/health`, keyword `ok` o status 200.
+HTTP **503** si `db` falla.
+
+**UptimeRobot (ejemplo):** monitor HTTP(s) cada 5 min a `https://erp-ibiomedica.com.ar/api/health`; alertar si status ≠ 200 o body sin `"ok":true`.
 
 Login con usuario real → Configuración → Logs del sistema (si hay permiso `logs.read`).
 
