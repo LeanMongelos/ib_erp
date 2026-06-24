@@ -23,14 +23,17 @@ Todo archivo con `'use client'` **solo** puede importar módulos que no usen Nod
 | `lib/prisma.ts` | ❌ | ✅ |
 | `lib/serialize.ts` | ❌ | ✅ |
 | `lib/api-auth.ts` | ❌ | ✅ |
+| `lib/facturas/equipo-instalacion-client.ts` | ✅ | ✅ |
 | `lib/facturas/validar-sucursal-equipo.ts` | ❌ | ✅ |
-| `lib/facturas/validar-sucursal-equipo-client.ts` | ✅ | ✅ |
+| `lib/clientes/validar-sucursales.ts` | ✅ | ✅ |
 
 ### Patrón validación cliente/servidor
 
 Cuando la UI necesita la misma regla que el API pero el módulo server importa Prisma o `api-auth`, **extraer un archivo `*-client.ts`** sin dependencias de servidor.
 
-Ejemplo: `validar-sucursal-equipo-client.ts` (formulario factura) vs `validar-sucursal-equipo.ts` (POST `/api/facturas`).
+Ejemplo: `equipo-instalacion-client.ts` (regla pura) → `validar-sucursal-equipo-client.ts` (re-export UI) y `validar-sucursal-equipo.ts` (POST `/api/facturas` con Prisma).
+
+Sucursales de cliente: `validar-sucursales.ts` compartido entre `SucursalesEditor` y `clienteCreateSchema`.
 
 ### Error típico
 
