@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { requirePagePermission } from '@/lib/page-guard'
 import { UsuariosManager } from '@/components/configuracion/UsuariosManager'
 import { OnboardingChecklist } from '@/components/configuracion/OnboardingChecklist'
+import { CapacitacionBanner } from '@/components/configuracion/CapacitacionBanner'
 
 export default async function UsuariosPage() {
   await requirePagePermission('usuarios.read')
@@ -26,6 +27,7 @@ export default async function UsuariosPage() {
       <Header title="Usuarios y Roles" subtitle={`${usuarios.length} usuarios`} />
       <div className="flex-1 overflow-y-auto bg-[#F4F6F9] p-6">
         <OnboardingChecklist />
+        <CapacitacionBanner />
         <UsuariosManager
           usuarios={JSON.parse(JSON.stringify(usuarios))}
           roles={roles}

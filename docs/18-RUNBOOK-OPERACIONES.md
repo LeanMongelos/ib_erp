@@ -54,7 +54,7 @@ Recargar con Ctrl+Shift+R o ventana incógnito. Archivos: `app/favicon.ico`, `ap
    ```bash
    npm run audit:permisos
    ```
-   Lista roles que no tienen permisos mínimos (`facturas.emit_afip`, `config.read`, etc.) según `lib/rbac.ts`. Útil al dar de alta usuarios nuevos.
+   Lista roles que no tienen permisos mínimos (`facturas.emit_afip`, `config.read`, etc.) según `lib/rbac.ts`. También aparece como **WARN** en `npm run go-live:check`. Guía por rol: [`CAPACITACION-OPERADORES.md`](CAPACITACION-OPERADORES.md).
 
 ---
 
