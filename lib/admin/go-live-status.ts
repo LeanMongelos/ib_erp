@@ -15,6 +15,9 @@ import {
   estadoPreparacionAfip,
 } from '@/lib/afip/validar-emision'
 import { getAdminNotifyEmails } from '@/lib/mail/system-mail'
+import { decryptCanalConfig } from '@/lib/integraciones/canal-config'
+import type { EmailImapConfig } from '@/lib/crm/config'
+import type { EmailGraphConfig } from '@/lib/crm/adapters/email-graph'
 
 export type GoLiveNivel = 'pass' | 'warn' | 'fail'
 
@@ -50,16 +53,16 @@ function addItem(items: GoLiveItem[], seccion: string, nivel: GoLiveNivel, msg: 
   items.push({ seccion, nivel, msg, codigo })
 }
 
-export function detectarWorkerAfipPm2(): WorkerAfipStatus {
+function detectarWorkerPm2(workerName: string): WorkerAfipStatus {
   try {
     const out = execSync('pm2 jlist', { encoding: 'utf8', timeout: 4000 })
     const list = JSON.parse(out) as Array<{
       name?: string
       pm2_env?: { status?: string }
     }>
-    const worker = list.find((p) => p.name === 'worker-afip')
+    const worker = list.find((p) => p.name === workerName)
     if (!worker) {
-      return { detectado: false, msg: 'worker-afip no registrado en PM2' }
+      return { detectado: false, msg: `${workerName} no registrado en PM2` }
     }
     const estado = worker.pm2_env?.status ?? 'desconocido'
     const online = estado === 'online'
@@ -67,34 +70,211 @@ export function detectarWorkerAfipPm2(): WorkerAfipStatus {
       detectado: true,
       online,
       estado,
-      msg: online ? 'worker-afip online' : `worker-afip ${estado}`,
+      msg: online ? `${workerName} online` : `${workerName} ${estado}`,
     }
   } catch {
     return { detectado: false, msg: 'PM2 no disponible en este host' }
   }
 }
 
+export function detectarWorkerAfipPm2(): WorkerAfipStatus {
+  return detectarWorkerPm2('worker-afip')
+}
+
 export function detectarWorkerCobranzasPm2(): WorkerAfipStatus {
-  try {
-    const out = execSync('pm2 jlist', { encoding: 'utf8', timeout: 4000 })
-    const list = JSON.parse(out) as Array<{
-      name?: string
-      pm2_env?: { status?: string }
-    }>
-    const worker = list.find((p) => p.name === 'worker-cobranzas')
-    if (!worker) {
-      return { detectado: false, msg: 'worker-cobranzas no registrado en PM2' }
+  return detectarWorkerPm2('worker-cobranzas')
+}
+
+export function detectarWorkerCrmEmailPm2(): WorkerAfipStatus {
+  return detectarWorkerPm2('worker-crm-email')
+}
+
+export function detectarWorkerCrmGraphPm2(): WorkerAfipStatus {
+  return detectarWorkerPm2('worker-crm-graph')
+}
+
+function envParcialPrefijo(env: NodeJS.ProcessEnv, prefix: string, ignorar: string[] = []): boolean {
+  const keys = Object.keys(env).filter(
+    (k) => k.startsWith(prefix) && !ignorar.includes(k) && String(env[k] ?? '').trim(),
+  )
+  if (keys.length === 0) return false
+  const requeridas = Object.keys(env).filter((k) => k.startsWith(prefix) && !ignorar.includes(k))
+  const definidas = requeridas.filter((k) => String(env[k] ?? '').trim())
+  return definidas.length > 0 && definidas.length < requeridas.length
+}
+
+function camposParciales(
+  cfg: Record<string, unknown>,
+  campos: string[],
+): { parcial: boolean; faltantes: string[] } {
+  const conValor = campos.filter((c) => String(cfg[c] ?? '').trim())
+  if (conValor.length === 0) return { parcial: false, faltantes: [] }
+  const faltantes = campos.filter((c) => !String(cfg[c] ?? '').trim())
+  return { parcial: faltantes.length > 0, faltantes }
+}
+
+function imapListo(cfg: EmailImapConfig): boolean {
+  return Boolean(cfg.imapHost?.trim() && cfg.imapUser?.trim() && cfg.imapPassword?.trim())
+}
+
+function graphListo(cfg: EmailGraphConfig): boolean {
+  const base = Boolean(cfg.tenantId?.trim() && cfg.clientId?.trim() && cfg.clientSecret?.trim())
+  const auth = Boolean(cfg.refreshToken?.trim() || cfg.accessToken?.trim())
+  return base && auth && Boolean(cfg.mailboxEmail?.trim())
+}
+
+async function validarCrmGoLive(items: GoLiveItem[], env: NodeJS.ProcessEnv) {
+  const ignorarPoll = ['CRM_EMAIL_POLL_MS', 'CRM_GRAPH_POLL_MS']
+  if (envParcialPrefijo(env, 'CRM_EMAIL_', ignorarPoll)) {
+    addItem(
+      items,
+      'crm',
+      'warn',
+      'Variables CRM_EMAIL_* parcialmente definidas en .env — completar o usar Integraciones',
+      'crm_email_env_parcial',
+    )
+  }
+  if (envParcialPrefijo(env, 'CRM_GRAPH_', ignorarPoll)) {
+    addItem(
+      items,
+      'crm',
+      'warn',
+      'Variables CRM_GRAPH_* parcialmente definidas en .env — completar o usar Integraciones',
+      'crm_graph_env_parcial',
+    )
+  }
+
+  const [imapCanal, graphCanal, n8nCanal] = await Promise.all([
+    prisma.canalIntegracion.findUnique({ where: { tipo: 'EMAIL_IMAP' } }),
+    prisma.canalIntegracion.findUnique({ where: { tipo: 'EMAIL_GRAPH' } }),
+    prisma.canalIntegracion.findUnique({ where: { tipo: 'N8N' } }),
+  ])
+
+  if (imapCanal?.config) {
+    const cfg = decryptCanalConfig(imapCanal.config) as EmailImapConfig
+    const { parcial, faltantes } = camposParciales(cfg as Record<string, unknown>, [
+      'imapHost',
+      'imapUser',
+      'imapPassword',
+    ])
+    if (parcial) {
+      addItem(
+        items,
+        'crm',
+        'warn',
+        `Canal EMAIL_IMAP incompleto — faltan: ${faltantes.join(', ')}`,
+        'crm_imap_parcial',
+      )
+    } else if (imapCanal.activo && !imapListo(cfg)) {
+      addItem(items, 'crm', 'warn', 'Canal EMAIL_IMAP activo sin credenciales IMAP', 'crm_imap_sin_cred')
     }
-    const estado = worker.pm2_env?.status ?? 'desconocido'
-    const online = estado === 'online'
-    return {
-      detectado: true,
-      online,
-      estado,
-      msg: online ? 'worker-cobranzas online' : `worker-cobranzas ${estado}`,
+
+    const imapOperativo = imapCanal.activo && imapCanal.estado === 'CONECTADO' && imapListo(cfg)
+    if (imapOperativo) {
+      const worker = detectarWorkerCrmEmailPm2()
+      if (!worker.detectado) {
+        addItem(
+          items,
+          'crm',
+          'warn',
+          `${worker.msg} — bandeja IMAP no se sincroniza`,
+          'worker_crm_email_no_pm2',
+        )
+      } else if (worker.online) {
+        addItem(items, 'crm', 'pass', `EMAIL_IMAP conectado — ${worker.msg}`)
+      } else {
+        addItem(items, 'crm', 'warn', worker.msg, 'worker_crm_email_offline')
+      }
+    } else if (imapCanal.activo && imapListo(cfg) && imapCanal.estado !== 'CONECTADO') {
+      addItem(
+        items,
+        'crm',
+        'warn',
+        'Canal EMAIL_IMAP activo pero no CONECTADO — probar conexión en Integraciones',
+        'crm_imap_no_conectado',
+      )
     }
-  } catch {
-    return { detectado: false, msg: 'PM2 no disponible en este host' }
+  }
+
+  if (graphCanal?.config) {
+    const cfg = decryptCanalConfig(graphCanal.config) as EmailGraphConfig
+    const { parcial, faltantes } = camposParciales(cfg as Record<string, unknown>, [
+      'tenantId',
+      'clientId',
+      'clientSecret',
+      'mailboxEmail',
+    ])
+    if (parcial) {
+      addItem(
+        items,
+        'crm',
+        'warn',
+        `Canal EMAIL_GRAPH incompleto — faltan: ${faltantes.join(', ')}`,
+        'crm_graph_parcial',
+      )
+    } else if (graphCanal.activo && !graphListo(cfg)) {
+      addItem(
+        items,
+        'crm',
+        'warn',
+        'Canal EMAIL_GRAPH activo sin OAuth completo — autorizar en Integraciones',
+        'crm_graph_sin_oauth',
+      )
+    }
+
+    const graphOperativo = graphCanal.activo && graphCanal.estado === 'CONECTADO' && graphListo(cfg)
+    if (graphOperativo) {
+      const worker = detectarWorkerCrmGraphPm2()
+      if (!worker.detectado) {
+        addItem(
+          items,
+          'crm',
+          'warn',
+          `${worker.msg} — bandeja Outlook no se sincroniza`,
+          'worker_crm_graph_no_pm2',
+        )
+      } else if (worker.online) {
+        addItem(items, 'crm', 'pass', `EMAIL_GRAPH conectado — ${worker.msg}`)
+      } else {
+        addItem(items, 'crm', 'warn', worker.msg, 'worker_crm_graph_offline')
+      }
+    } else if (graphCanal.activo && graphListo(cfg) && graphCanal.estado !== 'CONECTADO') {
+      addItem(
+        items,
+        'crm',
+        'warn',
+        'Canal EMAIL_GRAPH activo pero no CONECTADO — completar OAuth en Integraciones',
+        'crm_graph_no_conectado',
+      )
+    }
+  }
+
+  if (n8nCanal?.activo) {
+    const cfg = decryptCanalConfig(n8nCanal.config)
+    const { parcial } = camposParciales(cfg, ['webhookUrlN8n', 'apiKey'])
+    if (parcial || (!cfg.webhookUrlN8n && !env.N8N_API_KEY?.trim())) {
+      addItem(
+        items,
+        'crm',
+        'warn',
+        'Canal N8N activo con configuración parcial — webhook o N8N_API_KEY incompletos',
+        'crm_n8n_parcial',
+      )
+    } else {
+      addItem(items, 'crm', 'pass', 'Canal N8N configurado — webhooks /api/n8n/* protegidos con Bearer')
+    }
+  } else if (env.N8N_API_KEY?.trim()) {
+    addItem(items, 'crm', 'pass', 'N8N_API_KEY en .env — endpoints /api/n8n/* habilitados')
+  }
+
+  const crmItems = items.filter((i) => i.seccion === 'crm')
+  if (crmItems.length === 0) {
+    addItem(
+      items,
+      'crm',
+      'pass',
+      'CRM email/Graph no configurado — opcional hasta activar Integraciones',
+    )
   }
 }
 
@@ -260,6 +440,8 @@ export async function obtenerGoLiveStatus(): Promise<GoLiveStatus> {
       addItem(items, 'worker_cobranzas', 'warn', workerCobranzas.msg, 'worker_cobranzas_offline')
     }
   }
+
+  await validarCrmGoLive(items, process.env)
 
   const pass = items.filter((i) => i.nivel === 'pass').length
   const warn = items.filter((i) => i.nivel === 'warn').length

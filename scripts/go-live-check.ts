@@ -98,6 +98,9 @@ async function main() {
   console.log('\n--- 2d. Alertas AFIP / correo ---\n')
   for (const item of status.items.filter((i) => i.seccion === 'alertas')) printItem(item)
 
+  console.log('\n--- 2e. CRM (email / Graph / n8n) ---\n')
+  for (const item of status.items.filter((i) => i.seccion === 'crm')) printItem(item)
+
   const allItems = [...status.items]
   checkIntegridad(allItems)
   printResumen(allItems)

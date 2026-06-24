@@ -3,7 +3,7 @@ import { KPICard } from '@/components/dashboard/KPICard'
 import { OTsChart } from '@/components/dashboard/OTsChart'
 import { RecentOTsTable } from '@/components/dashboard/RecentOTsTable'
 import { Card, CardHeader, CardTitle } from '@/components/ui/card'
-import { ClipboardList, ShieldCheck, FileText, Users, AlertCircle } from 'lucide-react'
+import { ClipboardList, ShieldCheck, FileText, Users, AlertCircle, TrendingUp, Clock } from 'lucide-react'
 import { formatMonto } from '@/lib/utils'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -24,7 +24,8 @@ export default async function DashboardPage() {
 
   const kpiCount =
     (visibility.servicio ? 2 : 0) +
-    (visibility.facturas ? 2 : 0) +
+    (visibility.facturas ? 3 : 0) +
+    (visibility.presupuestos ? 1 : 0) +
     (visibility.clientes ? 1 : 0)
 
   const tieneMetricas = kpiCount > 0 || visibility.servicio
@@ -63,6 +64,14 @@ export default async function DashboardPage() {
                 variant="orange"
               />
             )}
+            {visibility.facturas && data.ventasMesActual !== null && (
+              <KPICard
+                title="Ventas mes actual"
+                value={formatMonto(data.ventasMesActual)}
+                icon={TrendingUp}
+                variant="green"
+              />
+            )}
             {visibility.facturas && data.facturasPendientesMonto !== null && (
               <KPICard
                 title="Facturas pendientes cobro"
@@ -77,6 +86,14 @@ export default async function DashboardPage() {
                 value={data.cuotasVencidas}
                 icon={AlertCircle}
                 variant="orange"
+              />
+            )}
+            {visibility.presupuestos && data.presupuestosPendientes !== null && (
+              <KPICard
+                title="Presupuestos pendientes"
+                value={data.presupuestosPendientes}
+                icon={Clock}
+                variant="blue"
               />
             )}
             {visibility.clientes && data.clientesActivos !== null && (

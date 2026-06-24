@@ -85,6 +85,7 @@ Detalle: [`16-DESPLIEGUE-PRODUCCION.md`](16-DESPLIEGUE-PRODUCCION.md) §5–§8.
 | Tarea | Cuándo |
 |-------|--------|
 | Backup PostgreSQL | 03:00 diario |
+| Backup off-site (S3/rsync) | 03:30 diario |
 | Purga logs | 04:00 diario |
 | OT SLA vencidas | Cada hora |
 | Presupuestos vencidos | 05:00 diario |
@@ -99,9 +100,19 @@ Instalación: `scripts/vps-install-cron.sh`. Manual: [`16-DESPLIEGUE-PRODUCCION.
 
 ```bash
 bash scripts/vps-backup-postgres.sh
+bash scripts/vps-backup-offsite.sh   # requiere BACKUP_OFFSITE_* en .env
 ```
 
-Retención 30 días local. Copia off-site recomendada.
+Retención 30 días local. Copia off-site vía `BACKUP_OFFSITE_RSYNC_TARGET` o `BACKUP_OFFSITE_S3_BUCKET` + `BACKUP_OFFSITE_S3_PREFIX` (ver `.env.local.example`).
+
+| Variable | Uso |
+|----------|-----|
+| `BACKUP_DIR` | Origen local (default `/var/backups/ibiomedica`) |
+| `BACKUP_OFFSITE_RSYNC_TARGET` | `user@host:/ruta/` — usa `rsync` |
+| `BACKUP_OFFSITE_S3_BUCKET` | Bucket S3 — usa `aws s3 cp` si `aws` está instalado |
+| `BACKUP_OFFSITE_S3_PREFIX` | Prefijo en bucket (default `ibiomedica/backups`) |
+
+Reinstalar cron tras cambios: `sudo bash scripts/vps-install-cron.sh`
 
 ### Disaster recovery (restaurar BD)
 
@@ -216,6 +227,71 @@ Cron diario envía email cuando `stock <= stockMinimo` (dedup diaria por artícu
 | Destinatarios | `STOCK_MINIMO_NOTIFY_EMAIL` (coma-separados) o `ADMIN_NOTIFY_EMAIL` |
 | Manual | `npm run cron:stock-minimo` o `POST /api/cron/stock-minimo` |
 | Integridad | `integridad:prod` advierte artículos bajo mínimo |
+
+---
+
+## CRM en producción (IMAP / Graph / n8n)
+
+Bandeja omnicanal en `/crm/inbox`. Correo entrante vía workers PM2; credenciales en **Configuración → Integraciones** (no en git).
+
+### Checklist CRM
+
+```bash
+npm run go-live:check   # sección 2e — CRM
+pm2 status              # worker-crm-email / worker-crm-graph online
+```
+
+| Canal | Integración | Worker PM2 | Poll |
+|-------|-------------|------------|------|
+| Correo IMAP/SMTP | `EMAIL_IMAP` — host, usuario, contraseña | `worker-crm-email` | `CRM_EMAIL_POLL_MS` |
+| Outlook / Graph | `EMAIL_GRAPH` — Azure app + OAuth | `worker-crm-graph` | `CRM_GRAPH_POLL_MS` |
+| Automatizaciones | `N8N` — webhook + apiKey | — | — |
+
+**Primera vez workers CRM:**
+
+```bash
+cd /opt/ibiomedica
+bash scripts/vps-start-workers.sh
+pm2 logs worker-crm-email --lines 30
+pm2 logs worker-crm-graph --lines 30
+```
+
+### IMAP (ej. @hotmail / buzón actual)
+
+1. Configuración → Integraciones → **Correo IMAP/SMTP**
+2. Completar IMAP host/puerto, usuario, contraseña de aplicación
+3. **Probar conexión** → estado `CONECTADO`
+4. Verificar `worker-crm-email` online en PM2
+5. Enviar email de prueba al buzón → debe aparecer en `/crm/inbox` en ~2 min
+
+### Microsoft Graph (dominio propio / Outlook 365)
+
+1. Azure Portal → App registration → permisos `Mail.Read`, `Mail.Send`, `offline_access`
+2. Integraciones → **Microsoft Graph** → tenantId, clientId, clientSecret, mailbox
+3. **Autorizar OAuth** → estado `CONECTADO`
+4. Verificar `worker-crm-graph` online
+
+### n8n webhooks (salientes / entrantes)
+
+| Dirección | Detalle |
+|-----------|---------|
+| ERP → n8n | Eventos `mensaje.nuevo`, etc. → URL en canal N8N |
+| n8n → ERP | `POST /api/n8n/*` con header `Authorization: Bearer $N8N_API_KEY` |
+
+Rutas protegidas (401 sin Bearer válido): `crear-lead`, `crear-ot`, `responder`, `etiquetar`.  
+Verificar: `npm run test:invariants` incluye `test-n8n-api-security.ts`.
+
+n8n en VPS: Docker `127.0.0.1:5678` — no exponer públicamente; túnel o VPN si hace falta.
+
+### Troubleshooting CRM
+
+| Síntoma | Acción |
+|---------|--------|
+| Inbox vacío con email enviado | PM2 workers · Integraciones → CONECTADO · Logs `worker-crm` |
+| WARN go-live CRM | Completar credenciales parciales o desactivar canal |
+| n8n 401 | Alinear `N8N_API_KEY` en `.env` con canal N8N o workflow |
+
+Detalle: [`05-crm-omnicanal.md`](05-crm-omnicanal.md) · [`18-RUNBOOK-OPERACIONES.md`](18-RUNBOOK-OPERACIONES.md) §6.
 
 ---
 

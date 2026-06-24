@@ -14,6 +14,7 @@ export type DashboardVisibility = {
   servicio: boolean
   clientes: boolean
   facturas: boolean
+  presupuestos: boolean
 }
 
 export type DashboardMetrics = {
@@ -22,6 +23,8 @@ export type DashboardMetrics = {
   otsVencidas: number | null
   clientesActivos: number | null
   facturasPendientesMonto: number | null
+  ventasMesActual: number | null
+  presupuestosPendientes: number | null
   cuotasVencidas: number | null
   equiposEnGarantia: number | null
   cumplimientoSLA: number | null
@@ -37,6 +40,7 @@ export function getDashboardVisibility(permissions: string[]): DashboardVisibili
     facturas:
       tienePermiso(permissions, 'facturas.read') ||
       tienePermiso(permissions, 'cobranzas.read'),
+    presupuestos: tienePermiso(permissions, 'presupuestos.read'),
   }
 }
 
@@ -48,6 +52,8 @@ export async function getDashboardMetrics(permissions: string[]): Promise<Dashbo
     otsVencidas: null,
     clientesActivos: null,
     facturasPendientesMonto: null,
+    ventasMesActual: null,
+    presupuestosPendientes: null,
     cuotasVencidas: null,
     equiposEnGarantia: null,
     cumplimientoSLA: null,
@@ -56,7 +62,7 @@ export async function getDashboardMetrics(permissions: string[]): Promise<Dashbo
     estadosCounts: null,
   }
 
-  if (!visibility.servicio && !visibility.clientes && !visibility.facturas) {
+  if (!visibility.servicio && !visibility.clientes && !visibility.facturas && !visibility.presupuestos) {
     return empty
   }
 
@@ -65,12 +71,16 @@ export async function getDashboardMetrics(permissions: string[]): Promise<Dashbo
   }
 
   const ahora = new Date()
+  const inicioMes = startOfMonth(ahora)
+  const finMes = endOfMonth(ahora)
 
   const [
     otsAbiertas,
     otsVencidas,
     clientesActivos,
     facturasPendientes,
+    ventasMesActual,
+    presupuestosPendientes,
     cuotasVencidas,
     equiposEnGarantia,
     ultimasOTs,
@@ -89,6 +99,20 @@ export async function getDashboardMetrics(permissions: string[]): Promise<Dashbo
       ? prisma.factura.aggregate({
           where: { estado: { in: ['PENDIENTE', 'EMITIDA', 'VENCIDA'] } },
           _sum: { total: true },
+        })
+      : Promise.resolve(null),
+    visibility.facturas
+      ? prisma.factura.aggregate({
+          where: {
+            estado: { in: ['EMITIDA', 'PAGADA'] },
+            fechaEmision: { gte: inicioMes, lte: finMes },
+          },
+          _sum: { total: true },
+        })
+      : Promise.resolve(null),
+    visibility.presupuestos
+      ? prisma.presupuesto.count({
+          where: { estado: { in: ['ENVIADO', 'APROBADO'] } },
         })
       : Promise.resolve(null),
     visibility.facturas
@@ -162,6 +186,8 @@ export async function getDashboardMetrics(permissions: string[]): Promise<Dashbo
     facturasPendientesMonto: facturasPendientes
       ? Number(facturasPendientes._sum.total ?? 0)
       : null,
+    ventasMesActual: ventasMesActual ? Number(ventasMesActual._sum.total ?? 0) : null,
+    presupuestosPendientes,
     cuotasVencidas,
     equiposEnGarantia,
     cumplimientoSLA,

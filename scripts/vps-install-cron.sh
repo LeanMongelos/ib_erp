@@ -31,6 +31,9 @@ PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 # Backup PostgreSQL — diario 03:00 (fallo seguro, no rompe cron)
 0 3 * * * ${CRON_USER} bash ${APP_DIR}/scripts/vps-backup-postgres.sh >> /var/log/ibiomedica-backup.log 2>&1
 
+# Copia off-site del último dump — diario 03:30 (requiere BACKUP_OFFSITE_* en .env)
+30 3 * * * ${CRON_USER} bash -c 'set -a; source ${APP_DIR}/.env; set +a; bash ${APP_DIR}/scripts/vps-backup-offsite.sh' >> /var/log/ibiomedica-backup.log 2>&1
+
 # Purga logs técnicos (>15 días) — diario 04:00
 0 4 * * * ${CRON_USER} cd ${APP_DIR} && npm run logs:purge >> /var/log/ibiomedica-cron.log 2>&1
 
@@ -53,6 +56,7 @@ echo "    APP_DIR=$APP_DIR  CRON_USER=$CRON_USER  APP_URL=$APP_URL"
 echo ""
 echo "Genera /etc/cron.d/ibiomedica-cron con:"
 echo "  - backup PostgreSQL (03:00) → scripts/vps-backup-postgres.sh"
+echo "  - backup off-site (03:30) → scripts/vps-backup-offsite.sh (BACKUP_OFFSITE_* en .env)"
 echo "  - logs:purge (04:00), OT SLA (cada hora), presupuestos (05:00), cobranzas (06:00), stock mínimo (07:00)"
 echo ""
 echo "Verificá CRON_SECRET en $APP_DIR/.env y probá manualmente:"
