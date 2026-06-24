@@ -8,6 +8,7 @@ import {
   ordenarClientesConEventual,
 } from '@/lib/clientes/eventual'
 import { requirePagePermission } from '@/lib/page-guard'
+import { obtenerPlantillaPredeterminadaResumen } from '@/lib/plantillas/resolver-plantilla'
 
 async function getData(otId?: string, presupuestoId?: string) {
   const clienteEventual = await ensureClienteEventual()
@@ -80,6 +81,7 @@ export default async function NuevaFacturaPage({
   }
 
   const { clientes, emisores, ot, presupuesto } = await getData(otId, presupuestoId)
+  const plantillaFactura = await obtenerPlantillaPredeterminadaResumen('FACTURA')
 
   if (presupuestoId) {
     if (!presupuesto) redirect('/presupuestos')
@@ -109,6 +111,7 @@ export default async function NuevaFacturaPage({
           emisores={plain(emisores)}
           otPrefill={ot ? plain(ot) : null}
           presupuestoPrefill={presupuesto ? plain(presupuesto) : null}
+          plantillaFactura={plain(plantillaFactura)}
         />
       </div>
     </>

@@ -10,6 +10,7 @@ import { parsePlazosCobranza, formatCondicionPago } from '@/lib/cobranzas/plazos
 import { sincronizarVencimientosCobranza } from '@/lib/cobranzas/vencimientos'
 import { resolverCotizacionUsdDocumento, CotizacionUsdFaltanteError } from '@/lib/moneda'
 import { validarSucursalesInstalacionEquipo } from '@/lib/facturas/validar-sucursal-equipo'
+import { resolverPlantillaIdEmision } from '@/lib/plantillas/resolver-plantilla'
 
 export async function GET() {
   try {
@@ -97,6 +98,8 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const plantillaId = await resolverPlantillaIdEmision('FACTURA', data.plantillaId ?? null)
+
     const factura = await crearConNumeroUnico(
       () => siguienteNumeroFactura(data.tipo),
       (numero) =>
@@ -114,7 +117,7 @@ export async function POST(req: NextRequest) {
             alicuotaIvaPct,
             clienteId: data.clienteId,
             emisorId,
-            plantillaId: data.plantillaId ?? null,
+            plantillaId,
             otId,
             presupuestoId: data.presupuestoId ?? null,
             condicionPago,

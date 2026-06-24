@@ -7,6 +7,7 @@ import { prisma } from '@/lib/prisma'
 import { calcularTotales } from '@/lib/documentos'
 import { siguienteNumeroPresupuesto, crearConNumeroUnico } from '@/lib/sequences'
 import { ApiError } from '@/lib/api-auth'
+import { resolverPlantillaIdEmision } from '@/lib/plantillas/resolver-plantilla'
 
 const CONDICION_PAGO: Record<string, string> = {
   CONTADO: 'Contado',
@@ -104,9 +105,7 @@ export async function crearPresupuestoDesdePropuesta(
   }
 
   const emisor = await prisma.emisor.findFirst({ where: { predeterminado: true, activo: true } })
-  const plantilla = await prisma.plantillaImpresion.findFirst({
-    where: { tipo: 'PRESUPUESTO', predeterminado: true, activo: true },
-  })
+  const plantillaId = await resolverPlantillaIdEmision('PRESUPUESTO', null)
 
   const { itemsCalculados, subtotal, iva, total, alicuotaIvaPct: alic } = calcularTotales(
     [{ descripcion, cantidad: 1, precioUnit: precioNeto }],
@@ -125,7 +124,7 @@ export async function crearPresupuestoDesdePropuesta(
           numero,
           clienteId,
           emisorId: emisor?.id ?? null,
-          plantillaId: plantilla?.id ?? null,
+          plantillaId,
           vendedorId: usuarioId ?? null,
           condicionPago,
           vigenciaDias,

@@ -36,3 +36,6 @@ jobs:
           DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/ci
           NEXTAUTH_SECRET: ci-build-secret-min-32-chars-long
           NEXTAUTH_URL: http://localhost:3000
+
+      - name: Test paridad plantillas PDF
+        run: npm run test:plantillas

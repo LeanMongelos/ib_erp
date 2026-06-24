@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requirePermission, handleApiError } from '@/lib/api-auth'
 import { renderDocumentoPDF } from '@/lib/plantillas/render-documento'
-import { getPlantillaConfig, buildDatosFactura } from '@/lib/plantillas/build-datos'
+import { getPlantillaResuelta, buildDatosFactura } from '@/lib/plantillas/build-datos'
 import { resolverFotosItemsPdf } from '@/lib/inventario/resolve-foto-pdf.server'
 import QRCode from 'qrcode'
 
@@ -38,7 +38,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       try { qrDataUrl = await QRCode.toDataURL(f.qrData, { width: 200 }) } catch { /* ignore */ }
     }
 
-    const cfg = await getPlantillaConfig(f.plantillaId, 'FACTURA')
+    const plantilla = await getPlantillaResuelta(f.plantillaId, 'FACTURA')
+    const cfg = plantilla.config
     const datos = buildDatosFactura(
       {
         numero: f.numeroAfip ? String(f.numeroAfip).padStart(8, '0') : f.numero,
@@ -53,6 +54,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
         condicionPago: f.condicionPago,
         cae: f.cae,
         caeVencimiento: f.caeVencimiento,
+        moneda: f.moneda,
+        cotizacionUsd: f.cotizacionUsd,
         items: f.items,
       },
       emisor,
@@ -60,10 +63,16 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       { qrDataUrl, presupuesto: f.presupuesto },
     )
     datos.items = await resolverFotosItemsPdf(datos.items)
+    if (!f.plantillaId && plantilla.id) {
+      prisma.factura.update({ where: { id }, data: { plantillaId: plantilla.id } }).catch(() => {})
+    }
     const pdf = await renderDocumentoPDF(cfg, datos)
 
     return new NextResponse(new Uint8Array(pdf), {
-      headers: { 'Content-Type': 'application/pdf', 'Content-Disposition': `inline; filename="factura-${f.numero}.pdf"` },
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `inline; filename="factura-${f.numero}.pdf"`,
+      },
     })
   } catch (error) {
     return handleApiError(error)

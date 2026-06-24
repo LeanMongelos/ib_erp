@@ -8,6 +8,7 @@ import { plain } from '@/lib/serialize'
 import { registrarAuditoria, getIp } from '@/lib/audit'
 import { parsePlazosCobranza, formatCondicionPago } from '@/lib/cobranzas/plazos'
 import { calcularInteresFinanciacion } from '@/lib/cobranzas/financiacion'
+import { resolverPlantillaIdEmision } from '@/lib/plantillas/resolver-plantilla'
 import { resolverCotizacionUsdDocumento, CotizacionUsdFaltanteError } from '@/lib/moneda'
 
 export async function GET(req: NextRequest) {
@@ -85,6 +86,8 @@ export async function POST(req: NextRequest) {
     const vence = new Date()
     vence.setDate(vence.getDate() + (data.vigenciaDias ?? 15))
 
+    const plantillaId = await resolverPlantillaIdEmision('PRESUPUESTO', data.plantillaId ?? null)
+
     const presupuesto = await crearConNumeroUnico(
       siguienteNumeroPresupuesto,
       (numero) =>
@@ -94,7 +97,7 @@ export async function POST(req: NextRequest) {
             clienteId: data.clienteId,
             otId: data.otId ?? null,
             emisorId,
-            plantillaId: data.plantillaId ?? null,
+            plantillaId,
             vendedorId: actor.id,
             condicionPago,
             tasaFinanciacionPct,

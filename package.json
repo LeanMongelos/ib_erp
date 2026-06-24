@@ -16,6 +16,7 @@
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx --env-file=.env prisma/seed.ts",
     "smoke": "tsx --env-file=.env scripts/e2e-smoke.ts",
+    "test:plantillas": "tsx scripts/test-plantillas-parity.ts",
     "e2e": "tsx --env-file=.env scripts/e2e-revision.ts",
     "e2e:all": "tsx --env-file=.env scripts/e2e-smoke.ts && tsx --env-file=.env scripts/e2e-revision.ts",
     "db:studio": "prisma studio",

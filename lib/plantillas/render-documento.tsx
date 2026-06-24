@@ -9,6 +9,7 @@ import {
 } from '@react-pdf/renderer'
 import type { PlantillaConfig, DatosDocumentoRender } from './types'
 import { LayoutDocumentPage, tieneLayoutBloques } from './render-layout'
+import { prepararConfigRender } from './resolver-plantilla'
 import { numeroALetras } from './numero-a-letras'
 import { formatFecha } from '@/lib/utils'
 import { formatImporteDoc, formatCantidadAr } from './format-importe'
@@ -284,11 +285,18 @@ export async function renderDocumentoPDF(
   datos: DatosDocumentoRender,
   opts?: RenderDocumentoPdfOpts,
 ): Promise<Buffer> {
+  const cfgNorm = prepararConfigRender(cfg, datos.tipo as 'FACTURA' | 'PRESUPUESTO' | 'REMITO')
+
+  // Layout visual (editor de plantillas) = mismo motor en preview y en facturación
+  if (tieneLayoutBloques(cfgNorm)) {
+    return renderToBuffer(<DocPDF cfg={cfgNorm} datos={datos} />)
+  }
+
   if (!opts?.forPreview) {
-    let html = cfg.html?.trim()
-    if (!html && (cfg.tipo === 'FACTURA' || cfg.tipo === 'PRESUPUESTO')) {
+    let html = cfgNorm.html?.trim()
+    if (!html && (cfgNorm.tipo === 'FACTURA' || cfgNorm.tipo === 'PRESUPUESTO')) {
       const { htmlDefaultPorTipo } = await import('./html-templates')
-      html = htmlDefaultPorTipo(cfg.tipo)
+      html = htmlDefaultPorTipo(cfgNorm.tipo)
     }
     if (html) {
       try {
@@ -296,7 +304,7 @@ export async function renderDocumentoPDF(
         const { htmlToPdf } = await import('./html-to-pdf.server')
         const { isValidPdfBuffer } = await import('./pdf-valid')
         const rendered = renderHtmlDocumento(html, datos)
-        const pdf = await htmlToPdf(rendered, cfg.papel)
+        const pdf = await htmlToPdf(rendered, cfgNorm.papel)
         if (isValidPdfBuffer(pdf)) return pdf
         console.error('[plantillas] Puppeteer devolvió PDF inválido, usando react-pdf')
       } catch (error) {
@@ -304,5 +312,5 @@ export async function renderDocumentoPDF(
       }
     }
   }
-  return renderToBuffer(<DocPDF cfg={cfg} datos={datos} />)
+  return renderToBuffer(<DocPDF cfg={cfgNorm} datos={datos} />)
 }

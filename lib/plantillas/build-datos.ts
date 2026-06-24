@@ -5,10 +5,27 @@
 
 import type { PlantillaConfig } from './types'
 import type { DatosDocumentoRender } from './types'
-import { PLANTILLA_FACTURA_DEFAULT, PLANTILLA_PRESUPUESTO_DEFAULT } from './defaults'
-import { prisma } from '@/lib/prisma'
+import {
+  resolverPlantillaDocumento,
+  type TipoPlantillaDocumento,
+} from './resolver-plantilla'
 import { parsePlazosCobranza } from '@/lib/cobranzas/plazos'
 import { calcularInteresFinanciacion } from '@/lib/cobranzas/financiacion'
+
+export async function getPlantillaConfig(
+  plantillaId: string | null | undefined,
+  tipo: TipoPlantillaDocumento,
+): Promise<PlantillaConfig> {
+  const res = await resolverPlantillaDocumento(tipo, plantillaId)
+  return res.config
+}
+
+export async function getPlantillaResuelta(
+  plantillaId: string | null | undefined,
+  tipo: TipoPlantillaDocumento,
+) {
+  return resolverPlantillaDocumento(tipo, plantillaId)
+}
 
 type EmisorRow = {
   razonSocial: string
@@ -40,21 +57,6 @@ type ItemRow = {
   subtotal: number
   numeroSerie?: string | null
   proximoPreventivo?: Date | string | null
-}
-
-export async function getPlantillaConfig(
-  plantillaId: string | null | undefined,
-  tipo: 'FACTURA' | 'PRESUPUESTO',
-): Promise<PlantillaConfig> {
-  if (plantillaId) {
-    const p = await prisma.plantillaImpresion.findUnique({ where: { id: plantillaId } })
-    if (p?.activo) return p.config as unknown as PlantillaConfig
-  }
-  const def = await prisma.plantillaImpresion.findFirst({
-    where: { tipo, predeterminado: true, activo: true },
-  })
-  if (def) return def.config as unknown as PlantillaConfig
-  return tipo === 'PRESUPUESTO' ? PLANTILLA_PRESUPUESTO_DEFAULT : PLANTILLA_FACTURA_DEFAULT
 }
 
 function mapEmisor(e: EmisorRow) {

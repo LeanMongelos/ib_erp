@@ -64,6 +64,11 @@ npx tsx --env-file=.env scripts/migrate-emails-ib-com.ts --execute || {
   echo "WARN: migración emails falló; revisar logs."
 }
 
+echo "==> Backfill plantillaId en facturas/presupuestos (idempotente)..."
+npx tsx --env-file=.env scripts/backfill-plantillas-documentos.ts --execute || {
+  echo "WARN: backfill plantillas falló; revisar logs."
+}
+
 echo "==> Contraseñas go-live ib2026 (excluye Leandro, idempotente)..."
 npx tsx --env-file=.env scripts/reset-passwords-ib2026.ts --execute || {
   echo "WARN: reset contraseñas falló; revisar logs."

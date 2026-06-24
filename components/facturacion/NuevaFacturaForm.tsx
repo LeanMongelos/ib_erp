@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, FileText } from 'lucide-react'
 import { toast } from 'sonner'
 import { Card, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -91,6 +91,7 @@ interface Props {
   emisores: { id: string; razonSocial: string; predeterminado?: boolean }[]
   otPrefill: any | null
   presupuestoPrefill?: PresupuestoPrefill | null
+  plantillaFactura: { id: string | null; nombre: string; origen: string }
 }
 
 export function NuevaFacturaForm({
@@ -98,6 +99,7 @@ export function NuevaFacturaForm({
   emisores,
   otPrefill,
   presupuestoPrefill,
+  plantillaFactura,
 }: Props) {
   const router = useRouter()
   const { alicuotas, defaultPct } = useAlicuotasIva()
@@ -262,6 +264,7 @@ export function NuevaFacturaForm({
           estado: 'BORRADOR',
           otId: otPrefill?.id ?? presupuestoPrefill?.otId ?? null,
           presupuestoId: presupuestoPrefill?.id ?? null,
+          plantillaId: plantillaFactura.id ?? undefined,
           observaciones: presupuestoPrefill?.observaciones ?? undefined,
           condicionPago:
             plazosActivos.length > 0 ? formatCondicionPago(plazosActivos) : undefined,
@@ -321,7 +324,19 @@ export function NuevaFacturaForm({
 
       {/* Datos generales */}
       <Card>
-        <h3 className="text-[13.5px] font-bold text-[#1f242c] mb-4">Datos del comprobante</h3>
+        <div className="mb-4 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+          <h3 className="text-[13.5px] font-bold text-[#1f242c]">Datos del comprobante</h3>
+          <div className="flex items-start gap-2 bg-[#FFFBF5] border border-[#FFE4CC] rounded-[9px] px-3 py-2 max-w-md">
+            <FileText size={15} className="text-[#E8650A] shrink-0 mt-0.5" />
+            <div>
+              <p className="text-[11px] font-bold text-[#92400E] uppercase tracking-wide">Modelo de impresión</p>
+              <p className="text-[12.5px] font-semibold text-[#1f242c]">{plantillaFactura.nombre}</p>
+              <p className="text-[11px] text-[#6b7280]">
+                Configurado en Plantillas de impresión. El PDF usará este diseño al emitir.
+              </p>
+            </div>
+          </div>
+        </div>
         <div className="grid grid-cols-2 gap-4">
           <ClienteCombobox
             value={clienteId}

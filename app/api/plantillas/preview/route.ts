@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { prisma } from '@/lib/prisma'
 import { requirePermission, handleApiError } from '@/lib/api-auth'
 import type { PlantillaConfig } from '@/lib/plantillas/types'
-import { configDefaultPorTipo, renderPreviewPlantilla } from '@/lib/plantillas/preview'
+import { renderPreviewPlantilla } from '@/lib/plantillas/preview'
+import { resolverPlantillaDocumento } from '@/lib/plantillas/resolver-plantilla'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -32,12 +32,8 @@ export async function GET(req: NextRequest) {
     await requirePermission('config.manage_billing_templates')
     const { tipo } = querySchema.parse(Object.fromEntries(new URL(req.url).searchParams))
 
-    const guardada = await prisma.plantillaImpresion.findFirst({
-      where: { tipo, predeterminado: true, activo: true },
-    })
-
-    const cfg = (guardada?.config as unknown as PlantillaConfig | undefined) ?? configDefaultPorTipo(tipo)
-    const pdf = await pdfConTimeout(cfg)
+    const guardada = await resolverPlantillaDocumento(tipo, null)
+    const pdf = await pdfConTimeout(guardada.config)
 
     return new NextResponse(new Uint8Array(pdf), {
       headers: {
