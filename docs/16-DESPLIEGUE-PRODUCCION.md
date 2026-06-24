@@ -98,10 +98,12 @@ npm run build
 pm2 start npm --name ibiomedica -- start
 pm2 save
 
-# 7. Workers (cada uno en proceso separado)
-pm2 start npm --name worker-afip -- run worker:afip
+# 7. Workers PM2 (cada uno en proceso separado; requieren REDIS_URL para AFIP/cobranzas)
+pm2 start npm --name worker-afip -- run worker:afip          # cola emisión AFIP (obligatorio si facturás)
 pm2 start npm --name worker-cobranzas -- run worker:cobranzas
-# ... crm-email, crm-graph según integraciones activas
+# pm2 start npm --name worker-crm-email -- run worker:crm-email   # si CRM email activo
+# pm2 start npm --name worker-crm-graph -- run worker:crm-graph     # si Microsoft Graph activo
+pm2 save
 
 # 8. Permisos nuevos (si aplica)
 npx tsx --env-file=.env scripts/sync-logs-permiso.ts
@@ -160,7 +162,16 @@ Con Nginx: proxy_pass a `:3000`, headers `X-Forwarded-For`, `X-Forwarded-Proto`.
 | Integridad datos | `npm run integridad:prod` (incluido en `vps-deploy-from-git.sh`) | Post-deploy |
 | Backup BD | `pg_dump` | Diario |
 
-Ejemplo crontab en VPS (`/etc/cron.d/ibiomedica-cron`; usuario `deploy`; `CRON_SECRET` en `/opt/ibiomedica/.env`):
+**Instalación automatizada** (en el VPS, como root):
+
+```bash
+cd /opt/ibiomedica
+sudo APP_URL=https://erp.tudominio.com bash scripts/vps-install-cron.sh
+```
+
+Genera `/etc/cron.d/ibiomedica-cron` con: `logs:purge` (04:00), OT SLA (cada hora), presupuestos vencidos (05:00), cobranzas (06:00). Requiere `CRON_SECRET` en `/opt/ibiomedica/.env`.
+
+Ejemplo manual equivalente:
 
 ```bash
 # OT SLA vencidas — cada hora

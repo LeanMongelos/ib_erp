@@ -4,15 +4,11 @@
  */
 
 import { prisma } from '@/lib/prisma'
+import { criterioPresupuestosVencidos } from '@/lib/presupuestos/vencimiento'
 
 export async function actualizarPresupuestosVencidos(): Promise<number> {
-  const ahora = new Date()
-
   const result = await prisma.presupuesto.updateMany({
-    where: {
-      estado: { in: ['ENVIADO', 'APROBADO'] },
-      fechaVencimiento: { lt: ahora },
-    },
+    where: criterioPresupuestosVencidos(),
     data: { estado: 'VENCIDO' },
   })
 

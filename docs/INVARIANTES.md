@@ -58,7 +58,7 @@ Documento de referencia para desarrollo, code review y agentes. Si un cambio vio
 |----|------------|------------|------|
 | Pr1 | Presupuesto **no** exige `sucursalInstalacionId`; la sucursal se valida al **facturar** (F2) | `itemPresupuestoSchema` | `npm run test:validaciones` |
 | Pr2 | Total presupuesto = subtotal + IVA + interés (POST y PATCH usan `calcularTotalesPresupuesto`) | `lib/presupuestos/calcular-total-presupuesto.ts` | `npm run test:validaciones` |
-| Pr3 | ENVIADO/APROBADO con `fechaVencimiento` pasada → VENCIDO (`actualizarPresupuestosVencidos`, idempotente) | `lib/presupuestos/actualizar-vencidos.ts` · cron `POST /api/cron/presupuestos-vencidos` | `integridad:prod` (warn) · `npm run cron:presupuestos-vencidos` |
+| Pr3 | ENVIADO/APROBADO con `fechaVencimiento` pasada → VENCIDO (`actualizarPresupuestosVencidos`, idempotente) | `lib/presupuestos/actualizar-vencidos.ts` · cron `POST /api/cron/presupuestos-vencidos` | `test-presupuestos-vencidos.ts` · `integridad:prod` (warn) · `npm run cron:presupuestos-vencidos` |
 
 ## Clientes
 

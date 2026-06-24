@@ -4,13 +4,19 @@ import { prisma } from '@/lib/prisma'
 import { formatMonto } from '@/lib/utils'
 import { plain } from '@/lib/serialize'
 import { requirePagePermission } from '@/lib/page-guard'
+import { actualizarPresupuestosVencidos } from '@/lib/presupuestos/actualizar-vencidos'
 
-export default async function PresupuestosPage() {
-  await requirePagePermission('presupuestos.read')
-  const presupuestos = await prisma.presupuesto.findMany({
+async function getPresupuestos() {
+  await actualizarPresupuestosVencidos()
+  return prisma.presupuesto.findMany({
     orderBy: { creadoEn: 'desc' },
     include: { cliente: { select: { nombre: true } } },
   })
+}
+
+export default async function PresupuestosPage() {
+  await requirePagePermission('presupuestos.read')
+  const presupuestos = await getPresupuestos()
 
   const total = presupuestos.reduce((a, p) => a + Number(p.total), 0)
   const aprobados = presupuestos.filter((p) => p.estado === 'APROBADO').length

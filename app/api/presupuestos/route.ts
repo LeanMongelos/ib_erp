@@ -10,10 +10,15 @@ import { resolverCotizacionUsdDocumento, CotizacionUsdFaltanteError } from '@/li
 import { siguienteNumeroPresupuesto, crearConNumeroUnico } from '@/lib/sequences'
 import { plain } from '@/lib/serialize'
 import { registrarAuditoria, getIp } from '@/lib/audit'
+import { actualizarPresupuestosVencidos } from '@/lib/presupuestos/actualizar-vencidos'
 
 export async function GET(req: NextRequest) {
   try {
     await requirePermission('presupuestos.read')
+
+    // Antes de listar, sincronizamos presupuestos cuya vigencia ya venció
+    await actualizarPresupuestosVencidos()
+
     const { searchParams } = new URL(req.url)
     const facturables = searchParams.get('facturables') === '1'
     const clienteId = searchParams.get('clienteId')
