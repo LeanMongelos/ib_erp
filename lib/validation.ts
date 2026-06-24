@@ -257,6 +257,17 @@ export const facturaCreateSchema = z.object({
   items:           z.array(itemFacturaSchema).min(1, 'La factura debe tener al menos un ítem'),
 })
 
+/** PATCH /api/facturas/[id] — edición borrador/rechazada. */
+export const facturaUpdateSchema = z.object({
+  emisorId:        z.string().min(1).optional().nullable(),
+  plantillaId:     z.string().min(1).optional().nullable(),
+  tipo:            tipoFacturaEnum.optional(),
+  condicionPago:   z.string().trim().max(60).optional(),
+  observaciones:   z.string().trim().max(2000).optional(),
+  bonificacionPct: z.number().min(0).max(100).optional(),
+  items:           z.array(itemFacturaSchema).min(1).optional(),
+}).refine((d) => Object.keys(d).length > 0, { message: 'Nada para actualizar' })
+
 export const presupuestoCreateSchema = z.object({
   clienteId:             z.string().min(1),
   otId:                  z.string().min(1).optional().nullable(),

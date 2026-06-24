@@ -100,7 +100,7 @@ Leyenda: ✅ operativo · 🟡 parcial · ❌ pendiente
 | Graph CRM | `npm run worker:crm-graph` | polling `CRM_GRAPH_POLL_MS` | `worker/crm-graph-worker.ts` |
 | Vencimientos cobranza | `npm run worker:cobranzas` | polling | `worker/cobranzas-vencimientos-worker.ts` |
 | Purga logs sistema | `npm run logs:purge` | cron diario | `scripts/purge-system-logs.ts` |
-| Cron HTTP | — | `POST /api/cron/cobranzas-vencimientos` + `CRON_SECRET` | `app/api/cron/` |
+| Cron HTTP | — | `POST /api/cron/cobranzas-vencimientos`, `POST /api/cron/ots-vencidas` + `CRON_SECRET` | `app/api/cron/` |
 
 ```mermaid
 graph LR

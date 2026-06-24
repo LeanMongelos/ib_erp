@@ -28,6 +28,7 @@ Documento de referencia para desarrollo, code review y agentes. Si un cambio vio
 | O1 | Repuestos OT: misma validación UI ↔ API | `lib/ots/repuestos-ot-client.ts` | `npm run test:validaciones` |
 | O2 | Cierre OT: stock validado y descontado en **una transacción** | `app/api/ots/[id]/route.ts` | — |
 | O3 | Repuestos con `inventarioId`: precio re-resuelto en API | `lib/ots/repuestos-ot.ts` | — |
+| O4 | SLA vencido: cron HTTP o script VPS ejecuta `actualizarOTsVencidas` (idempotente) | `app/api/cron/ots-vencidas` · `scripts/actualizar-ots-vencidas.ts` | — |
 
 ## Integraciones / n8n
 
@@ -42,8 +43,8 @@ Documento de referencia para desarrollo, code review y agentes. Si un cambio vio
 
 | ID | Invariante | Resolvedor | Test |
 |----|------------|------------|------|
-| I1 | Post-deploy: integridad de datos (plantillas, equipos, OT stock, config) | `scripts/integridad-prod.ts` | `npm run integridad:prod` |
-| I2 | OT ABIERTA/EN_PROCESO con SLA vencido debe pasar a VENCIDA (`actualizarOTsVencidas`) | `lib/ots.ts` | `integridad:prod` (warn) |
+| I1 | Post-deploy: integridad de datos (plantillas, equipos, OT stock, config) | `scripts/integridad-prod.ts` | `npm run integridad:prod` (VPS vía `vps-deploy-from-git.sh`) |
+| I2 | OT ABIERTA/EN_PROCESO con SLA vencido debe pasar a VENCIDA (`actualizarOTsVencidas`) | `lib/ots.ts` + cron `POST /api/cron/ots-vencidas` | `integridad:prod` (warn) · `npm run cron:ots-vencidas` |
 | I3 | Conversaciones CRM abiertas deben vincularse a cliente (`clienteId`) | bandeja CRM / crear-lead n8n | `integridad:prod` (warn) |
 | I4 | Predeterminado activo **único** por tipo (plantilla, emisor, lista precios) | APIs config + `integridad-prod.ts` | `integridad:prod` (warn) |
 | I5 | Negocios embudo activos (≠ CIERRE) con `clienteId` en BD cuando hay cliente real | formulario embudo | `integridad:prod` (warn) |
@@ -72,6 +73,7 @@ Documento de referencia para desarrollo, code review y agentes. Si un cambio vio
 | F4 | PDF factura incluye `moneda` y `cotizacionUsd` en `buildDatosFactura` | `lib/plantillas/build-datos.ts` | — |
 | F5 | Documento USD exige cotización: mismo mensaje UI ↔ API | `lib/moneda-documento-client.ts` | `npm run test:validaciones` |
 | F6 | Ítems con `inventarioId`: precio re-resuelto en API al guardar | `lib/precios/aplicar-precios-documento.ts` | — |
+| F7 | POST/PATCH factura y POST/PATCH presupuesto/inventario usan schemas de `lib/validation.ts` | `facturaCreateSchema`, `facturaUpdateSchema`, etc. | `npm run test:invariants` |
 
 ## Auth y permisos
 

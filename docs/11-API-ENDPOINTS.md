@@ -217,6 +217,7 @@ Ver detalle: [`12-PLANTILLAS-PDF.md`](12-PLANTILLAS-PDF.md).
 | * | `/api/webhooks/whatsapp` | Meta verify | WhatsApp |
 | * | `/api/webhooks/meta` | Meta verify | Meta |
 | POST | `/api/cron/cobranzas-vencimientos` | `CRON_SECRET` | Job vencimientos |
+| POST | `/api/cron/ots-vencidas` | `CRON_SECRET` | Marcar OTs con SLA vencido |
 
 ## Auditoría y logs
 

@@ -28,4 +28,5 @@ jobs:
             cd /opt/ibiomedica
             git fetch origin
             git reset --hard origin/master
+            # integridad:prod corre dentro de vps-deploy-from-git.sh (requiere BD prod; no en GitHub Actions)
             bash scripts/vps-deploy-from-git.sh

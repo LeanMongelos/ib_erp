@@ -89,7 +89,7 @@ echo "==> Listas de precios (MIN-ARS / MAY-ARS, idempotente)..."
 npx tsx --env-file=.env scripts/sync-listas-precios.ts
 
 echo "==> Integridad post-deploy..."
-npx tsx --env-file=.env scripts/integridad-prod.ts
+npm run integridad:prod
 
 echo "==> Caddy (dominio + HTTPS, no sobrescribir con HTTP plano)..."
 bash scripts/vps-caddy-apply.sh

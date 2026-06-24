@@ -1,24 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { requirePermission, handleApiError, ApiError } from '@/lib/api-auth'
-import { itemFacturaSchema } from '@/lib/validation'
+import { facturaUpdateSchema } from '@/lib/validation'
 import { calcularTotales } from '@/lib/documentos'
 import { validarSucursalesInstalacionEquipo } from '@/lib/facturas/validar-sucursal-equipo'
 import { datosItemsFacturaCreate } from '@/lib/facturas/datos-items-factura'
 import { aplicarPreciosResueltosItems } from '@/lib/precios/aplicar-precios-documento'
 import { plain } from '@/lib/serialize'
 import { registrarAuditoria, getIp } from '@/lib/audit'
-
-const facturaUpdateSchema = z.object({
-  emisorId: z.string().min(1).optional().nullable(),
-  plantillaId: z.string().min(1).optional().nullable(),
-  tipo: z.enum(['A', 'B', 'C']).optional(),
-  condicionPago: z.string().trim().max(60).optional(),
-  observaciones: z.string().trim().max(2000).optional(),
-  bonificacionPct: z.number().min(0).max(100).optional(),
-  items: z.array(itemFacturaSchema).min(1).optional(),
-}).refine((d) => Object.keys(d).length > 0, { message: 'Nada para actualizar' })
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {

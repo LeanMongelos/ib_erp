@@ -17,7 +17,7 @@
 | HTTPS | Reverse proxy (Caddy/Nginx) obligatorio para cookies seguras |
 | Backups | Cron diario de PostgreSQL (ver §6) |
 | Workers | PM2/systemd para `worker:*` |
-| Cron | `logs:purge` diario + `/api/cron/cobranzas-vencimientos` |
+| Cron | `logs:purge` diario + `/api/cron/cobranzas-vencimientos` + `/api/cron/ots-vencidas` |
 | Migraciones | `npx prisma migrate deploy` (nunca `migrate dev` en prod) |
 | Build | `npm run build && npm run start` o PM2 con `next start` |
 | Permisos RBAC | Tras deploy con permisos nuevos: `npm run db:seed` parcial o scripts de sync |
@@ -155,6 +155,8 @@ Con Nginx: proxy_pass a `:3000`, headers `X-Forwarded-For`, `X-Forwarded-Proto`.
 |-------|-------------------|------------|
 | Purga logs sistema | `npm run logs:purge` | Diario 04:00 |
 | Vencimientos cobranza | `POST /api/cron/cobranzas-vencimientos` + header `Authorization: Bearer $CRON_SECRET` | Diario |
+| OT SLA vencidas | `POST /api/cron/ots-vencidas` + header `Authorization: Bearer $CRON_SECRET` (o `npm run cron:ots-vencidas`) | Cada hora |
+| Integridad datos | `npm run integridad:prod` (incluido en `vps-deploy-from-git.sh`) | Post-deploy |
 | Backup BD | `pg_dump` | Diario |
 
 ---

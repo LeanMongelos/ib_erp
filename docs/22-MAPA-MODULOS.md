@@ -96,6 +96,7 @@ Componentes clave: `SucursalesEditor`, `ClienteHistorialInbox`, `InboxPanel`, `N
 | Meta WhatsApp | `/api/webhooks/whatsapp` | verify token + HMAC |
 | Microsoft Graph | OAuth + `worker:crm-graph` | OAuth tokens en BD |
 | Cron cobranzas | `/api/cron/cobranzas-vencimientos` | `CRON_SECRET` |
+| Cron OT SLA | `/api/cron/ots-vencidas` | `CRON_SECRET` |
 
 ---
 
