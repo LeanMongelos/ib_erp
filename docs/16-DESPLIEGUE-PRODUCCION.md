@@ -11,7 +11,7 @@
 | Secretos | `NEXTAUTH_SECRET`, `INTEGRATION_SECRET`, `N8N_API_KEY`, `CRON_SECRET` — valores únicos y largos |
 | URL pública | `NEXTAUTH_URL=https://erp.tudominio.com` |
 | Credenciales demo | **No** usar usuarios del seed en prod; crear admin real |
-| AFIP | Certificados de **producción** en emisor; ambiente `produccion` |
+| AFIP | Certificados de **producción** en emisor; ambiente `PRODUCCION` — ver [`AFIP-PRODUCCION.md`](AFIP-PRODUCCION.md) |
 | Storage | `STORAGE_DRIVER=s3` + MinIO o bucket S3 real |
 | Redis | `REDIS_URL` activo si usás cola AFIP |
 | HTTPS | Reverse proxy (Caddy/Nginx) obligatorio para cookies seguras |
@@ -113,7 +113,7 @@ npx tsx --env-file=.env scripts/sync-logs-permiso.ts
 
 ## 5. Actualizaciones (releases)
 
-En el VPS, el flujo habitual es **`bash scripts/vps-deploy-from-git.sh`** (también vía GitHub Actions). Ese script incluye: pull, build, `test:invariants`, `integridad:prod`, reinicio de `ibiomedica` y —si están registrados en PM2— `worker-afip` / `worker-cobranzas`, y Caddy.
+En el VPS, el flujo habitual es **`bash scripts/vps-deploy-from-git.sh`** (también vía GitHub Actions). Ese script incluye: pull, `validar:env-prod`, build, `test:invariants`, `integridad:prod`, reinicio de `ibiomedica` y —si están registrados en PM2— `worker-afip` / `worker-cobranzas` / `worker-crm-email` / `worker-crm-graph`, y Caddy.
 
 Al final intenta instalar `/etc/cron.d/ibiomedica-cron` con `vps-install-cron.sh` si el proceso tiene root o `sudo` sin contraseña sobre `/etc/cron.d/`; si no, imprime `cron: manual — run sudo bash scripts/vps-install-cron.sh` y continúa.
 
@@ -126,7 +126,8 @@ npx prisma migrate deploy
 npx prisma generate
 npm run build
 pm2 restart ibiomedica
-pm2 restart worker-afip worker-cobranzas --update-env   # solo si existen en PM2
+pm2 restart worker-afip worker-cobranzas worker-crm-email worker-crm-graph --update-env   # solo si existen en PM2
+FORCE_PROD=1 npm run validar:env-prod
 npm run smoke    # verificación rápida post-deploy
 ```
 
@@ -134,12 +135,17 @@ npm run smoke    # verificación rápida post-deploy
 
 ## 6. Backups PostgreSQL
 
-Ejemplo cron diario (ajustar rutas):
+Script idempotente con retención 30 días:
 
 ```bash
-# /etc/cron.d/ibiomedica-backup
-0 3 * * * deploy docker exec ibiomedica_db pg_dump -U admin ibiomedica_db | gzip > /backups/ibiomedica_$(date +\%Y\%m\%d).sql.gz
+# Manual
+bash scripts/vps-backup-postgres.sh
+
+# Variables opcionales
+BACKUP_DIR=/var/backups/ibiomedica RETENTION_DAYS=30 bash scripts/vps-backup-postgres.sh
 ```
+
+Se instala en cron diario **03:00** vía `vps-install-cron.sh` (fallo seguro: log en `/var/log/ibiomedica-backup.log`, no rompe otras tareas).
 
 Retención sugerida: 30 días local + copia off-site.
 
@@ -166,7 +172,8 @@ Con Nginx: proxy_pass a `:3000`, headers `X-Forwarded-For`, `X-Forwarded-Proto`.
 | OT SLA vencidas | `POST /api/cron/ots-vencidas` + header `Authorization: Bearer $CRON_SECRET` (o `npm run cron:ots-vencidas`) | Cada hora |
 | Presupuestos vencidos | `POST /api/cron/presupuestos-vencidos` + header `Authorization: Bearer $CRON_SECRET` (o `npm run cron:presupuestos-vencidos`) | Diario |
 | Integridad datos | `npm run integridad:prod` (incluido en `vps-deploy-from-git.sh`) | Post-deploy |
-| Backup BD | `pg_dump` | Diario |
+| Backup BD | `scripts/vps-backup-postgres.sh` | Diario 03:00 |
+| Validación env | `npm run validar:env-prod` | Pre-deploy |
 
 **Instalación automatizada:** `vps-deploy-from-git.sh` la intenta al final de cada deploy (si hay permisos). Primera vez o sin sudo en el deploy user:
 
@@ -175,7 +182,7 @@ cd /opt/ibiomedica
 sudo APP_URL=https://erp.tudominio.com bash scripts/vps-install-cron.sh
 ```
 
-Genera `/etc/cron.d/ibiomedica-cron` con: `logs:purge` (04:00), OT SLA (cada hora), presupuestos vencidos (05:00), cobranzas (06:00). Requiere `CRON_SECRET` en `/opt/ibiomedica/.env`.
+Genera `/etc/cron.d/ibiomedica-cron` con: backup PostgreSQL (03:00), `logs:purge` (04:00), OT SLA (cada hora), presupuestos vencidos (05:00), cobranzas (06:00). Requiere `CRON_SECRET` en `/opt/ibiomedica/.env`.
 
 Ejemplo manual equivalente:
 

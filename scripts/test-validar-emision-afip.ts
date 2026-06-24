@@ -1,0 +1,88 @@
+/**
+ * Tests puros — guardas pre-emisión AFIP (homologación vs producción).
+ * Uso: npx tsx scripts/test-validar-emision-afip.ts
+ */
+import {
+  emisorTieneCertificados,
+  esAmbienteProduccion,
+  validarEmisionAfip,
+} from '../lib/afip/validar-emision'
+import { validarEnvProd } from '../lib/env/validar-prod'
+
+const errors: string[] = []
+
+function pass(msg: string) {
+  console.log('✅', msg)
+}
+
+function fail(msg: string) {
+  errors.push(msg)
+  console.error('❌', msg)
+}
+
+function main() {
+  console.log('\n=== Test validación emisión AFIP ===\n')
+
+  const homo = { ambiente: 'HOMOLOGACION' as const, certificadoPath: null, clavePrivadaPath: null }
+  const prodSinCert = { ambiente: 'PRODUCCION' as const, certificadoPath: null, clavePrivadaPath: null }
+  const prodConCert = {
+    ambiente: 'PRODUCCION' as const,
+    certificadoPath: 'emisores/cert.crt',
+    clavePrivadaPath: 'emisores/key.key',
+  }
+
+  if (esAmbienteProduccion(homo)) fail('homo no es producción')
+  else pass('esAmbienteProduccion: HOMOLOGACION')
+
+  if (!esAmbienteProduccion(prodConCert)) fail('prod debe ser producción')
+  else pass('esAmbienteProduccion: PRODUCCION')
+
+  if (emisorTieneCertificados(prodConCert)) pass('certificados completos')
+  else fail('certificados completos')
+
+  if (emisorTieneCertificados(homo)) fail('homo sin cert no debe pasar')
+  else pass('homo sin cert: false')
+
+  if (validarEmisionAfip(homo) !== null) fail('homo sin cert debe permitir emisión (CAE simulado)')
+  else pass('homo sin cert: emisión permitida')
+
+  if (validarEmisionAfip(prodSinCert) === null) fail('prod sin cert debe bloquear')
+  else pass(`prod sin cert bloqueado: ${validarEmisionAfip(prodSinCert)!.slice(0, 40)}…`)
+
+  if (validarEmisionAfip(prodConCert) !== null) fail('prod con cert debe permitir')
+  else pass('prod con cert: emisión permitida')
+
+  if (validarEmisionAfip(null) === null) fail('sin emisor debe fallar')
+  else pass('sin emisor: bloqueado')
+
+  const envOk = validarEnvProd({
+    NODE_ENV: 'production',
+    FORCE_PROD: '1',
+    DATABASE_URL: 'postgresql://u:p@localhost/db',
+    NEXTAUTH_SECRET: 'x'.repeat(32),
+    NEXTAUTH_URL: 'https://erp.example.com',
+    CRON_SECRET: 'y'.repeat(32),
+    INTEGRATION_SECRET: 'z'.repeat(32),
+    STORAGE_DRIVER: 's3',
+    S3_ENDPOINT: 'http://127.0.0.1:9000',
+    S3_BUCKET: 'ibiomedica',
+    S3_ACCESS_KEY_ID: 'admin',
+    S3_SECRET_ACCESS_KEY: 'secret123456789',
+    REDIS_URL: 'redis://127.0.0.1:6379',
+  })
+  if (envOk.errores > 0) fail(`env prod válido tiene ${envOk.errores} errores`)
+  else pass('validarEnvProd: entorno mínimo prod OK')
+
+  const envBad = validarEnvProd({ NODE_ENV: 'production', FORCE_PROD: '1' })
+  if (envBad.errores === 0) fail('env prod vacío debe tener errores')
+  else pass(`validarEnvProd: ${envBad.errores} errores en env vacío`)
+
+  console.log('')
+  if (errors.length) {
+    console.error(`\n${errors.length} fallo(s)\n`)
+    process.exit(1)
+  }
+  console.log('Todos los tests pasaron\n')
+}
+
+main()

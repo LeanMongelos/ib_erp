@@ -47,9 +47,17 @@ for i in $(seq 1 20); do
   sleep 3
 done
 
-echo "==> Build..."
+echo "==> Dependencias..."
 export NODE_OPTIONS=--max-old-space-size=3072
 npm ci
+
+echo "==> Validación entorno producción..."
+FORCE_PROD=1 npm run validar:env-prod || {
+  echo "ERROR: validación de entorno falló — corregí .env antes de continuar."
+  exit 1
+}
+
+echo "==> Build..."
 bash scripts/vps-install-puppeteer-deps.sh
 npx prisma generate
 npx prisma migrate deploy
@@ -60,7 +68,7 @@ npm run test:invariants
 
 echo "==> PM2..."
 pm2 restart ibiomedica 2>/dev/null || pm2 start npm --name ibiomedica -- start
-for worker in worker-afip worker-cobranzas; do
+for worker in worker-afip worker-cobranzas worker-crm-email worker-crm-graph; do
   if pm2 describe "$worker" >/dev/null 2>&1; then
     echo "    reiniciando $worker..."
     pm2 restart "$worker" --update-env

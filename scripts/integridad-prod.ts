@@ -5,6 +5,7 @@
  * Uso: npx tsx --env-file=.env scripts/integridad-prod.ts
  */
 import { prisma } from '../lib/prisma'
+import { emisorTieneCertificados } from '../lib/afip/validar-emision'
 
 type Resultado = { nivel: 'ok' | 'warn' | 'error'; msg: string }
 
@@ -91,6 +92,27 @@ async function checkPresupuestosVigenciaVencida() {
   } else {
     warn(
       `${count} presupuesto(s) ENVIADO/APROBADO con fechaVencimiento pasada — ejecutar actualizarPresupuestosVencidos (cron o npm run cron:presupuestos-vencidos)`,
+    )
+  }
+}
+
+async function checkEmisoresProduccionCertificados() {
+  const emisores = await prisma.emisor.findMany({
+    where: { ambiente: 'PRODUCCION', activo: true },
+    select: { razonSocial: true, certificadoPath: true, clavePrivadaPath: true },
+  })
+
+  if (emisores.length === 0) {
+    ok('AFIP: sin emisor activo en PRODUCCION')
+    return
+  }
+
+  const sinCert = emisores.filter((e) => !emisorTieneCertificados(e))
+  if (sinCert.length === 0) {
+    ok(`AFIP: ${emisores.length} emisor(es) PRODUCCION con certificados`)
+  } else {
+    error(
+      `AFIP PRODUCCION: ${sinCert.map((e) => e.razonSocial).join(', ')} sin certificado/clave — bloquea emisión fiscal`,
     )
   }
 }
@@ -308,6 +330,7 @@ async function main() {
   await checkPlantillaPredeterminada()
   await checkPlantillaSnapshot()
   await checkFacturasEmitidasPlantilla()
+  await checkEmisoresProduccionCertificados()
   await checkFacturasEmitidasSinCae()
   await checkPresupuestoConvertidoSinFactura()
   await checkPresupuestosVigenciaVencida()

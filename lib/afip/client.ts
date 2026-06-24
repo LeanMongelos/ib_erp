@@ -2,8 +2,11 @@
  * lib/afip/client.ts
  * Cliente AFIP vía @afipsdk/afip.js.
  *
- * Modo simulación: si el emisor no tiene certificados cargados, genera un CAE
- * ficticio para homologación/demos (nunca usar en producción sin cert real).
+ * Ambiente (`emisor.ambiente`):
+ * - HOMOLOGACION: sin certificados → CAE simulado (solo dev/demo).
+ * - PRODUCCION: exige certificados; `production: true` en el SDK.
+ *
+ * La validación pre-emisión vive en `validar-emision.ts` (API + worker).
  */
 
 import Afip from '@afipsdk/afip.js'

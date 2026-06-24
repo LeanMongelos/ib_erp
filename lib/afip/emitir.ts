@@ -6,6 +6,7 @@
 import QRCode from 'qrcode'
 import { prisma } from '@/lib/prisma'
 import { emitirCAEFactura, buildQrFiscal } from './client'
+import { validarEmisionAfip } from './validar-emision'
 import { afipMonedaId } from '@/lib/moneda'
 import { registrarAuditoria } from '@/lib/audit'
 
@@ -19,6 +20,11 @@ export async function procesarEmisionFactura(facturaId: string, usuarioId?: stri
   if (!factura) throw new Error('Factura no encontrada')
   if (!['BORRADOR', 'PENDIENTE', 'PENDIENTE_CAE', 'RECHAZADA'].includes(factura.estado)) {
     throw new Error(`Estado ${factura.estado} no permite emisión`)
+  }
+
+  const bloqueoProd = validarEmisionAfip(factura.emisor)
+  if (bloqueoProd) {
+    return { ok: false, observaciones: bloqueoProd }
   }
 
   await prisma.factura.update({

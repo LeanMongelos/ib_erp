@@ -28,6 +28,9 @@ cat > "$CRON_FILE" <<EOF
 SHELL=/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
+# Backup PostgreSQL — diario 03:00 (fallo seguro, no rompe cron)
+0 3 * * * ${CRON_USER} bash ${APP_DIR}/scripts/vps-backup-postgres.sh >> /var/log/ibiomedica-backup.log 2>&1
+
 # Purga logs técnicos (>15 días) — diario 04:00
 0 4 * * * ${CRON_USER} cd ${APP_DIR} && npm run logs:purge >> /var/log/ibiomedica-cron.log 2>&1
 
@@ -44,6 +47,10 @@ EOF
 chmod 644 "$CRON_FILE"
 echo "==> Escrito $CRON_FILE"
 echo "    APP_DIR=$APP_DIR  CRON_USER=$CRON_USER  APP_URL=$APP_URL"
+echo ""
+echo "Genera /etc/cron.d/ibiomedica-cron con:"
+echo "  - backup PostgreSQL (03:00) → scripts/vps-backup-postgres.sh"
+echo "  - logs:purge (04:00), OT SLA (cada hora), presupuestos (05:00), cobranzas (06:00)"
 echo ""
 echo "Verificá CRON_SECRET en $APP_DIR/.env y probá manualmente:"
 echo "  curl -sf -X POST ${APP_URL}/api/cron/ots-vencidas -H \"Authorization: Bearer \$CRON_SECRET\""
