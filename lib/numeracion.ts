@@ -61,6 +61,15 @@ export function defsSecuenciasPorDefecto(anio = anioActual()): DefSecuencia[] {
       padding: 5,
       proximoNumero: 10001,
     })),
+    ...(['A', 'B', 'C'] as const).map((subtipo) => ({
+      clave: `NOTA_CREDITO_${subtipo}`,
+      etiqueta: `Nota de crédito ${subtipo} (número interno)`,
+      tipo: 'FACTURA' as const,
+      subtipo,
+      prefijo: `NC${subtipo}-`,
+      padding: 5,
+      proximoNumero: 10001,
+    })),
   ]
 }
 
@@ -208,4 +217,8 @@ export function claveRemito(anio = anioActual()) {
 
 export function claveFactura(tipo: string) {
   return `FACTURA_${tipo.toUpperCase()}`
+}
+
+export function claveNotaCredito(tipo: string) {
+  return `NOTA_CREDITO_${tipo.toUpperCase()}`
 }

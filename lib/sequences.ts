@@ -7,6 +7,7 @@ import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import {
   claveFactura,
+  claveNotaCredito,
   clavePresupuesto,
   claveRemito,
   parseCorrelativo,
@@ -28,6 +29,10 @@ export async function siguienteNumeroOT(): Promise<string> {
 
 export async function siguienteNumeroFactura(tipo: string): Promise<string> {
   return reservarSiguienteNumero(claveFactura(tipo))
+}
+
+export async function siguienteNumeroNotaCredito(tipo: string): Promise<string> {
+  return reservarSiguienteNumero(claveNotaCredito(tipo))
 }
 
 export async function crearConNumeroUnico<T>(

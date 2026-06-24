@@ -414,6 +414,21 @@ async function checkPagosChequeSinCartera() {
   }
 }
 
+async function checkChequesDuplicadosActivos() {
+  const dupes = await prisma.$queryRaw<Array<{ numero: string; banco: string; cnt: bigint }>>`
+    SELECT "numero", "banco", COUNT(*)::bigint AS cnt
+    FROM "cheques_cobranza"
+    WHERE "estado" IN ('EN_CARTERA', 'DEPOSITADO')
+    GROUP BY "numero", "banco"
+    HAVING COUNT(*) > 1
+  `
+  if (dupes.length === 0) {
+    ok('Sin cheques activos duplicados (numero + banco)')
+  } else {
+    error(`${dupes.length} par(es) numero+banco duplicados en cartera/depositados`)
+  }
+}
+
 async function main() {
   console.log('\n=== Integridad producción ===\n')
 
@@ -437,6 +452,7 @@ async function main() {
   await checkPlantillasNotificacionCliente()
   await checkChequesCarteraVencidos()
   await checkPagosChequeSinCartera()
+  await checkChequesDuplicadosActivos()
 
   const errs = resultados.filter((r) => r.nivel === 'error')
   const warns = resultados.filter((r) => r.nivel === 'warn')

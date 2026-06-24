@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Search, Plus, FileText, Zap } from 'lucide-react'
+import { Search, Plus, FileText, Zap, Ban } from 'lucide-react'
 import { toast } from 'sonner'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { BadgeEstadoFactura } from '@/components/ui/badge'
+import { useCan } from '@/components/auth/useCan'
 import { formatFecha } from '@/lib/utils'
 import { formatMontoMoneda } from '@/lib/moneda'
 import { mensajeErrorDesconocido, mensajeErrorJson } from '@/lib/errores'
@@ -66,7 +67,9 @@ export function FacturasTable({ facturas }: { facturas: FacturaRow[] }) {
   const [search, setSearch] = useState('')
   const [estado, setEstado] = useState('TODOS')
   const [emitiendo, setEmitiendo] = useState<string | null>(null)
+  const [anulando, setAnulando] = useState<string | null>(null)
   const [highlightId, setHighlightId] = useState<string | null>(null)
+  const puedeAnular = useCan('facturas.cancel')
 
   useEffect(() => {
     const id = searchParams.get('highlight')
@@ -108,6 +111,35 @@ export function FacturasTable({ facturas }: { facturas: FacturaRow[] }) {
     } finally {
       setEmitiendo(null)
     }
+  }
+
+  async function anularFactura(f: FacturaRow) {
+    const msg = f.cae
+      ? '¿Anular esta factura emitida? Se generará una nota de crédito en AFIP.'
+      : '¿Anular esta factura?'
+    if (!window.confirm(msg)) return
+    setAnulando(f.id)
+    try {
+      const res = await fetch(`/api/facturas/${f.id}/anular`, { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(mensajeErrorJson(data, 'No se pudo anular la factura'))
+      toast.success(
+        data.simulado
+          ? 'Factura anulada (NC con CAE simulado)'
+          : data.notaCredito
+            ? `Factura anulada · NC ${data.notaCredito.numero}`
+            : 'Factura anulada',
+      )
+      router.refresh()
+    } catch (e) {
+      toast.error(mensajeErrorDesconocido(e, 'No se pudo anular la factura'))
+    } finally {
+      setAnulando(null)
+    }
+  }
+
+  function puedeAnularFactura(estadoFactura: string) {
+    return ['BORRADOR', 'PENDIENTE', 'RECHAZADA', 'EMITIDA', 'VENCIDA'].includes(estadoFactura)
   }
 
   return (
@@ -197,6 +229,16 @@ export function FacturasTable({ facturas }: { facturas: FacturaRow[] }) {
                         </button>
                         )
                       })()}
+                      {puedeAnular && puedeAnularFactura(f.estado) && (
+                        <button
+                          onClick={() => anularFactura(f)}
+                          disabled={anulando === f.id || emitiendo === f.id}
+                          className="p-1.5 text-[#6b7280] hover:text-red-600 rounded disabled:opacity-50"
+                          title="Anular factura"
+                        >
+                          <Ban size={15} />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

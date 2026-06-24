@@ -18,5 +18,12 @@ for (const rol of ['GERENTE', 'CONTABILIDAD'] as const) {
   }
 }
 
+if (!tienePermiso(ROLE_PERMISSIONS.FACTURACION ?? [], 'facturas.cancel')) {
+  throw new Error('FACTURACION debe tener facturas.cancel')
+}
+if (!tienePermiso(ROLE_PERMISSIONS.FACTURACION ?? [], 'facturas.credit_note')) {
+  throw new Error('FACTURACION debe tener facturas.credit_note')
+}
+
 console.log('✅ permisos cheques OK')
 console.log('\nOK — cheques cobranza\n')

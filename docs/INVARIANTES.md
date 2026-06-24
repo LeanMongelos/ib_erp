@@ -91,6 +91,8 @@ Documento de referencia para desarrollo, code review y agentes. Si un cambio vio
 | F9 | Tras emisión `EMITIDA` con CAE, PDF disponible on-demand vía `GET /api/facturas/[id]/pdf` (`renderDocumentoPDF`) | `app/api/facturas/[id]/pdf/route.ts` | smoke manual post go-live |
 | F10 | Cuotas cobranza se crean al **crear** factura con plazos (`sincronizarVencimientosCobranza`), no al emitir AFIP | `app/api/facturas/route.ts` POST | — |
 | F11 | Tras emisión `EMITIDA`, email al cliente con PDF adjunto si tiene email y no opt-out (`[no-email-factura]` en notas); no bloquea emisión | `lib/facturas/notify-cliente-emitida.ts` · `FACTURA_EMAIL_CLIENTE` | smoke manual · SystemLog `factura-cliente-email` |
+| F12 | Factura emitida con CAE se anula vía NC AFIP (`POST /api/facturas/[id]/anular`); borrador sin CAE → `ANULADA` directa; bloqueo si hay cobranzas o cheques en cartera | `lib/facturas/anular.ts` · `lib/afip/emitir-nota-credito.ts` | `test-anular-factura.ts` |
+| Co5 | Cheque `(numero, banco)` único entre activos; anular revierte imputación | `lib/cobranzas/cheques.ts` · migración unique | `test-cheques-cobranza.ts` · `integridad:prod` |
 
 ## Operación (OT / inventario)
 

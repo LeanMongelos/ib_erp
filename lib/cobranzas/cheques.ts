@@ -102,6 +102,47 @@ export async function marcarChequeRechazado(chequeId: string) {
   })
 }
 
+export async function marcarChequeAnulado(chequeId: string) {
+  return prisma.$transaction(async (tx) => {
+    const cheque = await tx.chequeCobranza.findUnique({
+      where: { id: chequeId },
+      include: { pago: { include: { imputaciones: true } } },
+    })
+    if (!cheque) throw new Error('Cheque no encontrado')
+    if (cheque.estado !== 'EN_CARTERA') throw new Error('El cheque no está en cartera')
+
+    for (const imp of cheque.pago.imputaciones) {
+      await revertirImputacionVencimientos(imp.facturaId, imp.monto, tx)
+      await recalcularEstadoFacturaTrasRechazo(imp.facturaId, tx)
+    }
+
+    await tx.chequeCobranza.update({
+      where: { id: chequeId },
+      data: { estado: 'ANULADO' },
+    })
+
+    return cheque
+  })
+}
+
+async function validarChequeUnico(
+  numero: string,
+  banco: string | null | undefined,
+  tx: Tx,
+) {
+  const bancoNorm = (banco ?? '').trim()
+  const existente = await tx.chequeCobranza.findFirst({
+    where: {
+      numero: numero.trim(),
+      banco: bancoNorm,
+      estado: { in: ['EN_CARTERA', 'DEPOSITADO'] },
+    },
+  })
+  if (existente) {
+    throw new Error(`Ya existe un cheque activo con número ${numero} en ${bancoNorm || 'sin banco'}`)
+  }
+}
+
 export async function crearChequeConPago(
   data: {
     clienteId: string
@@ -118,6 +159,8 @@ export async function crearChequeConPago(
   },
   tx: Tx,
 ) {
+  await validarChequeUnico(data.cheque.numero, data.cheque.banco, tx)
+
   const nuevo = await tx.pago.create({
     data: {
       clienteId: data.clienteId,
@@ -143,7 +186,7 @@ export async function crearChequeConPago(
       pagoId: nuevo.id,
       clienteId: data.clienteId,
       numero: data.cheque.numero,
-      banco: data.cheque.banco ?? null,
+      banco: (data.cheque.banco ?? '').trim(),
       titular: data.cheque.titular ?? null,
       monto: data.monto,
       fechaVencimiento: data.cheque.fechaVencimiento,

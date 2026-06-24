@@ -774,16 +774,19 @@ model Factura {
   qrData           String? // JSON base64 para QR fiscal
   afipObservaciones String?
   concepto         Int           @default(1) // 1=Productos, 2=Servicios, 3=Ambos
+  facturaOrigenId  String?       // nota de crédito → factura anulada
   creadoEn         DateTime      @default(now())
 
-  cliente     Cliente            @relation(fields: [clienteId], references: [id])
-  emisor      Emisor?            @relation(fields: [emisorId], references: [id])
-  plantilla   PlantillaImpresion? @relation(fields: [plantillaId], references: [id])
-  presupuesto Presupuesto?       @relation(fields: [presupuestoId], references: [id])
-  ot          OrdenTrabajo?      @relation(fields: [otId], references: [id])
-  items       ItemFactura[]
-  pagos       PagoFactura[]
-  vencimientos VencimientoCobranza[]
+  cliente       Cliente            @relation(fields: [clienteId], references: [id])
+  emisor        Emisor?            @relation(fields: [emisorId], references: [id])
+  plantilla     PlantillaImpresion? @relation(fields: [plantillaId], references: [id])
+  presupuesto   Presupuesto?       @relation(fields: [presupuestoId], references: [id])
+  ot            OrdenTrabajo?      @relation(fields: [otId], references: [id])
+  facturaOrigen Factura?           @relation("NotaCreditoOrigen", fields: [facturaOrigenId], references: [id])
+  notasCredito  Factura[]          @relation("NotaCreditoOrigen")
+  items         ItemFactura[]
+  pagos         PagoFactura[]
+  vencimientos  VencimientoCobranza[]
 
   @@index([fechaEmision])
   @@index([estado, fechaEmision])
@@ -1106,7 +1109,7 @@ model ChequeCobranza {
   pagoId                String                @unique
   clienteId             String
   numero                String
-  banco                 String?
+  banco                 String                @default("")
   titular               String?
   monto                 Float
   fechaRecepcion        DateTime              @default(now())
@@ -1121,6 +1124,7 @@ model ChequeCobranza {
   pago    Pago    @relation(fields: [pagoId], references: [id], onDelete: Cascade)
   cliente Cliente @relation(fields: [clienteId], references: [id])
 
+  @@unique([numero, banco])
   @@index([fechaVencimiento, estado])
   @@index([clienteId, estado])
   @@map("cheques_cobranza")

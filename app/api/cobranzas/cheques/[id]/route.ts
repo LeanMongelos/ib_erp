@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requirePermission, handleApiError, ApiError } from '@/lib/api-auth'
 import { chequeDepositoSchema } from '@/lib/validation'
-import { marcarChequeDepositado, marcarChequeRechazado } from '@/lib/cobranzas/cheques'
+import { marcarChequeDepositado, marcarChequeRechazado, marcarChequeAnulado } from '@/lib/cobranzas/cheques'
 import { registrarAuditoria, getIp } from '@/lib/audit'
 import { plain } from '@/lib/serialize'
 
@@ -16,13 +16,20 @@ export async function PATCH(
     const resultado =
       accion === 'depositar'
         ? await marcarChequeDepositado(params.id)
-        : await marcarChequeRechazado(params.id)
+        : accion === 'rechazar'
+          ? await marcarChequeRechazado(params.id)
+          : await marcarChequeAnulado(params.id)
 
     if (!resultado) throw new ApiError(404, 'Cheque no encontrado')
 
     await registrarAuditoria({
       usuarioId: actor.id,
-      accion: accion === 'depositar' ? 'cheque.depositar' : 'cheque.rechazar',
+      accion:
+        accion === 'depositar'
+          ? 'cheque.depositar'
+          : accion === 'rechazar'
+            ? 'cheque.rechazar'
+            : 'cheque.anular',
       entidad: 'ChequeCobranza',
       entidadId: params.id,
       ip: getIp(req),

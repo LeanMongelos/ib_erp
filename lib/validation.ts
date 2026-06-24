@@ -336,7 +336,7 @@ export const pagoCreateSchema = z.object({
 )
 
 export const chequeDepositoSchema = z.object({
-  accion: z.enum(['depositar', 'rechazar']),
+  accion: z.enum(['depositar', 'rechazar', 'anular']),
 })
 
 export const ordenCompraCreateSchema = z.object({

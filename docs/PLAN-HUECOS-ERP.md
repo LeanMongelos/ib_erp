@@ -33,13 +33,13 @@ Auditoría post-cartera de cheques (jun 2026). Objetivo: cerrar gaps donde el **
 
 ---
 
-## Fase 2 — Estado y operación (pendiente, no romper AFIP)
+## Fase 2 — Estado y operación (en curso)
 
-| ID | Hueco | Acción propuesta |
-|----|-------|------------------|
-| C1 | Anulación / NC AFIP | `POST /api/facturas/[id]/anular` + NC + `anularVencimientosPendientes` |
-| H3 | `cobranzas.reconcile` sin UI | Conciliación mínima o retirar permiso |
-| H9 | Cheque duplicado / ANULADO | Unique `(numero,banco)` + acción anular |
+| ID | Hueco | Acción propuesta | Estado |
+|----|-------|------------------|--------|
+| C1 | Anulación / NC AFIP | `POST /api/facturas/[id]/anular` + NC + `anularVencimientosPendientes` | ✅ Implementado |
+| H3 | `cobranzas.reconcile` sin UI | Conciliación mínima o retirar permiso | pendiente |
+| H9 | Cheque duplicado / ANULADO | Unique `(numero,banco)` + acción anular | ✅ Implementado |
 | H10 | OT sin máquina de estados | `lib/ots/transiciones.ts` compartido UI/API |
 | H12 | Health cola AFIP | Alerta en integridad si worker caído |
 | — | Reversión pagos transferencia | PATCH anular pago no-cheque |

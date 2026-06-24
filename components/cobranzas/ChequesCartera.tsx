@@ -33,6 +33,7 @@ const ESTADO_OPTS = [
   { value: 'EN_CARTERA', label: 'En cartera' },
   { value: 'DEPOSITADO', label: 'Depositados' },
   { value: 'RECHAZADO', label: 'Rechazados' },
+  { value: 'ANULADO', label: 'Anulados' },
   { value: 'TODOS', label: 'Todos' },
 ]
 
@@ -67,9 +68,14 @@ export function ChequesCartera({ clientes }: { clientes: Cliente[] }) {
     cargar()
   }, [cargar])
 
-  async function accion(id: string, accion: 'depositar' | 'rechazar') {
+  async function accion(id: string, accion: 'depositar' | 'rechazar' | 'anular') {
     if (!puedeGestionar) return
-    const msg = accion === 'depositar' ? '¿Confirmás el depósito del cheque?' : '¿Marcar el cheque como rechazado? Se revertirá la imputación.'
+    const msg =
+      accion === 'depositar'
+        ? '¿Confirmás el depósito del cheque?'
+        : accion === 'rechazar'
+          ? '¿Marcar el cheque como rechazado? Se revertirá la imputación.'
+          : '¿Anular el cheque? Se revertirá la imputación en las facturas.'
     if (!window.confirm(msg)) return
     setAccionId(id)
     try {
@@ -79,7 +85,13 @@ export function ChequesCartera({ clientes }: { clientes: Cliente[] }) {
         body: JSON.stringify({ accion }),
       })
       if (!res.ok) throw new Error(await mensajeErrorRespuesta(res, 'No se pudo actualizar el cheque'))
-      toast.success(accion === 'depositar' ? 'Cheque depositado' : 'Cheque rechazado')
+      toast.success(
+        accion === 'depositar'
+          ? 'Cheque depositado'
+          : accion === 'rechazar'
+            ? 'Cheque rechazado'
+            : 'Cheque anulado',
+      )
       cargar()
     } catch (e) {
       toast.error(mensajeErrorDesconocido(e, 'Error al actualizar cheque'))
@@ -166,6 +178,9 @@ export function ChequesCartera({ clientes }: { clientes: Cliente[] }) {
                               </Button>
                               <Button size="sm" variant="secondary" disabled={accionId === c.id} onClick={() => accion(c.id, 'rechazar')}>
                                 Rechazar
+                              </Button>
+                              <Button size="sm" variant="ghost" disabled={accionId === c.id} onClick={() => accion(c.id, 'anular')}>
+                                Anular
                               </Button>
                             </div>
                           )}
