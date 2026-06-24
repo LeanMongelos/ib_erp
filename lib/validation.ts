@@ -151,6 +151,8 @@ export const itemFacturaSchema = z.object({
   precioUnit:       z.number().nonnegative('El precio no puede ser negativo'),
   bonificacionPct:  z.number().min(0).max(100).optional(),
   inventarioId:     z.string().min(1).optional().nullable(),
+  /** Solo validación UI↔API; no se persiste en FacturaItem. */
+  tipoArticulo:     z.enum(['REPUESTO', 'CONSUMIBLE', 'ACCESORIO', 'BATERIA', 'EQUIPO']).optional().nullable(),
   alicuotaIvaPct:   z.number().min(0).max(100).optional().nullable(),
   numeroSerie:      z.string().trim().max(80).optional().nullable(),
   proximoPreventivo: z.coerce.date().optional().nullable(),

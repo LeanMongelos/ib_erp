@@ -146,6 +146,7 @@ async function main() {
       await validarSucursalesInstalacionEquipo(clinica.id, [{
         descripcion: equipoInv.nombre,
         inventarioId: equipoInv.id,
+        tipoArticulo: 'EQUIPO',
         sucursalInstalacionId: null,
       }]).then(() => fail('validarSucursalesInstalacionEquipo debería rechazar equipo sin sucursal'))
       pass('Validación: equipo sin sucursal → rechazado')

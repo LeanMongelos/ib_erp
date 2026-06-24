@@ -24,7 +24,7 @@ Documento de referencia para desarrollo, code review y agentes. Si un cambio vio
 | ID | Invariante |
 |----|------------|
 | F1 | Totales siempre desde `calcularTotales` (API); la UI no es fuente de verdad |
-| F2 | Validación sucursal para equipos: `validar-sucursal-equipo-client.ts` (UI) = `validar-sucursal-equipo.ts` (API) |
+| F2 | Validación sucursal para equipos: `equipo-instalacion-client.ts` (UI) = `validar-sucursal-equipo.ts` (API) | `lib/facturas/equipo-instalacion-client.ts` | `npm run test:validaciones` |
 | F3 | Emisión AFIP vía `procesarEmisionFactura`; no duplicar lógica CAE en routes |
 | F4 | PDF factura incluye `moneda` y `cotizacionUsd` en `buildDatosFactura` |
 
@@ -51,7 +51,7 @@ Documento de referencia para desarrollo, code review y agentes. Si un cambio vio
 | `npm run build` | Types + compile |
 | `npm run test:invariants` | Plantillas + validaciones compartidas (sin DB) |
 | `npm run test:plantillas` | Solo paridad PDF plantillas |
-| `npm run test:validaciones` | Solo reglas sucursales UI/API |
+| `npm run test:validaciones` | Reglas sucursales clientes + equipos en factura |
 | `npm run smoke` | Prisma + seeds contables (con DB) |
 | `backfill-plantillas-documentos.ts --execute` | Snapshot plantilla en docs viejos (prod) |
 
