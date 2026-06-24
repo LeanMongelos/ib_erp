@@ -60,6 +60,22 @@ const PLANTILLAS = [
     cuerpo:
       'Estimado/a {{cliente}},\n\nLe recordamos que la cuota {{cuota}} de la factura {{numero}} está {{situacion}} ({{fecha}}).\nMonto de la cuota: {{monto}}\n\n— Ingeniería Biomédica',
   },
+  {
+    codigo: 'OT_CERRADA',
+    nombre: 'OT cerrada al cliente',
+    canal: 'EMAIL',
+    asunto: 'Orden de trabajo {{numero}} finalizada — Ingeniería Biomédica',
+    cuerpo:
+      'Estimado/a {{cliente}},\n\nLa orden {{numero}} ({{tipo}}) fue finalizada el {{fecha}}.\nEquipo: {{equipo}}\nTrabajo: {{descripcion}}\nDiagnóstico: {{diagnostico}}\n\nRepuestos:\n{{repuestos}}\n\n— Ingeniería Biomédica',
+  },
+  {
+    codigo: 'PRESUPUESTO_ENVIADO',
+    nombre: 'Presupuesto enviado al cliente',
+    canal: 'EMAIL',
+    asunto: 'Presupuesto {{numero}} — {{emisor}}',
+    cuerpo:
+      'Estimado/a {{cliente}},\n\nAdjuntamos el presupuesto {{numero}}.\nImporte total: {{total}}\nVálido hasta: {{vencimiento}}\n\n— {{emisor}}',
+  },
 ]
 
 const REGLAS = [
@@ -102,7 +118,7 @@ export async function seedModulosConfigIfEmpty() {
     }
   }
 
-  for (const codigo of ['FACTURA_EMITIDA', 'COBRANZA_RECORDATORIO'] as const) {
+  for (const codigo of ['FACTURA_EMITIDA', 'COBRANZA_RECORDATORIO', 'OT_CERRADA', 'PRESUPUESTO_ENVIADO'] as const) {
     const plantilla = PLANTILLAS.find((p) => p.codigo === codigo)
     if (plantilla) {
       await prisma.plantillaNotificacion.upsert({

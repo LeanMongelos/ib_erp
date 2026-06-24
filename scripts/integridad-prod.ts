@@ -343,6 +343,20 @@ async function checkCuotasVencidasSinAviso() {
   }
 }
 
+async function checkStockMinimo() {
+  const { listarArticulosStockBajo } = await import('../lib/inventario/alerta-stock-minimo')
+  const bajos = await listarArticulosStockBajo()
+
+  if (bajos.length === 0) {
+    ok('Inventario: ningún artículo activo bajo stock mínimo')
+  } else {
+    const sinStock = bajos.filter((i) => i.stock === 0).length
+    warn(
+      `${bajos.length} artículo(s) con stock ≤ mínimo (${sinStock} sin stock) — cron stock-minimo o revisar inventario`,
+    )
+  }
+}
+
 async function main() {
   console.log('\n=== Integridad producción ===\n')
 
@@ -362,6 +376,7 @@ async function main() {
   await checkConfigOperativa()
   await checkUsuariosActivos()
   await checkCuotasVencidasSinAviso()
+  await checkStockMinimo()
 
   const errs = resultados.filter((r) => r.nivel === 'error')
   const warns = resultados.filter((r) => r.nivel === 'warn')

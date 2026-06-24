@@ -42,6 +42,9 @@ PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 # Vencimientos cobranza — diario 06:00
 0 6 * * * ${CRON_USER} bash -c 'set -a; source ${APP_DIR}/.env; set +a; curl -sf -X POST ${APP_URL}/api/cron/cobranzas-vencimientos -H "Authorization: Bearer \$CRON_SECRET"' >> /var/log/ibiomedica-cron.log 2>&1
+
+# Alertas stock mínimo — diario 07:00
+0 7 * * * ${CRON_USER} bash -c 'set -a; source ${APP_DIR}/.env; set +a; curl -sf -X POST ${APP_URL}/api/cron/stock-minimo -H "Authorization: Bearer \$CRON_SECRET"' >> /var/log/ibiomedica-cron.log 2>&1
 EOF
 
 chmod 644 "$CRON_FILE"
@@ -50,7 +53,7 @@ echo "    APP_DIR=$APP_DIR  CRON_USER=$CRON_USER  APP_URL=$APP_URL"
 echo ""
 echo "Genera /etc/cron.d/ibiomedica-cron con:"
 echo "  - backup PostgreSQL (03:00) → scripts/vps-backup-postgres.sh"
-echo "  - logs:purge (04:00), OT SLA (cada hora), presupuestos (05:00), cobranzas (06:00)"
+echo "  - logs:purge (04:00), OT SLA (cada hora), presupuestos (05:00), cobranzas (06:00), stock mínimo (07:00)"
 echo ""
 echo "Verificá CRON_SECRET en $APP_DIR/.env y probá manualmente:"
 echo "  curl -sf -X POST ${APP_URL}/api/cron/ots-vencidas -H \"Authorization: Bearer \$CRON_SECRET\""

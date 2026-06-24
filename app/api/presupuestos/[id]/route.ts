@@ -58,6 +58,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const actual = await prisma.presupuesto.findUnique({ where: { id } })
     if (!actual) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
 
+    const enviando = data.estado === 'ENVIADO' && actual.estado !== 'ENVIADO'
+
     const { items, moneda: monedaPatch, cotizacionUsd: cotizacionPatch, ...resto } = data
 
     const monedaFinal = monedaPatch ?? actual.moneda
@@ -145,6 +147,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     await registrarAuditoria({
       usuarioId: actor.id, accion: 'presupuesto.update', entidad: 'Presupuesto', entidadId: id, despues: data, ip: getIp(req),
     })
+    if (enviando) {
+      void import('@/lib/presupuestos/notify-cliente-enviado').then(({ notifyClientePresupuestoEnviado }) =>
+        notifyClientePresupuestoEnviado(id).catch(() => null),
+      )
+    }
     return NextResponse.json(plain(p))
   } catch (error) {
     return handleApiError(error)

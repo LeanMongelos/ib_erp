@@ -89,6 +89,7 @@ Detalle: [`16-DESPLIEGUE-PRODUCCION.md`](16-DESPLIEGUE-PRODUCCION.md) §5–§8.
 | OT SLA vencidas | Cada hora |
 | Presupuestos vencidos | 05:00 diario |
 | Cobranzas vencimientos | 06:00 diario |
+| Stock mínimo (email admin) | 07:00 diario |
 
 Instalación: `scripts/vps-install-cron.sh`. Manual: [`16-DESPLIEGUE-PRODUCCION.md`](16-DESPLIEGUE-PRODUCCION.md) §8.
 
@@ -100,7 +101,17 @@ Instalación: `scripts/vps-install-cron.sh`. Manual: [`16-DESPLIEGUE-PRODUCCION.
 bash scripts/vps-backup-postgres.sh
 ```
 
-Retención 30 días local. Copia off-site recomendada. Restaurar: [`16-DESPLIEGUE-PRODUCCION.md`](16-DESPLIEGUE-PRODUCCION.md) §6.
+Retención 30 días local. Copia off-site recomendada.
+
+### Disaster recovery (restaurar BD)
+
+1. **Detener escrituras:** `pm2 stop ibiomedica worker-afip worker-cobranzas worker-crm-email worker-crm-graph`
+2. **Ver backup disponible:** `bash scripts/vps-restore-postgres.sh --dry-run`
+3. **Restaurar** (sobrescribe la BD — pide escribir `RESTAURAR`): `bash scripts/vps-restore-postgres.sh --restore`
+4. **Reiniciar:** `pm2 start ibiomedica worker-afip worker-cobranzas --update-env`
+5. **Verificar:** `curl -sf https://erp-ibiomedica.com.ar/api/health` · `npm run go-live:check`
+
+Detalle técnico: [`16-DESPLIEGUE-PRODUCCION.md`](16-DESPLIEGUE-PRODUCCION.md) §6.
 
 ---
 
@@ -162,6 +173,49 @@ El cron/worker de cobranzas envía recordatorio al email del cliente cuando una 
 Plantilla editable: Configuración → Notificaciones → `COBRANZA_RECORDATORIO`.
 
 Aviso **interno** a cobranzas (Guillermo/Lucas) sigue con `COBRANZA_NOTIFY_EMAIL`.
+
+---
+
+## Email OT cerrada al cliente
+
+Tras cerrar OT (`CERRADA`), el ERP envía resumen al email del cliente (si tiene email cargado).
+
+| Control | Cómo |
+|---------|------|
+| Desactivar global | `OT_EMAIL_CLIENTE=false` en `.env` |
+| Opt-out por cliente | `[no-email-ot]` o `[no-email-factura]` en notas del cliente |
+| Fallo de envío | No bloquea cierre — ver Logs (`ot-cliente-email`) |
+| Dedup | Una vez por OT vía SystemLog |
+
+Plantilla editable: Configuración → Notificaciones → `OT_CERRADA`.
+
+---
+
+## Email presupuesto al cliente
+
+Tras marcar presupuesto `ENVIADO`, el ERP envía PDF al email del cliente.
+
+| Control | Cómo |
+|---------|------|
+| Desactivar global | `PRESUPUESTO_EMAIL_CLIENTE=false` en `.env` |
+| Opt-out por cliente | `[no-email-presupuesto]` o `[no-email-factura]` en notas del cliente |
+| Fallo de envío | No bloquea transición — ver Logs (`presupuesto-cliente-email`) |
+| Dedup | Una vez por presupuesto vía SystemLog |
+
+Plantilla editable: Configuración → Notificaciones → `PRESUPUESTO_ENVIADO`.
+
+---
+
+## Alerta stock mínimo (admin)
+
+Cron diario envía email cuando `stock <= stockMinimo` (dedup diaria por artículo).
+
+| Control | Cómo |
+|---------|------|
+| Desactivar global | `STOCK_MINIMO_EMAIL=false` en `.env` |
+| Destinatarios | `STOCK_MINIMO_NOTIFY_EMAIL` (coma-separados) o `ADMIN_NOTIFY_EMAIL` |
+| Manual | `npm run cron:stock-minimo` o `POST /api/cron/stock-minimo` |
+| Integridad | `integridad:prod` advierte artículos bajo mínimo |
 
 ---
 

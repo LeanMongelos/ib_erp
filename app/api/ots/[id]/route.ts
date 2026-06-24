@@ -159,6 +159,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       }).catch(() => null)
     }
 
+    if (cerrando) {
+      void import('@/lib/ots/notify-cliente-cerrada').then(({ notifyClienteOtCerrada }) =>
+        notifyClienteOtCerrada(id).catch(() => null),
+      )
+    }
+
     return NextResponse.json(plain(ot))
   } catch (error) {
     return handleApiError(error)
