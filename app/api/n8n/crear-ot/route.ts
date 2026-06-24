@@ -1,20 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { z } from 'zod'
 import { addHours } from 'date-fns'
 import { prisma } from '@/lib/prisma'
 import { handleApiError, ApiError } from '@/lib/api-auth'
 import { verifyN8nApiKey } from '@/lib/crm/n8n'
+import { otN8nCreateSchema } from '@/lib/validation'
 import { siguienteNumeroOT, crearConNumeroUnico } from '@/lib/sequences'
 import { plain } from '@/lib/serialize'
-
-const schema = z.object({
-  clienteId: z.string().min(1),
-  descripcion: z.string().trim().min(5),
-  equipoId: z.string().optional(),
-  prioridad: z.enum(['BAJA', 'NORMAL', 'ALTA', 'URGENTE']).default('NORMAL'),
-  slaHoras: z.number().int().min(1).max(720).default(48),
-  conversacionId: z.string().optional(),
-})
 
 export async function POST(req: NextRequest) {
   try {
@@ -22,7 +13,7 @@ export async function POST(req: NextRequest) {
       throw new ApiError(401, 'API key inválida')
     }
 
-    const data = schema.parse(await req.json())
+    const data = otN8nCreateSchema.parse(await req.json())
 
     const cliente = await prisma.cliente.findUnique({ where: { id: data.clienteId } })
     if (!cliente) throw new ApiError(404, 'Cliente no encontrado')
@@ -35,6 +26,7 @@ export async function POST(req: NextRequest) {
         prisma.ordenTrabajo.create({
           data: {
             numero,
+            tipo: data.tipo,
             descripcion: data.descripcion,
             clienteId: data.clienteId,
             equipoId: data.equipoId ?? null,

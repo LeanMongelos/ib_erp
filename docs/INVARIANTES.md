@@ -28,6 +28,18 @@ Documento de referencia para desarrollo, code review y agentes. Si un cambio vio
 | O2 | Cierre OT: stock validado y descontado en **una transacción** | `app/api/ots/[id]/route.ts` | — |
 | O3 | Repuestos con `inventarioId`: precio re-resuelto en API | `lib/ots/repuestos-ot.ts` | — |
 
+## Integraciones / n8n
+
+| ID | Invariante | Resolvedor | Test |
+|----|------------|------------|------|
+| N1 | POST n8n crear OT usa `otN8nCreateSchema` (= `otCreateSchema`) | `lib/validation.ts` | `npm run test:validaciones` |
+
+## Operaciones / deploy
+
+| ID | Invariante | Resolvedor | Test |
+|----|------------|------------|------|
+| I1 | Post-deploy: integridad de datos (plantillas, equipos, OT stock, config) | `scripts/integridad-prod.ts` | `npm run integridad:prod` |
+
 ## Presupuestos
 
 | ID | Invariante | Resolvedor | Test |
@@ -78,6 +90,7 @@ Documento de referencia para desarrollo, code review y agentes. Si un cambio vio
 | `npm run test:plantillas` | Solo paridad PDF plantillas |
 | `npm run test:validaciones` | Reglas sucursales clientes + equipos en factura |
 | `npm run smoke` | Prisma + seeds contables (con DB) |
+| `npm run integridad:prod` | Chequeos de datos en producción (post-deploy) |
 | `npm run smoke:http` | Login HTTP + APIs/páginas (servidor levantado) |
 | `backfill-plantillas-documentos.ts --execute` | Snapshot plantilla en docs viejos (prod) |
 

@@ -112,6 +112,11 @@ export const otCreateSchema = z.object({
   tipo:        tipoOTEnum.default('CORRECTIVO'),
 })
 
+/** Webhook n8n — mismas reglas que POST /api/ots + conversacionId opcional. */
+export const otN8nCreateSchema = otCreateSchema.extend({
+  conversacionId: z.string().min(1).optional(),
+})
+
 export const otUpdateSchema = z
   .object({
     estado:      estadoOTEnum.optional(),
