@@ -155,6 +155,7 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
   const [fotoUrl, setFotoUrl] = useState<string | null>(null)
   const [fotoPendiente, setFotoPendiente] = useState<File | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const csvFileRef = useRef<HTMLInputElement>(null)
 
   const [categoriasOpciones, setCategoriasOpciones] = useState(CATEGORIAS_INVENTARIO)
 
@@ -333,7 +334,23 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
     }
   }
 
-  async function importarExcel(file: File) {
+  async function descargarPlantillaCsv() {
+    try {
+      const res = await fetch('/api/inventario/plantilla?formato=csv', { credentials: 'include' })
+      if (!res.ok) throw new Error(await mensajeErrorRespuesta(res, 'No se pudo descargar la plantilla'))
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'plantilla-inventario-ibiomedica.csv'
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      toast.error(mensajeErrorDesconocido(e, 'No se pudo descargar la plantilla'))
+    }
+  }
+
+  async function importarArchivo(file: File, esCsv: boolean) {
     setImportando(true)
     try {
       const fd = new FormData()
@@ -345,17 +362,19 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Error en la importación')
-      toast.success(`Importación: ${data.creados} creados, ${data.actualizados} actualizados`)
+      const omitidos = data.omitidos ? `, ${data.omitidos} omitidos` : ''
+      toast.success(`Importación: ${data.creados} creados, ${data.actualizados ?? 0} actualizados${omitidos}`)
       if (data.errores?.length) {
         toast.warning(`${data.errores.length} fila(s) con error — revisá el detalle en consola`)
         console.warn('Errores importación inventario:', data.errores)
       }
       await recargar()
     } catch (e) {
-      toast.error(mensajeErrorDesconocido(e, 'No se pudo importar el archivo'))
+      toast.error(mensajeErrorDesconocido(e, `No se pudo importar el ${esCsv ? 'CSV' : 'Excel'}`))
     } finally {
       setImportando(false)
-      if (fileRef.current) fileRef.current.value = ''
+      if (esCsv && csvFileRef.current) csvFileRef.current.value = ''
+      if (!esCsv && fileRef.current) fileRef.current.value = ''
     }
   }
 
@@ -406,6 +425,9 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
           <Button variant="outline" size="sm" onClick={descargarPlantilla}>
             <Download size={14} /> Plantilla Excel
           </Button>
+          <Button variant="outline" size="sm" onClick={descargarPlantillaCsv}>
+            <Download size={14} /> Plantilla CSV
+          </Button>
           {puedeCrear && (
             <>
               <input
@@ -415,11 +437,24 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
                 className="hidden"
                 onChange={(e) => {
                   const f = e.target.files?.[0]
-                  if (f) importarExcel(f)
+                  if (f) importarArchivo(f, false)
+                }}
+              />
+              <input
+                ref={csvFileRef}
+                type="file"
+                accept=".csv"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0]
+                  if (f) importarArchivo(f, true)
                 }}
               />
               <Button variant="outline" size="sm" loading={importando} onClick={() => fileRef.current?.click()}>
                 <Upload size={14} /> Importar Excel
+              </Button>
+              <Button variant="outline" size="sm" loading={importando} onClick={() => csvFileRef.current?.click()}>
+                <Upload size={14} /> Importar CSV
               </Button>
               <Button variant="primary" size="sm" onClick={() => { setForm(formVacio()); setFotoUrl(null); setFotoPendiente(null); setModalAlta(true) }}>
                 <Plus size={14} /> Nuevo producto
