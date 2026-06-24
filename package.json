@@ -40,7 +40,8 @@
     "worker:cobranzas": "tsx --env-file=.env worker/cobranzas-vencimientos-worker.ts",
     "logs:purge": "tsx --env-file=.env scripts/purge-system-logs.ts",
     "icons:generate": "node scripts/generate-favicons.mjs",
-    "audit:permisos": "tsx scripts/auditar-permisos.ts"
+    "audit:permisos": "tsx scripts/auditar-permisos.ts",
+    "verify:infra": "bash scripts/vps-verify-infra.sh"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

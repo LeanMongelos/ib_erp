@@ -4,6 +4,7 @@
 
 import { execSync } from 'child_process'
 import fs from 'fs'
+import path from 'path'
 import { prisma } from '@/lib/prisma'
 import { validarEnvProd, type EnvCheck } from '@/lib/env/validar-prod'
 import {
@@ -17,6 +18,7 @@ import {
 } from '@/lib/afip/validar-emision'
 import { getAdminNotifyEmails } from '@/lib/mail/system-mail'
 import { decryptCanalConfig } from '@/lib/integraciones/canal-config'
+import { auditarPermisosCriticos } from '@/lib/auditar-permisos'
 import type { EmailImapConfig } from '@/lib/crm/config'
 import type { EmailGraphConfig } from '@/lib/crm/adapters/email-graph'
 
@@ -76,6 +78,10 @@ function detectarWorkerPm2(workerName: string): WorkerAfipStatus {
   } catch {
     return { detectado: false, msg: 'PM2 no disponible en este host' }
   }
+}
+
+export function detectarProcesoPm2(workerName: string): WorkerAfipStatus {
+  return detectarWorkerPm2(workerName)
 }
 
 export function detectarWorkerAfipPm2(): WorkerAfipStatus {
@@ -402,6 +408,162 @@ async function validarOnboardingGoLive(items: GoLiveItem[]) {
   }
 }
 
+function esHostVps(): boolean {
+  try {
+    return fs.existsSync('/opt/ibiomedica') || fs.existsSync('/etc/cron.d/ibiomedica-cron')
+  } catch {
+    return false
+  }
+}
+
+function edadUltimoBackupHoras(backupDir: string): number | null {
+  try {
+    if (!fs.existsSync(backupDir)) return null
+    const entries = fs.readdirSync(backupDir).filter((f) => f.endsWith('.gz'))
+    if (entries.length === 0) return null
+    let latest = 0
+    for (const f of entries) {
+      const mtime = fs.statSync(path.join(backupDir, f)).mtimeMs
+      if (mtime > latest) latest = mtime
+    }
+    return (Date.now() - latest) / (1000 * 60 * 60)
+  } catch {
+    return null
+  }
+}
+
+async function validarInfraGoLive(items: GoLiveItem[]) {
+  const vps = esHostVps()
+  const appUrl = (process.env.NEXTAUTH_URL?.trim() || 'http://127.0.0.1:3000').replace(/\/$/, '')
+
+  try {
+    const res = await fetch(`${appUrl}/api/health`, {
+      signal: AbortSignal.timeout(5000),
+      headers: { Accept: 'application/json' },
+    })
+    const json = (await res.json()) as { ok?: boolean; db?: string; redis?: string }
+    if (json.ok) {
+      addItem(
+        items,
+        'infra',
+        'pass',
+        `Health OK — db=${json.db ?? '?'}, redis=${json.redis ?? '?'}`,
+        'infra_health',
+      )
+    } else if (vps) {
+      addItem(items, 'infra', 'fail', `Health respondió ok=false (${appUrl})`, 'infra_health')
+    } else {
+      addItem(items, 'infra', 'warn', `Health ok=false (${appUrl}) — levantar la app para verificar`, 'infra_health')
+    }
+  } catch {
+    if (vps) {
+      addItem(
+        items,
+        'infra',
+        'warn',
+        `Health no accesible en ${appUrl} — verificar PM2 ibiomedica`,
+        'infra_health',
+      )
+    } else {
+      addItem(
+        items,
+        'infra',
+        'warn',
+        'Health no verificado en este host (dev local)',
+        'infra_health',
+      )
+    }
+  }
+
+  const procesosCriticos = ['ibiomedica', 'worker-afip', 'worker-cobranzas'] as const
+  for (const nombre of procesosCriticos) {
+    const proc = detectarProcesoPm2(nombre)
+    if (!proc.detectado) {
+      const nivel: GoLiveNivel = nombre === 'ibiomedica' && vps ? 'fail' : 'warn'
+      addItem(items, 'infra', nivel, proc.msg, `infra_pm2_${nombre}`)
+    } else if (proc.online) {
+      addItem(items, 'infra', 'pass', proc.msg, `infra_pm2_${nombre}`)
+    } else {
+      const nivel: GoLiveNivel = nombre === 'ibiomedica' ? 'fail' : 'warn'
+      addItem(items, 'infra', nivel, proc.msg, `infra_pm2_${nombre}`)
+    }
+  }
+
+  let cronOk = false
+  try {
+    cronOk = fs.existsSync('/etc/cron.d/ibiomedica-cron')
+  } catch {
+    /* Windows / sin permisos */
+  }
+  if (cronOk) {
+    addItem(items, 'infra', 'pass', 'Cron del VPS instalado (/etc/cron.d/ibiomedica-cron)', 'infra_cron')
+  } else {
+    addItem(
+      items,
+      'infra',
+      'warn',
+      'Cron no detectado — en VPS: sudo APP_URL=https://erp-ibiomedica.com.ar bash scripts/vps-install-cron.sh',
+      'infra_cron',
+    )
+  }
+
+  const backupDir = process.env.BACKUP_DIR?.trim() || '/var/backups/ibiomedica'
+  const edadHoras = edadUltimoBackupHoras(backupDir)
+  if (edadHoras === null) {
+    addItem(
+      items,
+      'infra',
+      'warn',
+      vps ? `Sin backup reciente en ${backupDir}` : `Backups no verificados (${backupDir} — normal en dev)`,
+      'infra_backup',
+    )
+  } else if (edadHoras <= 24) {
+    addItem(
+      items,
+      'infra',
+      'pass',
+      `Último backup hace ~${Math.round(edadHoras)} h`,
+      'infra_backup',
+    )
+  } else {
+    addItem(
+      items,
+      'infra',
+      'warn',
+      `Backup antiguo (~${Math.round(edadHoras)} h) — revisar cron 03:00 en ${backupDir}`,
+      'infra_backup',
+    )
+  }
+}
+
+function validarPermisosGoLive(items: GoLiveItem[]) {
+  const hallazgos = auditarPermisosCriticos()
+  if (hallazgos.length === 0) {
+    addItem(
+      items,
+      'permisos',
+      'pass',
+      'Todos los roles tienen permisos críticos según lib/rbac.ts',
+      'permisos_ok',
+    )
+    return
+  }
+
+  addItem(
+    items,
+    'permisos',
+    'warn',
+    `${hallazgos.length} permiso(s) crítico(s) faltante(s) — ejecutar npm run audit:permisos`,
+    'permisos_faltantes',
+  )
+  for (const h of hallazgos.slice(0, 8)) {
+    addItem(items, 'permisos', 'warn', `Rol ${h.rol}: falta ${h.permiso}`, `permiso_${h.rol}_${h.permiso}`)
+  }
+  if (hallazgos.length > 8) {
+    addItem(items, 'permisos', 'warn', `… y ${hallazgos.length - 8} más (ver audit:permisos)`)
+  }
+}
+
 async function validarPlantillasNotificacionGoLive(items: GoLiveItem[]) {
   const requeridas = ['OT_CERRADA', 'PRESUPUESTO_ENVIADO', 'OT_ASIGNADA'] as const
   const faltantes: string[] = []
@@ -596,6 +758,8 @@ export async function obtenerGoLiveStatus(): Promise<GoLiveStatus> {
   }
 
   await validarCrmGoLive(items, process.env)
+  await validarInfraGoLive(items)
+  validarPermisosGoLive(items)
   await validarOnboardingGoLive(items)
   await validarPlantillasNotificacionGoLive(items)
 

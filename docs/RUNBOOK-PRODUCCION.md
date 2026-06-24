@@ -81,6 +81,29 @@ Detalle: [`16-DESPLIEGUE-PRODUCCION.md`](16-DESPLIEGUE-PRODUCCION.md) §5–§8.
 
 ---
 
+## Verificación de infraestructura
+
+Checklist rápido en el VPS (health, PM2, cron, edad del último backup):
+
+```bash
+cd /opt/ibiomedica
+npm run verify:infra
+```
+
+También incluido en `npm run go-live:check` (sección **Infraestructura** — WARN si falta cron o backup viejo en dev).
+
+| Qué verifica | Esperado en prod |
+|--------------|------------------|
+| `GET /api/health` | `"ok": true`, `"db": "ok"` |
+| PM2 `ibiomedica` | `online` |
+| PM2 `worker-afip` / `worker-cobranzas` | `online` si hay `REDIS_URL` |
+| `/etc/cron.d/ibiomedica-cron` | Archivo presente |
+| `/var/backups/ibiomedica/*.gz` | Último backup ≤ 24 h |
+
+Script: [`scripts/vps-verify-infra.sh`](../scripts/vps-verify-infra.sh). Variables opcionales: `NEXTAUTH_URL`, `BACKUP_DIR`, `MAX_BACKUP_HOURS`.
+
+---
+
 ## Cron en producción
 
 | Tarea | Cuándo |
