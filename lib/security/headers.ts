@@ -21,6 +21,9 @@ export const SECURITY_HEADERS: Record<string, string> = {
           "style-src 'self' 'unsafe-inline'",
           "img-src 'self' data: blob: https:",
           "font-src 'self' data:",
+          // Vista previa PDF en plantillas: iframe/embed con blob: tras fetch autenticado
+          "frame-src 'self' blob:",
+          "object-src 'self' blob:",
           "connect-src 'self' https://graph.facebook.com https://login.microsoftonline.com https://graph.microsoft.com",
           "frame-ancestors 'none'",
           "base-uri 'self'",

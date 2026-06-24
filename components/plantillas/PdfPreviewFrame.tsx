@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { Loader2 } from 'lucide-react'
 import { validarPdfBlob } from '@/lib/plantillas/pdf-valid'
 
@@ -40,13 +40,7 @@ export function PdfPreviewFrame({
   const [blobUrl, setBlobUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [waiting, setWaiting] = useState(true)
-  const [iframeError, setIframeError] = useState(false)
   const requestId = useRef(0)
-
-  const marcarIframeRoto = useCallback(() => {
-    setIframeError(true)
-    setError('No se pudo mostrar el PDF en el navegador')
-  }, [])
 
   useEffect(() => {
     if (!enabled) {
@@ -60,7 +54,6 @@ export function PdfPreviewFrame({
     let revoke: string | null = null
     setBlobUrl(null)
     setError(null)
-    setIframeError(false)
     setWaiting(true)
 
     const delayTimer = window.setTimeout(() => {
@@ -125,10 +118,10 @@ export function PdfPreviewFrame({
     )
   }
 
-  if (error || iframeError) {
+  if (error) {
     return (
       <div className={`flex items-center justify-center bg-[#fef2f2] text-[#991b1b] text-[10px] p-3 text-center ${className ?? ''}`}>
-        {error ?? 'No se pudo mostrar el PDF'}
+        {error}
       </div>
     )
   }
@@ -145,8 +138,9 @@ export function PdfPreviewFrame({
   if (scale !== 1) {
     return (
       <div className={`relative overflow-hidden bg-white ${className ?? ''}`}>
-        <iframe
-          src={blobUrl}
+        <embed
+          src={`${blobUrl}#toolbar=0&navpanes=0`}
+          type="application/pdf"
           title={titulo}
           className="absolute top-0 left-0 border-0 bg-white pointer-events-none"
           style={{
@@ -155,18 +149,17 @@ export function PdfPreviewFrame({
             transform: `scale(${scale})`,
             transformOrigin: 'top left',
           }}
-          onError={marcarIframeRoto}
         />
       </div>
     )
   }
 
   return (
-    <iframe
-      src={blobUrl}
+    <embed
+      src={`${blobUrl}#toolbar=0&navpanes=0`}
+      type="application/pdf"
       title={titulo}
       className={`border-0 bg-white w-full ${className ?? ''}`}
-      onError={marcarIframeRoto}
     />
   )
 }
