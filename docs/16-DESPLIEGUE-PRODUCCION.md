@@ -159,6 +159,15 @@ Con Nginx: proxy_pass a `:3000`, headers `X-Forwarded-For`, `X-Forwarded-Proto`.
 | Integridad datos | `npm run integridad:prod` (incluido en `vps-deploy-from-git.sh`) | Post-deploy |
 | Backup BD | `pg_dump` | Diario |
 
+Ejemplo crontab en VPS (`/etc/cron.d/ibiomedica-cron`; usuario `deploy`; `CRON_SECRET` en `/opt/ibiomedica/.env`):
+
+```bash
+# OT SLA vencidas — cada hora
+0 * * * * deploy bash -c 'set -a; source /opt/ibiomedica/.env; set +a; curl -sf -X POST https://erp-ibiomedica.com.ar/api/cron/ots-vencidas -H "Authorization: Bearer $CRON_SECRET"'
+```
+
+Alternativa local en el VPS (sin HTTP): `cd /opt/ibiomedica && npm run cron:ots-vencidas`.
+
 ---
 
 ## 9. Qué NO hacer en producción
