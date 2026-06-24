@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { useCan } from '@/components/auth/useCan'
 import { cn, formatFechaHora } from '@/lib/utils'
 import { mensajeErrorDesconocido, mensajeErrorJson, mensajeErrorRespuesta } from '@/lib/errores'
+import { validarEmailRequerido } from '@/lib/form-validation'
 import { RolesPermisosPanel } from '@/components/configuracion/RolesPermisosPanel'
 
 interface RolOpt { clave: string; nombre: string }
@@ -228,6 +229,10 @@ function UsuarioModal({
 
   async function guardar() {
     if (!esEdicion && (!nombre || !email)) { toast.error('Completá nombre y email'); return }
+    if (!esEdicion) {
+      const errEmail = validarEmailRequerido(email)
+      if (errEmail) { toast.error(errEmail); return }
+    }
     if (puedeAsignarRoles && seleccion.length === 0) { toast.error('Asigná al menos un rol'); return }
     if (hayPasswordManual) {
       if (!nuevaPassword) { toast.error('Ingresá la nueva contraseña'); return }

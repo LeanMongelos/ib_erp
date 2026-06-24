@@ -42,9 +42,11 @@ export const medioPagoEnum = z.enum(['TRANSFERENCIA', 'EFECTIVO', 'CHEQUE', 'TAR
 // Email opcional que acepta cadena vacía o ausente
 const emailOpcional = z
   .string()
-  .email('Email inválido')
+  .trim()
   .optional()
-  .or(z.literal(''))
+  .refine((v) => v === undefined || v === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), {
+    message: 'Email inválido',
+  })
 
 // ============ CLIENTE ============
 

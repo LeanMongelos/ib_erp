@@ -11,6 +11,7 @@ import { Select } from '@/components/ui/select'
 import { TIPO_CLIENTE, CONDICION_IVA } from '@/lib/form-options'
 import { useCan } from '@/components/auth/useCan'
 import { mensajeErrorDesconocido, parsearRespuestaApi } from '@/lib/errores'
+import { validarEmailOpcional } from '@/lib/form-validation'
 import {
   SucursalesEditor,
   sucursalDraftVacia,
@@ -47,6 +48,12 @@ export function NuevoClienteForm() {
     }
     if (form.nombre.trim().length < 2) {
       toast.error('El nombre debe tener al menos 2 caracteres')
+      return
+    }
+
+    const errEmail = validarEmailOpcional(form.email)
+    if (errEmail) {
+      toast.error(errEmail)
       return
     }
 

@@ -6,7 +6,7 @@ import { prisma } from '../lib/prisma'
 import { backfillUbicacionEquipos } from '../lib/equipos/seed-tracking-demo'
 
 async function main() {
-  const totalEquipos = await prisma.equipo.count({ where: { estado: { not: 'BAJA' } } } })
+  const totalEquipos = await prisma.equipo.count({ where: { estado: { not: 'BAJA' } } })
   const sinCoordsAntes = await prisma.equipo.count({
     where: { ubicacionLat: null, estado: { not: 'BAJA' } },
   })

@@ -17,6 +17,7 @@ import { CONDICION_IVA, CONDICION_PAGO } from '@/lib/form-options'
 import { BadgeEstadoOT, BadgeEstadoFactura } from '@/components/ui/badge'
 import { useCan } from '@/components/auth/useCan'
 import { mensajeErrorDesconocido, mensajeErrorJson } from '@/lib/errores'
+import { validarEmailOpcional } from '@/lib/form-validation'
 import { formatFecha, formatMonto } from '@/lib/utils'
 import {
   LABEL_SEGMENTO,
@@ -532,6 +533,18 @@ function ClienteEditModal({
   }, [])
 
   async function guardar() {
+    const errEmail = validarEmailOpcional(form.email)
+    if (errEmail) {
+      toast.error(errEmail)
+      return
+    }
+    if (form.limiteCredito !== '') {
+      const n = Number(form.limiteCredito)
+      if (Number.isNaN(n) || n < 0) {
+        toast.error('El límite de crédito debe ser un número mayor o igual a 0')
+        return
+      }
+    }
     setLoading(true)
     try {
       const payload: Record<string, unknown> = {

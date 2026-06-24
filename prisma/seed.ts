@@ -187,9 +187,6 @@ async function main() {
   }
 
   if ((await prisma.conversacionCRM.count()) === 0) {
-    const canales = await prisma.canalIntegracion.findMany()
-    const canalPorTipo = new Map(canales.map((c) => [c.tipo, c.id]))
-    const clientesDemo = await prisma.cliente.findMany({ take: 4, orderBy: { nombre: 'asc' } })
     const clinicaSanJuan = await prisma.cliente.findFirst({
       where: {
         OR: [
@@ -198,6 +195,12 @@ async function main() {
         ],
       },
     })
+    if (!clinicaSanJuan) {
+      console.log('ℹ️  Sin clientes demo; se omite conversaciones CRM de ejemplo.')
+    } else {
+    const canales = await prisma.canalIntegracion.findMany()
+    const canalPorTipo = new Map(canales.map((c) => [c.tipo, c.id]))
+    const clientesDemo = await prisma.cliente.findMany({ take: 4, orderBy: { nombre: 'asc' } })
     const guillermo = await prisma.usuario.findUnique({ where: { email: 'guillermo@ibiomedica.com' } })
 
     const demos: Array<{
@@ -297,11 +300,12 @@ async function main() {
       }
     }
     console.log(`✅ ${demos.length} conversaciones CRM demo`)
+    }
   }
 
   // ============ PROVEEDORES (demo idempotente) ============
-  // Guard por count: solo se cargan si todavía no hay proveedores.
-  if ((await prisma.proveedor.count()) === 0) {
+  // Guard por count: solo se cargan si todavía no hay proveedores ni inventario real cargado.
+  if ((await prisma.proveedor.count()) === 0 && (await prisma.inventario.count()) > 0) {
     const inventarioParaLink = await prisma.inventario.findMany({
       where: { sku: { in: ['BAT-12V-001', 'CAB-SPO2-001', 'PAN-TFT-001', 'SEN-NTC-001'] } },
       select: { id: true, sku: true, nombre: true },

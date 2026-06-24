@@ -59,6 +59,9 @@ echo "==> PM2..."
 pm2 restart ibiomedica 2>/dev/null || pm2 start npm --name ibiomedica -- start
 pm2 save
 
+echo "==> Limpieza datos demo (go-live, idempotente)..."
+npx tsx --env-file=.env scripts/prod-limpieza-demo.ts
+
 echo "==> Tracking backfill (idempotente, obligatorio)..."
 npx tsx --env-file=.env scripts/sync-tracking-demo.ts
 
