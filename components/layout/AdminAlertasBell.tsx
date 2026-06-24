@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { Bell, AlertTriangle } from 'lucide-react'
-import { useCan } from '@/components/auth/useCan'
+import { Terminal, AlertTriangle } from 'lucide-react'
+import { useDevAlertasUi } from '@/components/auth/useDevAlertasUi'
 import { etiquetaOrigenLog } from '@/lib/config/config-labels'
 import { formatFechaHora } from '@/lib/utils'
 
@@ -15,7 +15,7 @@ interface AlertaItem {
 }
 
 export function AdminAlertasBell() {
-  const puedeVer = useCan('config.read')
+  const puedeVer = useDevAlertasUi()
   const [open, setOpen] = useState(false)
   const [total, setTotal] = useState(0)
   const [alertas, setAlertas] = useState<AlertaItem[]>([])
@@ -61,11 +61,11 @@ export function AdminAlertasBell() {
         type="button"
         onClick={() => setOpen((v) => !v)}
         className="relative p-1 rounded-lg hover:bg-[#f4f6f9] transition-colors"
-        aria-label={`Alertas del sistema${total ? ` (${total} advertencias)` : ''}`}
+        aria-label={`Alertas DEV${total ? ` (${total} advertencias)` : ''}`}
       >
-        <Bell size={20} strokeWidth={1.8} className={total > 0 ? 'text-amber-600' : 'text-[#5b626d]'} />
+        <Terminal size={20} strokeWidth={1.8} className={total > 0 ? 'text-violet-600' : 'text-[#5b626d]'} />
         {total > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center text-[10px] font-bold text-white rounded-full border-2 border-white bg-amber-500">
+          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center text-[10px] font-bold text-white rounded-full border-2 border-white bg-violet-600">
             {total > 9 ? '9+' : total}
           </span>
         )}
@@ -74,9 +74,9 @@ export function AdminAlertasBell() {
       {open && (
         <div className="absolute right-0 top-full mt-2 w-[380px] max-h-[min(480px,70vh)] bg-white border border-[#e9ebef] rounded-[12px] shadow-xl z-[80] flex flex-col overflow-hidden">
           <div className="px-4 py-3 border-b border-[#eef0f2] shrink-0">
-            <p className="text-[13px] font-bold text-[#16181d]">Alertas del sistema</p>
+            <p className="text-[13px] font-bold text-[#16181d]">Alertas DEV</p>
             <p className="text-[11px] text-[#9aa1ab]">
-              WARN últimos 7 días · afip-notify, integridad, cobranza
+              WARN últimos 7 días · AFIP, integridad, cobranza
             </p>
           </div>
 
@@ -86,9 +86,9 @@ export function AdminAlertasBell() {
             )}
             {!loading && alertas.length === 0 && (
               <div className="px-4 py-10 text-center">
-                <Bell size={28} className="mx-auto text-[#d1d5db] mb-2" />
+                <Terminal size={28} className="mx-auto text-[#d1d5db] mb-2" />
                 <p className="text-[12.5px] font-semibold text-[#6b7280]">Sin advertencias recientes</p>
-                <p className="text-[11px] text-[#9aa1ab] mt-1">AFIP, integridad y cobranzas al día.</p>
+                <p className="text-[11px] text-[#9aa1ab] mt-1">Integraciones y jobs al día.</p>
               </div>
             )}
             {alertas.map((a) => (

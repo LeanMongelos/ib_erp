@@ -8,7 +8,7 @@ export function NotificationBell() {
     <NotificationInboxBase
       scope="general"
       icon={Bell}
-      ariaLabel="Notificaciones del sistema"
+      ariaLabel="Notificaciones"
       panelTitle="Notificaciones"
       emptyTitle="Sin alertas pendientes"
       emptyHint="Cobranzas, OT, preventivos y stock se monitorean en vivo."

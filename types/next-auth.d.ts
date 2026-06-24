@@ -15,6 +15,8 @@ declare module 'next-auth' {
       permissions: string[]
       avatarUrl: string | null
       exigirCambioPassword: boolean
+      /** Campana Terminal: WARN técnicos (solo dev allowlist). */
+      devAlertasUi: boolean
     } & DefaultSession['user']
   }
 
@@ -24,6 +26,7 @@ declare module 'next-auth' {
     permissions?: string[]
     avatarUrl?: string | null
     exigirCambioPassword?: boolean
+    devAlertasUi?: boolean
   }
 }
 

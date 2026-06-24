@@ -23,6 +23,7 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
 import { permisosDeRoles } from '@/lib/rbac'
+import { esUsuarioAlertasDev } from '@/lib/dev/alertas-dev'
 import { getClientIp } from '@/lib/auth/client-ip'
 import {
   getLoginLockStatus,
@@ -186,6 +187,10 @@ function buildAuthOptions(maxAge: number): NextAuthOptions {
           if (s.avatarUrl !== undefined) token.avatarUrl = s.avatarUrl
           if (s.exigirCambioPassword === false) token.exigirCambioPassword = false
         }
+        token.devAlertasUi = esUsuarioAlertasDev({
+          email: (token.email as string | undefined) ?? user?.email,
+          roles: (token.roles as string[] | undefined) ?? (user as { roles?: string[] })?.roles,
+        })
         return token
       },
 
@@ -201,6 +206,7 @@ function buildAuthOptions(maxAge: number): NextAuthOptions {
           session.user.avatarUrl   = token.avatarUrl ?? null
           session.user.image       = token.avatarUrl ?? undefined
           session.user.exigirCambioPassword = token.exigirCambioPassword ?? false
+          session.user.devAlertasUi = token.devAlertasUi ?? false
         }
         return session
       },

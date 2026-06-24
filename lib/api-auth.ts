@@ -20,6 +20,7 @@ import { tienePermiso } from '@/lib/rbac'
 import { applySecurityHeaders } from '@/lib/security/headers'
 import { traducirMensajeInterno } from '@/lib/errores'
 import { persistirErrorApi, type ApiErrorLogContext } from '@/lib/error-log'
+import { esUsuarioAlertasDev } from '@/lib/dev/alertas-dev'
 
 export interface SessionUser {
   id: string
@@ -84,6 +85,15 @@ export async function requirePermission(...permisos: string[]): Promise<SessionU
 /** Exige al menos uno de los permisos indicados (OR lógico). */
 export async function requirePermissionAny(...permisos: string[]): Promise<SessionUser> {
   return requirePermission(...permisos)
+}
+
+/** Alertas WARN técnicas (campana dev) — solo SUPERADMIN en DEV_ALERTS_EMAILS. */
+export async function requireDevAlertas(): Promise<SessionUser> {
+  const user = await requireAuth()
+  if (!esUsuarioAlertasDev({ email: user.email, roles: user.roles })) {
+    throw new ApiError(403, 'No tenés permisos para realizar esta acción')
+  }
+  return user
 }
 
 /**
