@@ -1,5 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import type { EstadoFactura } from '@prisma/client'
+import { NivelLog } from '@prisma/client'
+import { registrarError } from '@/lib/error-log'
 import { enviarAvisoVencimiento } from '@/lib/cobranzas/notify-vencimiento'
 import { marcarFacturasVencidasPorCuota } from '@/lib/cobranzas/marcar-facturas-vencidas'
 import {
@@ -72,6 +74,12 @@ export async function procesarVencimientosDelDia(): Promise<ResultadoProcesarVen
       console.warn(
         `[cobranzas] No se pudo enviar aviso interno — ${v.factura.numero} cuota ${v.numeroCuota}`,
       )
+      void registrarError({
+        nivel: NivelLog.WARN,
+        origen: 'cobranza',
+        mensaje: `No se pudo enviar aviso interno — ${v.factura.numero} cuota ${v.numeroCuota}`,
+        metadata: { vencimientoId: v.id, facturaNumero: v.factura.numero, numeroCuota: v.numeroCuota },
+      })
     }
   }
 

@@ -2,6 +2,8 @@
 
 > “Si pasa X, hacé Y” — referencia rápida para devs y operadores.
 
+**Operadores nuevos:** empezá por [`INICIO-RAPIDO-OPERADOR.md`](INICIO-RAPIDO-OPERADOR.md) (login, primera factura, OT, cobranzas).
+
 ---
 
 ## 1. La app no carga / error en dashboard

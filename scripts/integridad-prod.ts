@@ -6,6 +6,10 @@
  */
 import { prisma } from '../lib/prisma'
 import { emisorTieneCertificados } from '../lib/afip/validar-emision'
+import { NivelLog } from '@prisma/client'
+import { registrarError } from '../lib/error-log'
+
+const ORIGEN_INTEGRIDAD = 'integridad'
 
 type Resultado = { nivel: 'ok' | 'warn' | 'error'; msg: string }
 
@@ -19,6 +23,11 @@ function ok(msg: string) {
 function warn(msg: string) {
   resultados.push({ nivel: 'warn', msg })
   console.warn('⚠️ ', msg)
+  void registrarError({
+    nivel: NivelLog.WARN,
+    origen: ORIGEN_INTEGRIDAD,
+    mensaje: msg,
+  })
 }
 
 function error(msg: string) {

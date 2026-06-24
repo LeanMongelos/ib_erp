@@ -34,6 +34,9 @@ export const ORIGEN_LOG_LABEL: Record<string, string> = {
   'worker-afip': 'Worker AFIP',
   'worker-crm': 'Worker CRM',
   'worker-cobranzas': 'Worker Cobranzas',
+  'afip-notify': 'Alertas AFIP',
+  integridad: 'Integridad',
+  cobranza: 'Cobranzas',
   page: 'Página',
 }
 

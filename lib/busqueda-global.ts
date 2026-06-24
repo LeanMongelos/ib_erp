@@ -10,6 +10,15 @@ function contiene(q: string) {
   return { contains: q, mode: 'insensitive' as const }
 }
 
+/** Si el término es numérico, también busca sufijo en número (ej. 10001 → B-10001). */
+function condicionesNumero(campo: 'numero', term: string): Record<string, unknown>[] {
+  const conds: Record<string, unknown>[] = [{ [campo]: contiene(term) }]
+  if (/^\d+$/.test(term)) {
+    conds.push({ [campo]: { endsWith: term, mode: 'insensitive' } })
+  }
+  return conds
+}
+
 export async function buscarEnErp(q: string): Promise<ResultadoBusqueda[]> {
   const term = q.trim()
   if (term.length < 2) return []
@@ -42,7 +51,7 @@ export async function buscarEnErp(q: string): Promise<ResultadoBusqueda[]> {
     prisma.factura.findMany({
       where: {
         OR: [
-          { numero: contiene(term) },
+          ...condicionesNumero('numero', term),
           { cae: contiene(term) },
           { cliente: { nombre: contiene(term) } },
         ],
@@ -59,7 +68,7 @@ export async function buscarEnErp(q: string): Promise<ResultadoBusqueda[]> {
     prisma.presupuesto.findMany({
       where: {
         OR: [
-          { numero: contiene(term) },
+          ...condicionesNumero('numero', term),
           { cliente: { nombre: contiene(term) } },
         ],
       },
@@ -109,7 +118,7 @@ export async function buscarEnErp(q: string): Promise<ResultadoBusqueda[]> {
     prisma.ordenTrabajo.findMany({
       where: {
         OR: [
-          { numero: contiene(term) },
+          ...condicionesNumero('numero', term),
           { descripcion: contiene(term) },
           { cliente: { nombre: contiene(term) } },
           { equipo: { nombre: contiene(term) } },

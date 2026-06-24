@@ -1,6 +1,7 @@
 'use client'
 
 import { Fragment, useCallback, useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Search, ChevronDown, ChevronRight, AlertTriangle } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -35,14 +36,15 @@ function formatDiaCorto(dia: string): string {
 }
 
 export function LogsManager() {
+  const searchParams = useSearchParams()
   const [logs, setLogs] = useState<LogRow[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [pages, setPages] = useState(1)
   const [retencion, setRetencion] = useState(15)
   const [q, setQ] = useState('')
-  const [nivel, setNivel] = useState('')
-  const [origen, setOrigen] = useState('')
+  const [nivel, setNivel] = useState(() => searchParams.get('nivel') ?? '')
+  const [origen, setOrigen] = useState(() => searchParams.get('origen') ?? '')
   const [usuarioId, setUsuarioId] = useState('')
   const [dia, setDia] = useState('')
   const [origenes, setOrigenes] = useState<string[]>([])

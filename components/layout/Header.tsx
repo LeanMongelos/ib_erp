@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils'
 import { ROLE_DEFS } from '@/lib/rbac'
 import { GlobalSearchTrigger } from '@/components/layout/GlobalSearch'
 import { NotificationBell } from '@/components/layout/NotificationBell'
+import { AdminAlertasBell } from '@/components/layout/AdminAlertasBell'
 import { CrmInboxBell } from '@/components/layout/CrmInboxBell'
 import { useEmbudoSidebar } from '@/components/layout/SidebarContext'
 import { UserAvatar } from '@/components/perfil/UserAvatar'
@@ -60,6 +61,7 @@ export function Header({ title, subtitle }: HeaderProps) {
         <GlobalSearchTrigger />
 
         <div className="flex items-center gap-1">
+          <AdminAlertasBell />
           <CrmInboxBell />
           <NotificationBell />
         </div>
