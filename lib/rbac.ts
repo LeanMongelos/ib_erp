@@ -147,7 +147,7 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     'tracking.read', 'tracking.create',
     'crm.read', 'crm.reply', 'crm.assign', 'crm.manage_channels',
     'reportes.read_comercial', 'reportes.read_financiero', 'reportes.read_fiscal', 'reportes.read_operativo', 'reportes.read_fiscal',
-    'emisores.read',
+    'emisores.read', 'emisores.create', 'emisores.update',
     'config.read',
     'config.manage_accounting',
     'config.manage_billing_templates',
@@ -214,7 +214,7 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     'cobranzas.cheques.read', 'cobranzas.cheques.manage',
     'compras.read', 'compras.approve',
     'reportes.read_financiero', 'reportes.read_fiscal',
-    'emisores.read', 'emisores.update',
+    'emisores.read', 'emisores.create', 'emisores.update',
     'config.read', 'config.manage_accounting', 'config.update',
   ],
 

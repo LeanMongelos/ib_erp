@@ -6,6 +6,7 @@ import { PERMISSIONS, ROLE_PERMISSIONS } from '../lib/rbac'
 
 const CLAVES = ['cobranzas.cheques.read', 'cobranzas.cheques.manage'] as const
 const ROLES = ['GERENTE', 'ADMINISTRACION', 'CONTABILIDAD', 'FACTURACION'] as const
+const ROLES_EMISORES_CREATE = ['GERENTE', 'CONTABILIDAD'] as const
 
 async function main() {
   for (const clave of CLAVES) {
@@ -15,6 +16,15 @@ async function main() {
       where: { clave: p.clave },
       update: { modulo: p.modulo, descripcion: p.descripcion },
       create: p,
+    })
+  }
+
+  const pEmisor = PERMISSIONS.find((x) => x.clave === 'emisores.create')
+  if (pEmisor) {
+    await prisma.permiso.upsert({
+      where: { clave: pEmisor.clave },
+      update: { modulo: pEmisor.modulo, descripcion: pEmisor.descripcion },
+      create: pEmisor,
     })
   }
 
@@ -31,6 +41,21 @@ async function main() {
         update: {},
         create: { rolId: rol.id, permisoId: permiso.id },
       })
+    }
+  }
+
+  if (pEmisor) {
+    const permisoEmisor = await prisma.permiso.findUnique({ where: { clave: 'emisores.create' } })
+    if (permisoEmisor) {
+      for (const rolClave of ROLES_EMISORES_CREATE) {
+        const rol = await prisma.rolRBAC.findUnique({ where: { clave: rolClave } })
+        if (!rol) continue
+        await prisma.rolPermiso.upsert({
+          where: { rolId_permisoId: { rolId: rol.id, permisoId: permisoEmisor.id } },
+          update: {},
+          create: { rolId: rol.id, permisoId: permisoEmisor.id },
+        })
+      }
     }
   }
 

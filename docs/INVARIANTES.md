@@ -55,6 +55,9 @@ Documento de referencia para desarrollo, code review y agentes. Si un cambio vio
 | I5 | Negocios embudo activos (≠ CIERRE) con `clienteId` en BD cuando hay cliente real | formulario embudo | `integridad:prod` (warn) |
 | I9 | Cuotas vencidas deben pasar a `AVISO_ENVIADO` (cron cobranzas idempotente) | `procesarVencimientosDelDia` · `POST /api/cron/cobranzas-vencimientos` | `integridad:prod` (warn) |
 | I9b | Cuotas impagas vencidas marcan factura `EMITIDA` → `VENCIDA`; recordatorio cliente deduplicado | `marcarFacturasVencidasPorCuota` · `notify-cliente-recordatorio.ts` | cron manual |
+| Co1 | Imputación de cobranza ≤ saldo pendiente; solo facturas cobrables | `lib/cobranzas/validar-pago.ts` · POST `/api/cobranzas` | `test-validar-cobranza-saldo.ts` |
+| Co2 | Pago `CHEQUE` tiene fila en `cheques_cobranza`; cartera vencida alerta en integridad | `lib/cobranzas/cheques.ts` · `integridad-prod.ts` | `integridad:prod` (warn/error) |
+| Co3 | OC en `BORRADOR` no se recepciona; aprobación → `ENVIADA` | `app/api/ordenes-compra/[id]/aprobar` · recibir | manual |
 | I10 | Emisor `PRODUCCION` activo exige `ADMIN_NOTIFY_EMAIL` + SMTP (o EMAIL_IMAP) para alertas AFIP | `lib/admin/go-live-status.ts` · `validar-env-prod` | `go-live:check` (warn/fail) |
 
 ## Presupuestos

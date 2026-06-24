@@ -7,7 +7,7 @@ import { crearClienteConSucursales } from '@/lib/clientes/crear-cliente'
 
 export async function GET(req: NextRequest) {
   try {
-    await requireAuth()
+    await requirePermission('clientes.read')
 
     const { searchParams } = new URL(req.url)
     const search = searchParams.get('q')?.trim() ?? ''

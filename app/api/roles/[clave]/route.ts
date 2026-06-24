@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requireAuth, handleApiError, ApiError } from '@/lib/api-auth'
+import { requireAuth, requirePermissionAny, handleApiError, ApiError } from '@/lib/api-auth'
 import { rolePermisosUpdateSchema } from '@/lib/validation'
 import { WILDCARD } from '@/lib/rbac'
 import { registrarAuditoria, getIp } from '@/lib/audit'
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ clave: string }> }) {
   try {
-    await requireAuth()
+    await requirePermissionAny('config.read', 'usuarios.read')
     const { clave } = await params
     const rol = await prisma.rolRBAC.findUnique({
       where: { clave },

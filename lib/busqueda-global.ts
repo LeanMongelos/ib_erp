@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { tienePermiso } from '@/lib/rbac'
 import type { ResultadoBusqueda } from '@/lib/busqueda-global-types'
 
 export type { TipoResultadoBusqueda, ResultadoBusqueda } from '@/lib/busqueda-global-types'
@@ -19,9 +20,11 @@ function condicionesNumero(campo: 'numero', term: string): Record<string, unknow
   return conds
 }
 
-export async function buscarEnErp(q: string): Promise<ResultadoBusqueda[]> {
+export async function buscarEnErp(q: string, permisos: string[] = []): Promise<ResultadoBusqueda[]> {
   const term = q.trim()
   if (term.length < 2) return []
+
+  const can = (p: string) => tienePermiso(permisos, p)
 
   const [
     clientes,
@@ -32,7 +35,8 @@ export async function buscarEnErp(q: string): Promise<ResultadoBusqueda[]> {
     ots,
     proveedores,
   ] = await Promise.all([
-    prisma.cliente.findMany({
+    can('clientes.read')
+      ? prisma.cliente.findMany({
       where: {
         activo: true,
         OR: [
@@ -47,8 +51,10 @@ export async function buscarEnErp(q: string): Promise<ResultadoBusqueda[]> {
       select: { id: true, nombre: true, ciudad: true, cuit: true },
       take: LIMITE,
       orderBy: { nombre: 'asc' },
-    }),
-    prisma.factura.findMany({
+    })
+      : Promise.resolve([]),
+    can('facturas.read')
+      ? prisma.factura.findMany({
       where: {
         OR: [
           ...condicionesNumero('numero', term),
@@ -64,8 +70,10 @@ export async function buscarEnErp(q: string): Promise<ResultadoBusqueda[]> {
       },
       take: LIMITE,
       orderBy: { fechaEmision: 'desc' },
-    }),
-    prisma.presupuesto.findMany({
+    })
+      : Promise.resolve([]),
+    can('presupuestos.read')
+      ? prisma.presupuesto.findMany({
       where: {
         OR: [
           ...condicionesNumero('numero', term),
@@ -80,8 +88,10 @@ export async function buscarEnErp(q: string): Promise<ResultadoBusqueda[]> {
       },
       take: LIMITE,
       orderBy: { creadoEn: 'desc' },
-    }),
-    prisma.inventario.findMany({
+    })
+      : Promise.resolve([]),
+    can('inventario.read')
+      ? prisma.inventario.findMany({
       where: {
         OR: [
           { nombre: contiene(term) },
@@ -94,8 +104,10 @@ export async function buscarEnErp(q: string): Promise<ResultadoBusqueda[]> {
       select: { id: true, nombre: true, sku: true, tipoArticulo: true },
       take: LIMITE,
       orderBy: { nombre: 'asc' },
-    }),
-    prisma.equipo.findMany({
+    })
+      : Promise.resolve([]),
+    can('servicio.read')
+      ? prisma.equipo.findMany({
       where: {
         OR: [
           { nombre: contiene(term) },
@@ -114,8 +126,10 @@ export async function buscarEnErp(q: string): Promise<ResultadoBusqueda[]> {
       },
       take: LIMITE,
       orderBy: { nombre: 'asc' },
-    }),
-    prisma.ordenTrabajo.findMany({
+    })
+      : Promise.resolve([]),
+    can('servicio.read')
+      ? prisma.ordenTrabajo.findMany({
       where: {
         OR: [
           ...condicionesNumero('numero', term),
@@ -133,8 +147,10 @@ export async function buscarEnErp(q: string): Promise<ResultadoBusqueda[]> {
       },
       take: LIMITE,
       orderBy: { fechaApertura: 'desc' },
-    }),
-    prisma.proveedor.findMany({
+    })
+      : Promise.resolve([]),
+    can('proveedores.read')
+      ? prisma.proveedor.findMany({
       where: {
         activo: true,
         OR: [
@@ -147,7 +163,8 @@ export async function buscarEnErp(q: string): Promise<ResultadoBusqueda[]> {
       select: { id: true, razonSocial: true, ciudad: true, cuit: true },
       take: LIMITE,
       orderBy: { razonSocial: 'asc' },
-    }),
+    })
+      : Promise.resolve([]),
   ])
 
   const resultados: ResultadoBusqueda[] = []

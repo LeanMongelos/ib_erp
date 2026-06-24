@@ -6,6 +6,7 @@ import { plain } from '@/lib/serialize'
 import { registrarAuditoria, getIp } from '@/lib/audit'
 import { imputarPagoAVencimientos } from '@/lib/cobranzas/vencimientos'
 import { crearChequeConPago } from '@/lib/cobranzas/cheques'
+import { validarImputacionesContraFacturas } from '@/lib/cobranzas/validar-pago'
 
 export async function GET() {
   try {
@@ -42,11 +43,13 @@ export async function POST(req: NextRequest) {
     const facturaIds = data.imputaciones.map((i) => i.facturaId)
     const facturas = await prisma.factura.findMany({
       where: { id: { in: facturaIds }, clienteId: data.clienteId },
-      include: { pagos: true },
+      include: { pagos: { select: { monto: true } } },
     })
     if (facturas.length !== facturaIds.length) {
       throw new ApiError(400, 'Una o más facturas no pertenecen al cliente')
     }
+
+    validarImputacionesContraFacturas(facturas, data.imputaciones)
 
     const pago = await prisma.$transaction(async (tx) => {
       if (data.medio === 'CHEQUE' && data.cheque) {

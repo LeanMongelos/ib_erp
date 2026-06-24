@@ -3,6 +3,13 @@ import { sendSystemEmail } from '@/lib/mail/system-mail'
 import { formatFecha, formatMonto } from '@/lib/utils'
 import { getCobranzaNotifyEmails } from '@/lib/cobranzas/notify-vencimiento'
 
+async function reglaChequeDepositoActiva(): Promise<boolean> {
+  const regla = await prisma.reglaNotificacion.findFirst({
+    where: { evento: 'cheque.deposito', activo: true },
+  })
+  return regla !== null
+}
+
 type ChequeAviso = {
   id: string
   numero: string
@@ -41,6 +48,10 @@ export type ResultadoProcesarCheques = {
 
 /** Cheques EN_CARTERA con vencimiento hoy o anterior — aviso idempotente por día. */
 export async function procesarChequesADepositar(): Promise<ResultadoProcesarCheques> {
+  if (!(await reglaChequeDepositoActiva())) {
+    return { revisados: 0, avisosEnviados: 0 }
+  }
+
   const finHoy = new Date()
   finHoy.setHours(23, 59, 59, 999)
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requirePermission, handleApiError, ApiError } from '@/lib/api-auth'
+import { tienePermiso } from '@/lib/rbac'
 import { presupuestoUpdateSchema } from '@/lib/validation'
 import { calcularTotalesPresupuesto } from '@/lib/presupuestos/calcular-total-presupuesto'
 import { aplicarPreciosResueltosItems } from '@/lib/precios/aplicar-precios-documento'
@@ -59,6 +60,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (!actual) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
 
     const enviando = data.estado === 'ENVIADO' && actual.estado !== 'ENVIADO'
+    if (enviando && !tienePermiso(actor.permissions, 'presupuestos.send')) {
+      throw new ApiError(403, 'No tenés permisos para enviar presupuestos')
+    }
 
     const { items, moneda: monedaPatch, cotizacionUsd: cotizacionPatch, ...resto } = data
 

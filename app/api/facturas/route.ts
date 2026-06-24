@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requireAuth, requirePermission, handleApiError, ApiError } from '@/lib/api-auth'
+import { requirePermissionAny, requirePermission, handleApiError, ApiError } from '@/lib/api-auth'
 import { facturaCreateSchema } from '@/lib/validation'
 import { calcularTotales } from '@/lib/documentos'
 import { siguienteNumeroFactura, crearConNumeroUnico } from '@/lib/sequences'
@@ -16,7 +16,7 @@ import { resolverPlantillaIdEmision } from '@/lib/plantillas/resolver-plantilla'
 
 export async function GET() {
   try {
-    await requireAuth()
+    await requirePermissionAny('facturas.read', 'cobranzas.read')
     const facturas = await prisma.factura.findMany({
       orderBy: { creadoEn: 'desc' },
       include: {

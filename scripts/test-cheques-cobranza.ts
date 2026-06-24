@@ -12,5 +12,11 @@ for (const rol of rolesCheques) {
   }
 }
 
+for (const rol of ['GERENTE', 'CONTABILIDAD'] as const) {
+  if (!tienePermiso(ROLE_PERMISSIONS[rol] ?? [], 'emisores.create')) {
+    throw new Error(`${rol} debe tener emisores.create`)
+  }
+}
+
 console.log('✅ permisos cheques OK')
 console.log('\nOK — cheques cobranza\n')

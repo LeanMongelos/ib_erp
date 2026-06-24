@@ -24,6 +24,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       include: { items: true },
     })
     if (!oc) throw new ApiError(404, 'Orden de compra no encontrada')
+    if (oc.estado === 'BORRADOR') {
+      throw new ApiError(400, 'La OC debe estar aprobada (enviada) antes de recepcionar mercadería')
+    }
     if (oc.estado === 'CANCELADA' || oc.estado === 'RECIBIDA') {
       throw new ApiError(400, `Estado ${oc.estado} no permite recepción`)
     }

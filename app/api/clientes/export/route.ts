@@ -4,7 +4,7 @@ import { exportarClientesCsv } from '@/lib/clientes/export-csv'
 
 export async function GET() {
   try {
-    await requirePermission('clientes.read')
+    await requirePermission('clientes.export')
     const csv = await exportarClientesCsv()
 
     return new NextResponse(csv, {

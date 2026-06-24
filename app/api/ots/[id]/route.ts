@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { requireAuth, requirePermission, handleApiError, ApiError } from '@/lib/api-auth'
+import { tienePermiso } from '@/lib/rbac'
 import { otUpdateSchema } from '@/lib/validation'
 import { plain } from '@/lib/serialize'
 import { validarRepuestosOTCliente } from '@/lib/ots/repuestos-ot-client'
@@ -10,7 +11,7 @@ import { registrarMovimientoStock } from '@/lib/inventario'
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireAuth()
+    await requirePermission('servicio.read')
     const { id } = await params
 
     const ot = await prisma.ordenTrabajo.findUnique({
@@ -41,9 +42,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const actor = await requirePermission('servicio.update')
     const { id } = await params
-
     const body = await req.json()
     const { estado, nota, diagnostico, tecnicoId, repuestos } = otUpdateSchema.parse(body)
 
@@ -54,6 +53,21 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (!otActual) throw new ApiError(404, 'Orden de trabajo no encontrada')
 
     const cerrando = estado === 'CERRADA' && otActual.estado !== 'CERRADA'
+
+    const actor = await requireAuth()
+    if (!tienePermiso(actor.permissions, 'servicio.update')) {
+      throw new ApiError(403, 'No tenés permisos para realizar esta acción')
+    }
+    if (cerrando && !tienePermiso(actor.permissions, 'servicio.close')) {
+      throw new ApiError(403, 'No tenés permisos para cerrar órdenes de trabajo')
+    }
+    if (
+      tecnicoId !== undefined &&
+      tecnicoId !== otActual.tecnicoId &&
+      !tienePermiso(actor.permissions, 'servicio.assign')
+    ) {
+      throw new ApiError(403, 'No tenés permisos para asignar técnicos')
+    }
 
     let repuestosNormalizados: typeof repuestos | undefined
     if (repuestos !== undefined) {

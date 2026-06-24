@@ -67,6 +67,7 @@ export function ComprasManager({
 }) {
   const router = useRouter()
   const puedeRecibir = useCan('compras.receive')
+  const puedeAprobar = useCan('compras.approve')
   const puedeCrear = useCan('compras.create')
   const [ordenes, setOrdenes] = useState<OrdenCompra[]>(inicialOrdenes)
   const [faltantes, setFaltantes] = useState<Faltante[]>(inicialFaltantes)
@@ -74,6 +75,24 @@ export function ComprasManager({
   const [generando, setGenerando] = useState(false)
   const [proveedorId, setProveedorId] = useState('')
   const [recibir, setRecibir] = useState<OrdenCompra | null>(null)
+
+  async function aprobarOc(id: string) {
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/ordenes-compra/${id}/aprobar`, { method: 'POST' })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(mensajeErrorJson(data, 'No se pudo aprobar la OC'))
+      }
+      toast.success('OC aprobada — lista para recepción')
+      await cargar()
+      router.refresh()
+    } catch (e: unknown) {
+      toast.error(mensajeErrorDesconocido(e, 'No se pudo aprobar la OC'))
+    } finally {
+      setLoading(false)
+    }
+  }
 
   async function cargar() {
     setLoading(true)
@@ -215,7 +234,8 @@ export function ComprasManager({
               <tbody>
                 {ordenes.map((oc, i) => {
                   const st = ESTADO_OC[oc.estado] ?? { label: oc.estado, cls: 'bg-gray-100 text-gray-600' }
-                  const puedeRec = puedeRecibir && !['RECIBIDA', 'CANCELADA'].includes(oc.estado)
+                  const puedeRec = puedeRecibir && ['ENVIADA', 'APROBADA', 'PARCIAL'].includes(oc.estado)
+                  const puedeApr = puedeAprobar && oc.estado === 'BORRADOR'
                   return (
                     <tr key={oc.id} className={i % 2 === 0 ? 'bg-white' : 'bg-[#fafbfc]'}>
                       <td className="px-5 py-[13px] text-[12.5px] font-bold text-[#1f242c] border-b border-[#f4f5f7]">{oc.numero}</td>
@@ -226,11 +246,18 @@ export function ComprasManager({
                       <td className="px-5 py-[13px] text-[12.5px] font-semibold text-[#3a4150] border-b border-[#f4f5f7]">{formatMonto(oc.total)}</td>
                       <td className="px-5 py-[13px] text-[12px] text-[#9aa1ab] border-b border-[#f4f5f7]">{formatFecha(oc.creadoEn)}</td>
                       <td className="px-5 py-[13px] border-b border-[#f4f5f7] text-right">
-                        {puedeRec && (
-                          <Button variant="outline" size="sm" onClick={() => setRecibir(oc)}>
-                            <Truck size={14} /> Recibir
-                          </Button>
-                        )}
+                        <div className="flex gap-2 justify-end">
+                          {puedeApr && (
+                            <Button variant="primary" size="sm" disabled={loading} onClick={() => aprobarOc(oc.id)}>
+                              Aprobar
+                            </Button>
+                          )}
+                          {puedeRec && (
+                            <Button variant="outline" size="sm" onClick={() => setRecibir(oc)}>
+                              <Truck size={14} /> Recibir
+                            </Button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   )

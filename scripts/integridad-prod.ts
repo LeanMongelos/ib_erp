@@ -387,6 +387,33 @@ async function checkPlantillasNotificacionCliente() {
   }
 }
 
+async function checkChequesCarteraVencidos() {
+  const finHoy = new Date()
+  finHoy.setHours(23, 59, 59, 999)
+  const n = await prisma.chequeCobranza.count({
+    where: { estado: 'EN_CARTERA', fechaVencimiento: { lte: finHoy } },
+  })
+  if (n === 0) {
+    ok('Sin cheques en cartera vencidos pendientes de depósito')
+  } else {
+    warn(`${n} cheque(s) EN_CARTERA con vencimiento alcanzado — depositar en Cobranzas`)
+  }
+}
+
+async function checkPagosChequeSinCartera() {
+  const n = await prisma.pago.count({
+    where: {
+      medio: 'CHEQUE',
+      cheque: null,
+    },
+  })
+  if (n === 0) {
+    ok('Pagos CHEQUE tienen fila en cartera')
+  } else {
+    error(`${n} pago(s) CHEQUE sin registro en cheques_cobranza`)
+  }
+}
+
 async function main() {
   console.log('\n=== Integridad producción ===\n')
 
@@ -408,6 +435,8 @@ async function main() {
   await checkCuotasVencidasSinAviso()
   await checkStockMinimo()
   await checkPlantillasNotificacionCliente()
+  await checkChequesCarteraVencidos()
+  await checkPagosChequeSinCartera()
 
   const errs = resultados.filter((r) => r.nivel === 'error')
   const warns = resultados.filter((r) => r.nivel === 'warn')

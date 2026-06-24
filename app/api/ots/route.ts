@@ -8,7 +8,7 @@ import { actualizarOTsVencidas } from '@/lib/ots'
 
 export async function GET(req: NextRequest) {
   try {
-    await requireAuth()
+    await requirePermission('servicio.read')
 
     // Antes de listar, sincronizamos las OTs cuyo SLA ya venció
     await actualizarOTsVencidas()
