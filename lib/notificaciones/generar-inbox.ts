@@ -5,7 +5,7 @@
 import { addDays, differenceInCalendarDays } from 'date-fns'
 import { prisma } from '@/lib/prisma'
 import { getAlertasComponentesEquipos } from '@/lib/equipos/historia-clinica'
-import { formatMonto } from '@/lib/utils'
+import { formatFecha, formatMonto } from '@/lib/utils'
 import type { AlertaInbox, PrioridadAlerta } from '@/lib/notificaciones/generar-inbox-types'
 
 export type { AlertaInbox, PrioridadAlerta, CategoriaAlerta } from '@/lib/notificaciones/generar-inbox-types'
@@ -106,6 +106,34 @@ export async function generarAlertasInbox(): Promise<AlertaInbox[]> {
         mensaje: `${v.factura.cliente.nombre} · cuota ${v.numeroCuota} · ${formatMonto(v.monto)}`,
         href: `/facturacion?highlight=${v.factura.id}`,
         fecha: v.fechaVencimiento.toISOString(),
+      })
+    }
+  }
+
+  if (reglaActiva(reglas, 'cheque.deposito')) {
+    const finHoy = new Date()
+    finHoy.setHours(23, 59, 59, 999)
+    const chequesDepositar = await prisma.chequeCobranza.findMany({
+      where: {
+        estado: 'EN_CARTERA',
+        fechaVencimiento: { lte: finHoy },
+      },
+      include: { cliente: { select: { nombre: true } } },
+      take: 15,
+      orderBy: { fechaVencimiento: 'asc' },
+    })
+    for (const c of chequesDepositar) {
+      const inicioHoy = new Date()
+      inicioHoy.setHours(0, 0, 0, 0)
+      const vencido = c.fechaVencimiento < inicioHoy
+      alertas.push({
+        clave: `cheque-deposito:${c.id}`,
+        categoria: 'cobranza',
+        prioridad: vencido ? 'urgente' : 'importante',
+        titulo: vencido ? `Depositar cheque vencido — N° ${c.numero}` : `Depositar cheque — N° ${c.numero}`,
+        mensaje: `${c.cliente.nombre} · ${formatMonto(c.monto)} · vence ${formatFecha(c.fechaVencimiento)}`,
+        href: '/cobranzas',
+        fecha: c.fechaVencimiento.toISOString(),
       })
     }
   }

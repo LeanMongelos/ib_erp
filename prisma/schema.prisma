@@ -154,6 +154,13 @@ enum EstadoVencimientoCobranza {
   ANULADO
 }
 
+enum EstadoChequeCobranza {
+  EN_CARTERA
+  DEPOSITADO
+  RECHAZADO
+  ANULADO
+}
+
 enum EstadoOrdenCompra {
   BORRADOR
   ENVIADA
@@ -364,6 +371,7 @@ model Cliente {
   facturas     Factura[]
   presupuestos Presupuesto[]
   pagos        Pago[]
+  cheques      ChequeCobranza[]
   contactos    ContactoCliente[]
   conversaciones ConversacionCRM[]
   negociosEmbudo NegocioEmbudo[]
@@ -1088,8 +1096,34 @@ model Pago {
 
   cliente     Cliente       @relation(fields: [clienteId], references: [id])
   imputaciones PagoFactura[]
+  cheque      ChequeCobranza?
 
   @@map("pagos")
+}
+
+model ChequeCobranza {
+  id                    String                @id @default(cuid())
+  pagoId                String                @unique
+  clienteId             String
+  numero                String
+  banco                 String?
+  titular               String?
+  monto                 Float
+  fechaRecepcion        DateTime              @default(now())
+  fechaVencimiento      DateTime
+  estado                EstadoChequeCobranza  @default(EN_CARTERA)
+  fechaDeposito         DateTime?
+  recordatorioEnviadoEn DateTime?
+  notas                 String?
+  creadoEn              DateTime              @default(now())
+  actualizadoEn        DateTime              @updatedAt
+
+  pago    Pago    @relation(fields: [pagoId], references: [id], onDelete: Cascade)
+  cliente Cliente @relation(fields: [clienteId], references: [id])
+
+  @@index([fechaVencimiento, estado])
+  @@index([clienteId, estado])
+  @@map("cheques_cobranza")
 }
 
 model PagoFactura {

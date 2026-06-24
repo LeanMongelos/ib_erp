@@ -312,16 +312,31 @@ export const presupuestoUpdateSchema = z.object({
   items:           z.array(itemPresupuestoSchema).min(1).optional(),
 }).refine((d) => Object.keys(d).length > 0, { message: 'Nada para actualizar' })
 
+export const chequeDatosSchema = z.object({
+  numero: z.string().trim().min(1).max(40),
+  banco: z.string().trim().max(80).optional(),
+  titular: z.string().trim().max(120).optional(),
+  fechaVencimiento: z.string().min(1),
+})
+
 export const pagoCreateSchema = z.object({
   clienteId: z.string().min(1),
   monto:     z.number().positive(),
   medio:     medioPagoEnum.default('TRANSFERENCIA'),
   referencia: z.string().trim().max(80).optional(),
   notas:     z.string().trim().max(500).optional(),
+  cheque:    chequeDatosSchema.optional(),
   imputaciones: z.array(z.object({
     facturaId: z.string().min(1),
     monto:     z.number().positive(),
   })).min(1),
+}).refine(
+  (d) => d.medio !== 'CHEQUE' || !!d.cheque,
+  { message: 'Completá los datos del cheque', path: ['cheque'] },
+)
+
+export const chequeDepositoSchema = z.object({
+  accion: z.enum(['depositar', 'rechazar']),
 })
 
 export const ordenCompraCreateSchema = z.object({

@@ -119,6 +119,9 @@ run_optional_step "Migración emails @ib.com + cierre de sesiones (idempotente)"
 run_optional_step "Backfill plantillaId en facturas/presupuestos (idempotente)" \
   npx tsx --env-file=.env scripts/backfill-plantillas-documentos.ts --execute
 
+run_optional_step "Permisos cartera de cheques (idempotente)" \
+  npx tsx --env-file=.env scripts/sync-cheques-permisos.ts
+
 run_optional_step "Contraseñas go-live ib2026 (excluye Leandro, idempotente)" \
   npx tsx --env-file=.env scripts/reset-passwords-ib2026.ts --execute
 

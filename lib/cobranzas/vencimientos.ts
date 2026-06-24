@@ -87,6 +87,32 @@ export async function imputarPagoAVencimientos(
   }
 }
 
+/** Revierte cuotas COBRADAS (LIFO) hasta cubrir el monto rechazado. */
+export async function revertirImputacionVencimientos(
+  facturaId: string,
+  montoRevertir: number,
+  tx?: Tx,
+) {
+  const db = tx ?? prisma
+  let restante = montoRevertir
+
+  const cobrados = await db.vencimientoCobranza.findMany({
+    where: { facturaId, estado: 'COBRADO' },
+    orderBy: { numeroCuota: 'desc' },
+  })
+
+  for (const v of cobrados) {
+    if (restante <= 0.009) break
+    if (restante >= Number(v.monto) - 0.01) {
+      await db.vencimientoCobranza.update({
+        where: { id: v.id },
+        data: { estado: 'PENDIENTE', cobradoEn: null },
+      })
+      restante -= Number(v.monto)
+    }
+  }
+}
+
 export async function anularVencimientosPendientes(facturaId: string, tx?: Tx) {
   const db = tx ?? prisma
   await db.vencimientoCobranza.updateMany({

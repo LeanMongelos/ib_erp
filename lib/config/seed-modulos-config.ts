@@ -89,6 +89,7 @@ const PLANTILLAS = [
 const REGLAS = [
   { codigo: 'REGLA_COBRANZA', nombre: 'Aviso factura vencida', evento: 'cobranza.vencida', diasAnticipacion: 0, plantillaCodigo: 'COBRANZA_VENCIDA' },
   { codigo: 'REGLA_COBRANZA_PROXIMO', nombre: 'Recordatorio cuota próxima', evento: 'cobranza.proximo', diasAnticipacion: 3, plantillaCodigo: 'COBRANZA_RECORDATORIO' },
+  { codigo: 'REGLA_CHEQUE_DEPOSITO', nombre: 'Cheque listo para depositar', evento: 'cheque.deposito', diasAnticipacion: 0, plantillaCodigo: 'COBRANZA_VENCIDA' },
   { codigo: 'REGLA_OT_SLA', nombre: 'Aviso SLA de OT', evento: 'ot.sla_proximo', diasAnticipacion: 1, plantillaCodigo: 'OT_SLA' },
   { codigo: 'REGLA_PREVENTIVO', nombre: 'Aviso preventivo', evento: 'preventivo.proximo', diasAnticipacion: 7, plantillaCodigo: 'PREVENTIVO_PROXIMO' },
   { codigo: 'REGLA_COMPONENTE', nombre: 'Aviso componente', evento: 'equipo.componente_vence', diasAnticipacion: 30, plantillaCodigo: 'COMPONENTE_VENCE' },
@@ -151,6 +152,25 @@ export async function seedModulosConfigIfEmpty() {
         nombre: reglaProximo.nombre,
         evento: reglaProximo.evento,
         diasAnticipacion: reglaProximo.diasAnticipacion,
+        plantillaId: plantilla?.id ?? null,
+      },
+    })
+  }
+
+  const reglaCheque = REGLAS.find((r) => r.codigo === 'REGLA_CHEQUE_DEPOSITO')
+  if (reglaCheque) {
+    const plantilla = await prisma.plantillaNotificacion.findUnique({
+      where: { codigo: reglaCheque.plantillaCodigo },
+      select: { id: true },
+    })
+    await prisma.reglaNotificacion.upsert({
+      where: { codigo: reglaCheque.codigo },
+      update: { evento: reglaCheque.evento, nombre: reglaCheque.nombre },
+      create: {
+        codigo: reglaCheque.codigo,
+        nombre: reglaCheque.nombre,
+        evento: reglaCheque.evento,
+        diasAnticipacion: reglaCheque.diasAnticipacion,
         plantillaId: plantilla?.id ?? null,
       },
     })

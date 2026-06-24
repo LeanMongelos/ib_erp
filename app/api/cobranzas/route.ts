@@ -5,6 +5,7 @@ import { pagoCreateSchema } from '@/lib/validation'
 import { plain } from '@/lib/serialize'
 import { registrarAuditoria, getIp } from '@/lib/audit'
 import { imputarPagoAVencimientos } from '@/lib/cobranzas/vencimientos'
+import { crearChequeConPago } from '@/lib/cobranzas/cheques'
 
 export async function GET() {
   try {
@@ -29,6 +30,10 @@ export async function POST(req: NextRequest) {
     const actor = await requirePermission('cobranzas.register_payment')
     const data = pagoCreateSchema.parse(await req.json())
 
+    if (data.medio === 'CHEQUE') {
+      await requirePermission('cobranzas.cheques.manage')
+    }
+
     const montoImputado = data.imputaciones.reduce((a, i) => a + i.monto, 0)
     if (Math.abs(montoImputado - data.monto) > 0.01) {
       throw new ApiError(400, 'La suma de imputaciones debe coincidir con el monto del pago')
@@ -44,6 +49,29 @@ export async function POST(req: NextRequest) {
     }
 
     const pago = await prisma.$transaction(async (tx) => {
+      if (data.medio === 'CHEQUE' && data.cheque) {
+        const fechaVenc = new Date(data.cheque.fechaVencimiento)
+        if (Number.isNaN(fechaVenc.getTime())) {
+          throw new ApiError(400, 'Fecha de vencimiento del cheque inválida')
+        }
+        return crearChequeConPago(
+          {
+            clienteId: data.clienteId,
+            monto: data.monto,
+            referencia: data.referencia,
+            notas: data.notas,
+            imputaciones: data.imputaciones,
+            cheque: {
+              numero: data.cheque.numero,
+              banco: data.cheque.banco,
+              titular: data.cheque.titular,
+              fechaVencimiento: fechaVenc,
+            },
+          },
+          tx,
+        )
+      }
+
       const nuevo = await tx.pago.create({
         data: {
           clienteId: data.clienteId,
@@ -84,7 +112,7 @@ export async function POST(req: NextRequest) {
 
     await registrarAuditoria({
       usuarioId: actor.id,
-      accion: 'cobranza.register',
+      accion: data.medio === 'CHEQUE' ? 'cheque.register' : 'cobranza.register',
       entidad: 'Pago',
       entidadId: pago.id,
       ip: getIp(req),

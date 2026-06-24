@@ -10,6 +10,7 @@ import { ClienteCombobox } from '@/components/clientes/ClienteCombobox'
 import { MEDIO_PAGO } from '@/lib/form-options'
 import { formatFecha, formatMonto } from '@/lib/utils'
 import { mensajeErrorDesconocido, mensajeErrorRespuesta } from '@/lib/errores'
+import { useCan } from '@/components/auth/useCan'
 
 interface FacturaPendiente {
   id: string
@@ -31,7 +32,12 @@ export function CobranzasForm({ clientes }: { clientes: Cliente[] }) {
   const [imputaciones, setImputaciones] = useState<Record<string, number>>({})
   const [medio, setMedio] = useState('TRANSFERENCIA')
   const [referencia, setReferencia] = useState('')
+  const [chequeNumero, setChequeNumero] = useState('')
+  const [chequeBanco, setChequeBanco] = useState('')
+  const [chequeTitular, setChequeTitular] = useState('')
+  const [chequeVencimiento, setChequeVencimiento] = useState('')
   const [loading, setLoading] = useState(false)
+  const puedeCheques = useCan('cobranzas.cheques.manage')
 
   useEffect(() => {
     if (!clienteId) { setFacturas([]); return }
@@ -54,18 +60,42 @@ export function CobranzasForm({ clientes }: { clientes: Cliente[] }) {
     const imps = Object.entries(imputaciones).filter(([, m]) => m > 0).map(([facturaId, monto]) => ({ facturaId, monto }))
     if (imps.length === 0) { toast.error('Indicá montos a imputar'); return }
     if (montoTotal <= 0) { toast.error('El monto debe ser mayor a 0'); return }
+    if (medio === 'CHEQUE') {
+      if (!puedeCheques) { toast.error('No tenés permiso para registrar cheques'); return }
+      if (!chequeNumero.trim()) { toast.error('Indicá el número de cheque'); return }
+      if (!chequeVencimiento) { toast.error('Indicá la fecha de vencimiento del cheque'); return }
+    }
 
     setLoading(true)
     try {
+      const body: Record<string, unknown> = {
+        clienteId,
+        monto: montoTotal,
+        medio,
+        referencia: referencia || undefined,
+        imputaciones: imps,
+      }
+      if (medio === 'CHEQUE') {
+        body.cheque = {
+          numero: chequeNumero.trim(),
+          banco: chequeBanco.trim() || undefined,
+          titular: chequeTitular.trim() || undefined,
+          fechaVencimiento: chequeVencimiento,
+        }
+      }
       const res = await fetch('/api/cobranzas', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ clienteId, monto: montoTotal, medio, referencia: referencia || undefined, imputaciones: imps }),
+        body: JSON.stringify(body),
       })
       if (!res.ok) throw new Error(await mensajeErrorRespuesta(res, 'No se pudo registrar el pago'))
-      toast.success('Pago registrado')
+      toast.success(medio === 'CHEQUE' ? 'Cheque registrado en cartera' : 'Pago registrado')
       setImputaciones({})
       setReferencia('')
+      setChequeNumero('')
+      setChequeBanco('')
+      setChequeTitular('')
+      setChequeVencimiento('')
     } catch (e) {
       toast.error(mensajeErrorDesconocido(e, 'No se pudo registrar el pago'))
     } finally {
@@ -94,10 +124,18 @@ export function CobranzasForm({ clientes }: { clientes: Cliente[] }) {
               label="Referencia"
               value={referencia}
               onChange={(e) => setReferencia(e.target.value)}
-              placeholder="N° transferencia, cheque…"
+              placeholder={medio === 'CHEQUE' ? 'Opcional si completás N° cheque abajo' : 'N° transferencia…'}
               autoComplete="off"
             />
           </div>
+          {medio === 'CHEQUE' && puedeCheques && (
+            <>
+              <Input label="N° cheque" value={chequeNumero} onChange={(e) => setChequeNumero(e.target.value)} required />
+              <Input label="Banco" value={chequeBanco} onChange={(e) => setChequeBanco(e.target.value)} />
+              <Input label="Titular" value={chequeTitular} onChange={(e) => setChequeTitular(e.target.value)} />
+              <Input label="Fecha vencimiento" type="date" value={chequeVencimiento} onChange={(e) => setChequeVencimiento(e.target.value)} required />
+            </>
+          )}
         </div>
       </Card>
 
@@ -135,7 +173,9 @@ export function CobranzasForm({ clientes }: { clientes: Cliente[] }) {
           </table>
           <div className="px-5 py-4 flex items-center justify-between border-t border-[#f0f1f4]">
             <span className="text-[13px] font-bold">Total a cobrar: {formatMonto(montoTotal)}</span>
-            <Button onClick={registrar} loading={loading} disabled={montoTotal <= 0}>Registrar pago</Button>
+            <Button onClick={registrar} loading={loading} disabled={montoTotal <= 0}>
+              {medio === 'CHEQUE' ? 'Registrar cheque' : 'Registrar pago'}
+            </Button>
           </div>
         </Card>
       )}
