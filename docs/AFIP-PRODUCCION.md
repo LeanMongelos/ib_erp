@@ -2,6 +2,8 @@
 
 > Complementa [`02-facturacion-afip.md`](02-facturacion-afip.md) y [`16-DESPLIEGUE-PRODUCCION.md`](16-DESPLIEGUE-PRODUCCION.md).
 
+**Guía paso a paso en el VPS (operador):** [`GO-LIVE-AFIP-VPS.md`](GO-LIVE-AFIP-VPS.md)
+
 ---
 
 ## 0. Checklist unificado (antes de todo)
