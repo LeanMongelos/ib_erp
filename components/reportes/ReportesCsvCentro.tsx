@@ -17,6 +17,27 @@ type ExportDef = {
 
 const EXPORTES: ExportDef[] = [
   {
+    id: 'iva-mes',
+    titulo: 'IVA ventas del mes (por alícuota)',
+    descripcion: 'Líneas de factura emitidas del mes con neto e IVA por alícuota.',
+    href: '/api/reportes/iva-mes',
+    permisos: ['facturas.read', 'reportes.read_fiscal'],
+  },
+  {
+    id: 'aging-cobranzas',
+    titulo: 'Aging de cobranzas',
+    descripcion: 'Cuotas pendientes agrupadas por antigüedad (0-30, 31-60, 61-90, 90+ días).',
+    href: '/api/reportes/aging-cobranzas',
+    permisos: ['cobranzas.read', 'reportes.read_financiero'],
+  },
+  {
+    id: 'ots-por-tecnico',
+    titulo: 'OTs por técnico (mes)',
+    descripcion: 'Órdenes abiertas y cerradas del mes agrupadas por técnico asignado.',
+    href: '/api/reportes/ots-por-tecnico',
+    permisos: ['servicio.read', 'reportes.read_operativo'],
+  },
+  {
     id: 'ventas-mes',
     titulo: 'Ventas del mes',
     descripcion: 'Facturas EMITIDA/PAGADA del mes en curso (número, cliente, totales, CAE).',

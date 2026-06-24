@@ -99,12 +99,12 @@
 
 | Fase | Commit | Estado |
 |------|--------|--------|
-| 0 | — | Pendiente |
-| 1 F | — | Pendiente |
-| 2 E | — | Pendiente |
-| 3 B | — | Pendiente |
-| 4 A | — | Pendiente |
-| 5 C | — | Pendiente |
-| 6 D | — | Pendiente |
+| 0 | `f71300c` | ✅ Completada |
+| 1 F | `c3024d0` | ✅ Completada |
+| 2 E | `8c0db34` | ✅ Completada |
+| 3 B | `d2a04ee` | ✅ Completada |
+| 4 A | (este run) | ✅ Completada |
+| 5 C | (este run) | ✅ Completada |
+| 6 D | (este run) | ✅ Completada |
 
 Actualizar esta tabla al completar cada fase.
