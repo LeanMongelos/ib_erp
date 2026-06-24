@@ -146,11 +146,21 @@ export const otUpdateSchema = z
 
 // ============ FACTURA ============
 
+// URL de foto (ruta interna del ERP o URL absoluta)
+const fotoUrlOpcional = z
+  .string()
+  .trim()
+  .optional()
+  .refine(
+    (v) => !v || v === '' || v.startsWith('/api/') || /^https?:\/\//i.test(v),
+    { message: 'URL de foto inválida' },
+  )
+
 export const itemFacturaSchema = z.object({
   codigo:           z.string().trim().max(40).optional(),
   descripcion:      z.string().trim().min(1, 'La descripción del ítem es obligatoria'),
   descripcionLarga: z.string().trim().max(2000).optional(),
-  fotoUrl:          z.string().trim().url().optional().or(z.literal('')),
+  fotoUrl:          fotoUrlOpcional.or(z.literal('')),
   cantidad:         z.number().int().positive('La cantidad debe ser mayor a 0'),
   precioUnit:       z.number().nonnegative('El precio no puede ser negativo'),
   bonificacionPct:  z.number().min(0).max(100).optional(),

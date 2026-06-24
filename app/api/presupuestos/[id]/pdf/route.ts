@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { requirePermission, handleApiError, ApiError } from '@/lib/api-auth'
 import { renderDocumentoPDF } from '@/lib/plantillas/render-documento'
 import { getPlantillaConfig, buildDatosPresupuesto } from '@/lib/plantillas/build-datos'
+import { resolverFotosItemsPdf } from '@/lib/inventario/resolve-foto-pdf.server'
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -18,6 +19,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
     const cfg = await getPlantillaConfig(pres.plantillaId, 'PRESUPUESTO')
     const datos = buildDatosPresupuesto(pres, pres.emisor, pres.cliente)
+    datos.items = await resolverFotosItemsPdf(datos.items)
     const pdf = await renderDocumentoPDF(cfg, datos)
 
     return new NextResponse(new Uint8Array(pdf), {

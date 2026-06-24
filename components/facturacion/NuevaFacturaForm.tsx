@@ -36,6 +36,7 @@ interface ItemRow {
   alicuotaIvaPct?: number
   inventarioId?: string
   codigo?: string
+  fotoUrl?: string
   tipoArticulo?: string
   esSerializado?: boolean
   numeroSerie?: string
@@ -274,6 +275,7 @@ export function NuevaFacturaForm({
             alicuotaIvaPct: i.alicuotaIvaPct,
             inventarioId: i.inventarioId ?? null,
             codigo: i.codigo ?? undefined,
+            fotoUrl: i.fotoUrl ?? undefined,
             numeroSerie: i.numeroSerie?.trim() || null,
             proximoPreventivo: i.proximoPreventivo || null,
             sucursalInstalacionId: i.sucursalInstalacionId || null,
@@ -431,6 +433,7 @@ export function NuevaFacturaForm({
                     alicuotaIvaPct: item.alicuotaIva?.porcentaje,
                     inventarioId: item.id,
                     codigo: item.sku ?? undefined,
+                    fotoUrl: item.fotoUrl ?? undefined,
                     tipoArticulo: item.tipoArticulo,
                     esSerializado: item.esSerializado,
                     proximoPreventivo: esEquipo ? d.toISOString().slice(0, 10) : undefined,

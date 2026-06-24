@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { requirePermission, handleApiError } from '@/lib/api-auth'
 import { renderDocumentoPDF } from '@/lib/plantillas/render-documento'
 import { getPlantillaConfig, buildDatosFactura } from '@/lib/plantillas/build-datos'
+import { resolverFotosItemsPdf } from '@/lib/inventario/resolve-foto-pdf.server'
 import QRCode from 'qrcode'
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -58,6 +59,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       f.cliente,
       { qrDataUrl, presupuesto: f.presupuesto },
     )
+    datos.items = await resolverFotosItemsPdf(datos.items)
     const pdf = await renderDocumentoPDF(cfg, datos)
 
     return new NextResponse(new Uint8Array(pdf), {

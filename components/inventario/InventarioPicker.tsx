@@ -10,6 +10,7 @@ export interface InventarioOption {
   nombre: string
   sku: string | null
   descripcion: string | null
+  fotoUrl?: string | null
   stock: number
   precioUnit: number | null
   moneda?: string

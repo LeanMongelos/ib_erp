@@ -15,6 +15,7 @@ import { CATEGORIAS_INVENTARIO } from '@/lib/form-options'
 import { useCan } from '@/components/auth/useCan'
 import { formatMontoMoneda } from '@/lib/moneda'
 import { mensajeErrorDesconocido, mensajeErrorRespuesta } from '@/lib/errores'
+import { ProductoFotoField, subirFotoInventario } from '@/components/inventario/ProductoFotoField'
 import { TIPOS_ARTICULO, TIPOS_KIT } from '@/lib/inventario-constants'
 
 export interface KitItemForm {
@@ -46,6 +47,7 @@ export interface ItemInventario {
   precioUnit: number | null
   moneda: string
   categoria: string | null
+  fotoUrl?: string | null
   kitComoEquipo?: KitItemForm[]
   alicuotaIva?: { id: string; porcentaje: number; nombre: string } | null
 }
@@ -150,6 +152,8 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
   const [loading, setLoading] = useState(false)
   const [ajusteCant, setAjusteCant] = useState('1')
   const [ajusteTipo, setAjusteTipo] = useState<'ENTRADA' | 'SALIDA' | 'AJUSTE'>('ENTRADA')
+  const [fotoUrl, setFotoUrl] = useState<string | null>(null)
+  const [fotoPendiente, setFotoPendiente] = useState<File | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const [categoriasOpciones, setCategoriasOpciones] = useState(CATEGORIAS_INVENTARIO)
@@ -242,9 +246,15 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
         body: JSON.stringify(payload),
       })
       if (!res.ok) throw new Error(await mensajeErrorRespuesta(res, 'No se pudo crear el producto'))
+      const creado = (await res.json()) as { id: string }
+      if (fotoPendiente) {
+        await subirFotoInventario(creado.id, fotoPendiente)
+      }
       toast.success('Producto agregado al inventario')
       setModalAlta(false)
       setForm(formVacio())
+      setFotoUrl(null)
+      setFotoPendiente(null)
       await recargar()
     } catch (e) {
       toast.error(mensajeErrorDesconocido(e, 'No se pudo crear el producto'))
@@ -405,7 +415,7 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
               <Button variant="outline" size="sm" loading={importando} onClick={() => fileRef.current?.click()}>
                 <Upload size={14} /> Importar Excel
               </Button>
-              <Button variant="primary" size="sm" onClick={() => { setForm(formVacio()); setModalAlta(true) }}>
+              <Button variant="primary" size="sm" onClick={() => { setForm(formVacio()); setFotoUrl(null); setFotoPendiente(null); setModalAlta(true) }}>
                 <Plus size={14} /> Nuevo producto
               </Button>
             </>
@@ -418,7 +428,7 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
           <table className="w-full">
             <thead>
               <tr>
-                {['Producto', 'Tipo', 'SKU', 'Stock', 'Preventivo', 'Precio', 'Estado', ''].map((h) => (
+                {['', 'Producto', 'Tipo', 'SKU', 'Stock', 'Preventivo', 'Precio', 'Estado', ''].map((h) => (
                   <th key={h || 'acc'} className="px-5 py-3 text-left text-[10.5px] font-bold text-[#8a909a] tracking-[0.6px] uppercase border-b border-[#eef0f2]">
                     {h}
                   </th>
@@ -430,6 +440,16 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
                 const bajo = item.stock <= item.stockMinimo
                 return (
                   <tr key={item.id} className={i % 2 === 0 ? 'bg-white' : 'bg-[#fafbfc]'}>
+                    <td className="px-3 py-[13px] border-b border-[#f4f5f7] w-[52px]">
+                      {item.fotoUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={item.fotoUrl} alt="" className="w-10 h-10 rounded-[6px] object-contain border border-[#eef0f2] bg-white" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-[6px] bg-[#f4f5f7] flex items-center justify-center">
+                          <Package size={16} className="text-[#c4c9d1]" />
+                        </div>
+                      )}
+                    </td>
                     <td className="px-5 py-[13px] border-b border-[#f4f5f7]">
                       <p className="text-[12.5px] font-bold text-[#1f242c]">{item.nombre}</p>
                       {item.descripcion && <p className="text-[11px] text-[#9aa1ab] mt-0.5 line-clamp-1">{item.descripcion}</p>}
@@ -463,7 +483,7 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
                     <td className="px-5 py-[13px] border-b border-[#f4f5f7]">
                       <div className="flex gap-1">
                         {puedeEditar && (
-                          <button type="button" onClick={() => { setEditando(item); setForm(itemAForm(item)) }} className="p-1.5 rounded hover:bg-gray-100 text-[#6b7280]" title="Editar">
+                          <button type="button" onClick={() => { setEditando(item); setForm(itemAForm(item)); setFotoUrl(item.fotoUrl ?? null); setFotoPendiente(null) }} className="p-1.5 rounded hover:bg-gray-100 text-[#6b7280]" title="Editar">
                             <Pencil size={14} />
                           </button>
                         )}
@@ -479,7 +499,7 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
               })}
               {filtrados.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-5 py-10 text-center text-[12.5px] text-[#9aa1ab]">
+                  <td colSpan={9} className="px-5 py-10 text-center text-[12.5px] text-[#9aa1ab]">
                     <Package size={24} className="mx-auto mb-2 opacity-40" />
                     {items.length === 0 ? 'Sin productos — agregá uno o importá desde Excel' : 'Sin resultados para la búsqueda'}
                   </td>
@@ -498,7 +518,11 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
           setForm={setForm}
           loading={loading}
           ocultarStock={!!editando}
-          onClose={() => { setModalAlta(false); setEditando(null) }}
+          inventarioId={editando?.id}
+          fotoUrl={fotoUrl}
+          onFotoChange={setFotoUrl}
+          onArchivoPendiente={setFotoPendiente}
+          onClose={() => { setModalAlta(false); setEditando(null); setFotoUrl(null); setFotoPendiente(null) }}
           onSave={editando ? guardarEdicion : guardarAlta}
         />
       )}
@@ -534,6 +558,10 @@ function ModalForm({
   loading,
   ocultarStock,
   categoriasOpciones,
+  inventarioId,
+  fotoUrl,
+  onFotoChange,
+  onArchivoPendiente,
   onClose,
   onSave,
 }: {
@@ -543,6 +571,10 @@ function ModalForm({
   loading: boolean
   ocultarStock?: boolean
   categoriasOpciones: { value: string; label: string }[]
+  inventarioId?: string
+  fotoUrl: string | null
+  onFotoChange: (url: string | null) => void
+  onArchivoPendiente: (file: File | null) => void
   onClose: () => void
   onSave: () => void
 }) {
@@ -611,6 +643,15 @@ function ModalForm({
                 />
               </div>
               {field('descripcion', 'Descripción', { span: true })}
+            </div>
+            <div className="mt-4">
+              <ProductoFotoField
+                inventarioId={inventarioId}
+                fotoUrl={fotoUrl}
+                onFotoChange={onFotoChange}
+                onArchivoPendiente={onArchivoPendiente}
+                disabled={loading}
+              />
             </div>
           </section>
 
