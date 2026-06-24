@@ -59,6 +59,11 @@ echo "==> PM2..."
 pm2 restart ibiomedica 2>/dev/null || pm2 start npm --name ibiomedica -- start
 pm2 save
 
+echo "==> Contraseñas go-live ib2026 (excluye Leandro, idempotente)..."
+npx tsx --env-file=.env scripts/reset-passwords-ib2026.ts --execute || {
+  echo "WARN: reset contraseñas falló; revisar logs."
+}
+
 echo "==> Limpieza datos demo (go-live, idempotente)..."
 npx tsx --env-file=.env scripts/prod-limpieza-demo.ts || {
   echo "WARN: limpieza demo falló; revisar logs. Continuando deploy..."
