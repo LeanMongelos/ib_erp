@@ -37,5 +37,5 @@ jobs:
           NEXTAUTH_SECRET: ci-build-secret-min-32-chars-long
           NEXTAUTH_URL: http://localhost:3000
 
-      - name: Test paridad plantillas PDF
-        run: npm run test:plantillas
+      - name: Test invariantes (plantillas + validaciones)
+        run: npm run test:invariants

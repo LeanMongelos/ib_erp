@@ -10,7 +10,14 @@ Documento de referencia para desarrollo, code review y agentes. Si un cambio vio
 | P2 | Si la config tiene **layout de bloques**, no se usa HTML/Puppeteer por separado | `renderDocumentoPDF` (layout primero) | `test:plantillas` |
 | P3 | Al **crear** factura o presupuesto se persiste `plantillaId` (snapshot) | `resolverPlantillaIdEmision` | API POST + backfill |
 | P4 | Al **generar PDF** se resuelve plantilla vía `resolverPlantillaDocumento` | `getPlantillaResuelta` / `build-datos.ts` | smoke manual |
+| P5 | La predeterminada por tipo es **única** (`predeterminado: true` en BD) | `PlantillasManager` + API plantillas | — |
 | P6 | Al **crear** presupuesto se persiste `plantillaId` y la UI muestra el modelo | `NuevoPresupuestoForm` + `resolverPlantillaIdEmision` | — |
+
+## Clientes
+
+| ID | Invariante | Resolvedor | Test |
+|----|------------|------------|------|
+| C1 | Sucursales: misma regla en UI y API (nombre, dirección, geo) | `lib/clientes/validar-sucursales.ts` | `npm run test:validaciones` |
 
 ## Facturación
 
@@ -42,7 +49,9 @@ Documento de referencia para desarrollo, code review y agentes. Si un cambio vio
 |---------|----------------|
 | `npm run lint` | Estilo Next/ESLint |
 | `npm run build` | Types + compile |
-| `npm run test:plantillas` | Paridad preview/producción: mismo pipeline, mismo tamaño PDF (sin DB) |
+| `npm run test:invariants` | Plantillas + validaciones compartidas (sin DB) |
+| `npm run test:plantillas` | Solo paridad PDF plantillas |
+| `npm run test:validaciones` | Solo reglas sucursales UI/API |
 | `npm run smoke` | Prisma + seeds contables (con DB) |
 | `backfill-plantillas-documentos.ts --execute` | Snapshot plantilla en docs viejos (prod) |
 
@@ -58,4 +67,4 @@ Documento de referencia para desarrollo, code review y agentes. Si un cambio vio
 - [ ] ¿Hay un solo resolvedor para la regla de negocio?
 - [ ] ¿Se snapshotea en create lo configurable?
 - [ ] ¿Preview y prod comparten función?
-- [ ] ¿`test:plantillas` o smoke actualizado si tocó plantillas/facturación?
+- [ ] ¿`test:invariants` o smoke actualizado si tocó plantillas/facturación/clientes?

@@ -9,6 +9,7 @@ import {
   type GeoStatus,
 } from '@/components/clientes/SucursalUbicacionFields'
 import type { SucursalInput } from '@/lib/clientes/crear-cliente'
+import { validarListaSucursales } from '@/lib/clientes/validar-sucursales'
 
 export type SucursalDraft = SucursalInput & {
   _key: string
@@ -143,27 +144,5 @@ export function SucursalesEditor({ value, onChange, tipoCliente, compact }: Prop
 }
 
 export function validarSucursalesDraft(sucursales: SucursalDraft[]): string | null {
-  if (sucursales.length === 0) return 'Agregá al menos una sucursal de instalación'
-  for (let i = 0; i < sucursales.length; i++) {
-    const s = sucursales[i]
-    if (s.nombre.trim().length < 2) {
-      return `Sucursal ${i + 1}: el nombre es obligatorio`
-    }
-    if (!s.direccion?.trim()) {
-      return `Sucursal ${i + 1}: indicá la calle o dirección`
-    }
-    if (!s.numero?.trim()) {
-      return `Sucursal ${i + 1}: indicá el número de calle`
-    }
-    if (!s.ciudad?.trim()) {
-      return `Sucursal ${i + 1}: indicá la ciudad`
-    }
-    if (s.geoStatus === 'loading') {
-      return `Sucursal ${i + 1}: esperá a que termine la validación en el mapa`
-    }
-    if (s.lat == null || s.lng == null || s.geoStatus !== 'confirmed') {
-      return `Sucursal ${i + 1}: validá la ubicación en el mapa (calle + número + ciudad)`
-    }
-  }
-  return null
+  return validarListaSucursales(sucursales, { exigirAlMenosUna: true })
 }

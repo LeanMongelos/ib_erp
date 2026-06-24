@@ -9,6 +9,7 @@
 import { z } from 'zod'
 import '@/lib/zod-es'
 import { monedaDocumentoEnum } from '@/lib/moneda'
+import { validarListaSucursales } from '@/lib/clientes/validar-sucursales'
 
 // ============ ENUMS ============
 
@@ -79,29 +80,14 @@ function validarSucursalesCliente(
 ) {
   const sucursales = data.sucursales ?? []
   if (sucursales.length === 0) return
-  sucursales.forEach((s, i) => {
-    if (!s.direccion?.trim()) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'Indicá la calle o dirección de la sucursal',
-        path: ['sucursales', i, 'direccion'],
-      })
-    }
-    if (!s.numero?.trim()) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'Indicá el número de calle de la sucursal',
-        path: ['sucursales', i, 'numero'],
-      })
-    }
-    if (!s.ciudad?.trim()) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'Indicá la ciudad de la sucursal',
-        path: ['sucursales', i, 'ciudad'],
-      })
-    }
-  })
+  const err = validarListaSucursales(sucursales)
+  if (err) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: err,
+      path: ['sucursales'],
+    })
+  }
 }
 
 export const clienteCreateSchema = clienteFieldsSchema.superRefine(validarSucursalesCliente)
