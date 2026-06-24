@@ -1,15 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { handleApiError, ApiError } from '@/lib/api-auth'
 import { verifyN8nApiKey } from '@/lib/crm/n8n'
 import { despacharMensajeSaliente } from '@/lib/crm/dispatch'
 import { plain } from '@/lib/serialize'
-
-const schema = z.object({
-  conversacionId: z.string().min(1),
-  contenido: z.string().trim().min(1).max(4000),
-})
+import { mensajeN8nResponderSchema } from '@/lib/validation'
 
 export async function POST(req: NextRequest) {
   try {
@@ -17,7 +12,7 @@ export async function POST(req: NextRequest) {
       throw new ApiError(401, 'API key inválida')
     }
 
-    const { conversacionId, contenido } = schema.parse(await req.json())
+    const { conversacionId, contenido } = mensajeN8nResponderSchema.parse(await req.json())
 
     const conv = await prisma.conversacionCRM.findUnique({ where: { id: conversacionId } })
     if (!conv) throw new ApiError(404, 'Conversación no encontrada')

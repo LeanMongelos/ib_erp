@@ -25,6 +25,19 @@ function error(msg: string) {
   console.error('❌', msg)
 }
 
+async function checkPlantillaPredeterminada() {
+  for (const tipo of ['FACTURA', 'PRESUPUESTO'] as const) {
+    const count = await prisma.plantillaImpresion.count({
+      where: { tipo, predeterminado: true, activo: true },
+    })
+    if (count === 1) {
+      ok(`Plantilla predeterminada activa para ${tipo}`)
+    } else {
+      warn(`${tipo}: ${count} plantilla(s) predeterminada(s) activa(s) (esperado 1)`)
+    }
+  }
+}
+
 async function checkPlantillaSnapshot() {
   const [sinFactura, sinPresup] = await Promise.all([
     prisma.factura.count({ where: { plantillaId: null } }),
@@ -114,6 +127,7 @@ async function checkUsuariosActivos() {
 async function main() {
   console.log('\n=== Integridad producción ===\n')
 
+  await checkPlantillaPredeterminada()
   await checkPlantillaSnapshot()
   await checkEquiposSinSucursal()
   await checkOtCierreStock()

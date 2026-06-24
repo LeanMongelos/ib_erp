@@ -117,6 +117,34 @@ export const otN8nCreateSchema = otCreateSchema.extend({
   conversacionId: z.string().min(1).optional(),
 })
 
+// ============ CRM / n8n ============
+
+/** Contenido de mensaje saliente — misma regla UI y webhooks n8n. */
+export const crmMensajeContenidoSchema = z.object({
+  contenido: z.string().trim().min(1).max(4000),
+})
+
+/** Webhook n8n responder — POST /api/n8n/responder. */
+export const mensajeN8nResponderSchema = crmMensajeContenidoSchema.extend({
+  conversacionId: z.string().min(1),
+})
+
+/** Webhook n8n etiquetar — POST /api/n8n/etiquetar. */
+export const conversacionEtiquetasN8nSchema = z.object({
+  conversacionId: z.string().min(1),
+  etiquetas: z.array(z.string().trim().min(1)).min(1),
+  modo: z.enum(['agregar', 'reemplazar']).default('agregar'),
+})
+
+/** Webhook n8n crear lead — POST /api/n8n/crear-lead (cliente mínimo tipo OTRO). */
+export const leadN8nCreateSchema = z.object({
+  nombre: z.string().trim().min(2),
+  email: emailOpcional,
+  telefono: z.string().trim().max(40).optional(),
+  notas: z.string().trim().max(1000).optional(),
+  conversacionId: z.string().min(1).optional(),
+})
+
 export const otUpdateSchema = z
   .object({
     estado:      estadoOTEnum.optional(),

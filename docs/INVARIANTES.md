@@ -33,6 +33,9 @@ Documento de referencia para desarrollo, code review y agentes. Si un cambio vio
 | ID | Invariante | Resolvedor | Test |
 |----|------------|------------|------|
 | N1 | POST n8n crear OT usa `otN8nCreateSchema` (= `otCreateSchema`) | `lib/validation.ts` | `npm run test:validaciones` |
+| N2 | POST n8n responder usa `mensajeN8nResponderSchema` (= `crmMensajeContenidoSchema`) | `lib/validation.ts` | `npm run test:validaciones` |
+| N3 | POST n8n etiquetar usa `conversacionEtiquetasN8nSchema` | `lib/validation.ts` | `npm run test:validaciones` |
+| N4 | POST n8n crear lead usa `leadN8nCreateSchema` | `lib/validation.ts` | `npm run test:validaciones` |
 
 ## Operaciones / deploy
 

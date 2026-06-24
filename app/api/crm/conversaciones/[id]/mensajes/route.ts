@@ -1,19 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { requirePermission, handleApiError, ApiError } from '@/lib/api-auth'
 import { plain } from '@/lib/serialize'
 import { registrarAuditoria, getIp } from '@/lib/audit'
-
-const mensajeSchema = z.object({
-  contenido: z.string().trim().min(1).max(4000),
-})
+import { crmMensajeContenidoSchema } from '@/lib/validation'
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const actor = await requirePermission('crm.reply')
     const { id } = await params
-    const { contenido } = mensajeSchema.parse(await req.json())
+    const { contenido } = crmMensajeContenidoSchema.parse(await req.json())
 
     const conv = await prisma.conversacionCRM.findUnique({
       where: { id },
