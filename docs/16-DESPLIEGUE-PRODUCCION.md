@@ -17,7 +17,7 @@
 | HTTPS | Reverse proxy (Caddy/Nginx) obligatorio para cookies seguras |
 | Backups | Cron diario de PostgreSQL (ver §6) |
 | Workers | PM2/systemd para `worker:*` |
-| Cron | `logs:purge` diario + `/api/cron/cobranzas-vencimientos` + `/api/cron/ots-vencidas` |
+| Cron | `logs:purge` diario + `/api/cron/cobranzas-vencimientos` + `/api/cron/ots-vencidas` + `/api/cron/presupuestos-vencidos` |
 | Migraciones | `npx prisma migrate deploy` (nunca `migrate dev` en prod) |
 | Build | `npm run build && npm run start` o PM2 con `next start` |
 | Permisos RBAC | Tras deploy con permisos nuevos: `npm run db:seed` parcial o scripts de sync |
@@ -156,6 +156,7 @@ Con Nginx: proxy_pass a `:3000`, headers `X-Forwarded-For`, `X-Forwarded-Proto`.
 | Purga logs sistema | `npm run logs:purge` | Diario 04:00 |
 | Vencimientos cobranza | `POST /api/cron/cobranzas-vencimientos` + header `Authorization: Bearer $CRON_SECRET` | Diario |
 | OT SLA vencidas | `POST /api/cron/ots-vencidas` + header `Authorization: Bearer $CRON_SECRET` (o `npm run cron:ots-vencidas`) | Cada hora |
+| Presupuestos vencidos | `POST /api/cron/presupuestos-vencidos` + header `Authorization: Bearer $CRON_SECRET` (o `npm run cron:presupuestos-vencidos`) | Diario |
 | Integridad datos | `npm run integridad:prod` (incluido en `vps-deploy-from-git.sh`) | Post-deploy |
 | Backup BD | `pg_dump` | Diario |
 
@@ -164,9 +165,12 @@ Ejemplo crontab en VPS (`/etc/cron.d/ibiomedica-cron`; usuario `deploy`; `CRON_S
 ```bash
 # OT SLA vencidas — cada hora
 0 * * * * deploy bash -c 'set -a; source /opt/ibiomedica/.env; set +a; curl -sf -X POST https://erp-ibiomedica.com.ar/api/cron/ots-vencidas -H "Authorization: Bearer $CRON_SECRET"'
+
+# Presupuestos con vigencia vencida — diario 05:00
+0 5 * * * deploy bash -c 'set -a; source /opt/ibiomedica/.env; set +a; curl -sf -X POST https://erp-ibiomedica.com.ar/api/cron/presupuestos-vencidos -H "Authorization: Bearer $CRON_SECRET"'
 ```
 
-Alternativa local en el VPS (sin HTTP): `cd /opt/ibiomedica && npm run cron:ots-vencidas`.
+Alternativa local en el VPS (sin HTTP): `cd /opt/ibiomedica && npm run cron:ots-vencidas` o `npm run cron:presupuestos-vencidos`.
 
 ---
 

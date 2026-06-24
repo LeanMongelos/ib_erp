@@ -46,6 +46,7 @@ Documento de referencia para desarrollo, code review y agentes. Si un cambio vio
 | I1 | Post-deploy: integridad de datos (plantillas, equipos, OT stock, config) | `scripts/integridad-prod.ts` | `npm run integridad:prod` (VPS vía `vps-deploy-from-git.sh`) |
 | I6 | Presupuesto CONVERTIDO debe tener factura vinculada | `integridad-prod.ts` | `integridad:prod` (error) |
 | I7 | Factura EMITIDA/PAGADA/VENCIDA debe tener `plantillaId` | `integridad-prod.ts` + backfill | `integridad:prod` (error) |
+| I8 | Factura EMITIDA/PAGADA/VENCIDA debe tener CAE | `integridad-prod.ts` | `integridad:prod` (warn en homologación · error si emisor activo `PRODUCCION`) |
 | I2 | OT ABIERTA/EN_PROCESO con SLA vencido debe pasar a VENCIDA (`actualizarOTsVencidas`) | `lib/ots.ts` + cron `POST /api/cron/ots-vencidas` | `integridad:prod` (warn) · `npm run cron:ots-vencidas` |
 | I3 | Conversaciones CRM abiertas deben vincularse a cliente (`clienteId`) | bandeja CRM / crear-lead n8n | `integridad:prod` (warn) |
 | I4 | Predeterminado activo **único** por tipo (plantilla, emisor, lista precios) | APIs config + `integridad-prod.ts` | `integridad:prod` (warn) |
@@ -57,6 +58,7 @@ Documento de referencia para desarrollo, code review y agentes. Si un cambio vio
 |----|------------|------------|------|
 | Pr1 | Presupuesto **no** exige `sucursalInstalacionId`; la sucursal se valida al **facturar** (F2) | `itemPresupuestoSchema` | `npm run test:validaciones` |
 | Pr2 | Total presupuesto = subtotal + IVA + interés (POST y PATCH usan `calcularTotalesPresupuesto`) | `lib/presupuestos/calcular-total-presupuesto.ts` | `npm run test:validaciones` |
+| Pr3 | ENVIADO/APROBADO con `fechaVencimiento` pasada → VENCIDO (`actualizarPresupuestosVencidos`, idempotente) | `lib/presupuestos/actualizar-vencidos.ts` · cron `POST /api/cron/presupuestos-vencidos` | `integridad:prod` (warn) · `npm run cron:presupuestos-vencidos` |
 
 ## Clientes
 
@@ -106,7 +108,8 @@ Documento de referencia para desarrollo, code review y agentes. Si un cambio vio
 | `npm run smoke` | Prisma + seeds contables (con DB) |
 | `npm run integridad:prod` | Chequeos de datos en producción (post-deploy) |
 | `npm run smoke:http` | Login HTTP + APIs/páginas (servidor levantado; no en CI estándar) |
-| `backfill-plantillas-documentos.ts --execute` | Snapshot plantilla en docs viejos (prod) |
+| `backfill-plantillas-documentos.ts --execute` | Snapshot plantilla en docs viejos (prod; incluido en `vps-deploy-from-git.sh`) |
+| `npm run cron:presupuestos-vencidos` | Marcar presupuestos con vigencia vencida |
 
 ## Anti-patrones (no hacer)
 

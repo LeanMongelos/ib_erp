@@ -89,7 +89,35 @@ async function checkPresupuestosVigenciaVencida() {
   if (count === 0) {
     ok('Presupuestos ENVIADO/APROBADO: ninguno con vigencia vencida sin marcar VENCIDO')
   } else {
-    warn(`${count} presupuesto(s) ENVIADO/APROBADO con fechaVencimiento pasada — revisar estado VENCIDO`)
+    warn(
+      `${count} presupuesto(s) ENVIADO/APROBADO con fechaVencimiento pasada — ejecutar actualizarPresupuestosVencidos (cron o npm run cron:presupuestos-vencidos)`,
+    )
+  }
+}
+
+async function checkFacturasEmitidasSinCae() {
+  const count = await prisma.factura.count({
+    where: {
+      estado: { in: ['EMITIDA', 'PAGADA', 'VENCIDA'] },
+      OR: [{ cae: null }, { cae: '' }],
+    },
+  })
+
+  if (count === 0) {
+    ok('Facturas emitidas/cobradas: todas con CAE')
+    return
+  }
+
+  const emisorProduccion = await prisma.emisor.count({
+    where: { ambiente: 'PRODUCCION', activo: true },
+  })
+
+  const msg = `${count} factura(s) EMITIDA/PAGADA/VENCIDA sin CAE — emitir en AFIP o corregir estado`
+
+  if (emisorProduccion > 0) {
+    error(msg)
+  } else {
+    warn(`${msg} (homologación: advertencia; en producción fiscal sería error)`)
   }
 }
 
@@ -280,6 +308,7 @@ async function main() {
   await checkPlantillaPredeterminada()
   await checkPlantillaSnapshot()
   await checkFacturasEmitidasPlantilla()
+  await checkFacturasEmitidasSinCae()
   await checkPresupuestoConvertidoSinFactura()
   await checkPresupuestosVigenciaVencida()
   await checkEquiposSinSucursal()

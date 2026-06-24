@@ -218,6 +218,7 @@ Ver detalle: [`12-PLANTILLAS-PDF.md`](12-PLANTILLAS-PDF.md).
 | * | `/api/webhooks/meta` | Meta verify | Meta |
 | POST | `/api/cron/cobranzas-vencimientos` | `CRON_SECRET` | Job vencimientos |
 | POST | `/api/cron/ots-vencidas` | `CRON_SECRET` | Marcar OTs con SLA vencido |
+| POST | `/api/cron/presupuestos-vencidos` | `CRON_SECRET` | Marcar presupuestos con vigencia vencida |
 
 ## Auditoría y logs
 
