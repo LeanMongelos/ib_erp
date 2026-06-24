@@ -60,6 +60,14 @@ npm run test:invariants
 
 echo "==> PM2..."
 pm2 restart ibiomedica 2>/dev/null || pm2 start npm --name ibiomedica -- start
+for worker in worker-afip worker-cobranzas; do
+  if pm2 describe "$worker" >/dev/null 2>&1; then
+    echo "    reiniciando $worker..."
+    pm2 restart "$worker" --update-env
+  else
+    echo "    $worker: no registrado en PM2; omitiendo."
+  fi
+done
 pm2 save
 
 echo "==> Migración emails @ib.com + cierre de sesiones (idempotente)..."
@@ -96,4 +104,25 @@ bash scripts/vps-caddy-apply.sh
 
 sleep 2
 curl -s -o /dev/null -w "deploy_ok:%{http_code}\n" http://127.0.0.1:3000/login
+
+echo "==> Cron del sistema (opcional)..."
+CRON_SCRIPT="$APP_DIR/scripts/vps-install-cron.sh"
+if [[ -f "$CRON_SCRIPT" ]]; then
+  CAN_CRON=0
+  if [[ "${EUID:-$(id -u)}" -eq 0 ]]; then
+    CAN_CRON=1
+  elif sudo -n test -w /etc/cron.d/ 2>/dev/null; then
+    CAN_CRON=1
+  fi
+  if [[ "$CAN_CRON" -eq 1 ]]; then
+    if [[ "${EUID:-$(id -u)}" -eq 0 ]]; then
+      bash "$CRON_SCRIPT" || echo "WARN: instalación cron falló; continuar deploy..."
+    else
+      sudo -n bash "$CRON_SCRIPT" || echo "WARN: instalación cron falló; continuar deploy..."
+    fi
+  else
+    echo "cron: manual — run sudo bash scripts/vps-install-cron.sh"
+  fi
+fi
+
 pm2 status

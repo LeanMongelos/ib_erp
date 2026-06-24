@@ -113,6 +113,12 @@ npx tsx --env-file=.env scripts/sync-logs-permiso.ts
 
 ## 5. Actualizaciones (releases)
 
+En el VPS, el flujo habitual es **`bash scripts/vps-deploy-from-git.sh`** (también vía GitHub Actions). Ese script incluye: pull, build, `test:invariants`, `integridad:prod`, reinicio de `ibiomedica` y —si están registrados en PM2— `worker-afip` / `worker-cobranzas`, y Caddy.
+
+Al final intenta instalar `/etc/cron.d/ibiomedica-cron` con `vps-install-cron.sh` si el proceso tiene root o `sudo` sin contraseña sobre `/etc/cron.d/`; si no, imprime `cron: manual — run sudo bash scripts/vps-install-cron.sh` y continúa.
+
+Manual equivalente:
+
 ```bash
 git pull
 npm ci
@@ -120,7 +126,7 @@ npx prisma migrate deploy
 npx prisma generate
 npm run build
 pm2 restart ibiomedica
-# Reiniciar workers si cambió lógica de colas
+pm2 restart worker-afip worker-cobranzas --update-env   # solo si existen en PM2
 npm run smoke    # verificación rápida post-deploy
 ```
 
@@ -162,7 +168,7 @@ Con Nginx: proxy_pass a `:3000`, headers `X-Forwarded-For`, `X-Forwarded-Proto`.
 | Integridad datos | `npm run integridad:prod` (incluido en `vps-deploy-from-git.sh`) | Post-deploy |
 | Backup BD | `pg_dump` | Diario |
 
-**Instalación automatizada** (en el VPS, como root):
+**Instalación automatizada:** `vps-deploy-from-git.sh` la intenta al final de cada deploy (si hay permisos). Primera vez o sin sudo en el deploy user:
 
 ```bash
 cd /opt/ibiomedica
