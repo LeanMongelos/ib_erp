@@ -26,7 +26,8 @@ Todo archivo con `'use client'` **solo** puede importar módulos que no usen Nod
 | `lib/facturas/equipo-instalacion-client.ts` | ✅ | ✅ |
 | `lib/facturas/validar-sucursal-equipo.ts` | ❌ | ✅ |
 | `lib/crm/embudo-movimiento-client.ts` | ✅ | ✅ |
-| `lib/precios/aplicar-precios-documento.ts` | ❌ | ✅ |
+| `lib/ots/repuestos-ot-client.ts` | ✅ | ✅ |
+| `lib/ots/repuestos-ot.ts` | ❌ | ✅ |
 | `lib/clientes/validar-sucursales.ts` | ✅ | ✅ |
 
 ### Patrón validación cliente/servidor

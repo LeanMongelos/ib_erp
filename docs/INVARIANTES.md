@@ -20,6 +20,14 @@ Documento de referencia para desarrollo, code review y agentes. Si un cambio vio
 | E1 | Movimiento entre etapas: misma regla UI (drag) y API | `lib/crm/embudo-movimiento-client.ts` | `npm run test:validaciones` |
 | E2 | Formularios de transición validados en UI y API | `validateForm` en `embudo-forms.ts` | `test:validaciones` |
 
+## Servicio técnico (OT)
+
+| ID | Invariante | Resolvedor | Test |
+|----|------------|------------|------|
+| O1 | Repuestos OT: misma validación UI ↔ API | `lib/ots/repuestos-ot-client.ts` | `npm run test:validaciones` |
+| O2 | Cierre OT: stock validado y descontado en **una transacción** | `app/api/ots/[id]/route.ts` | — |
+| O3 | Repuestos con `inventarioId`: precio re-resuelto en API | `lib/ots/repuestos-ot.ts` | — |
+
 ## Presupuestos
 
 | ID | Invariante | Resolvedor | Test |

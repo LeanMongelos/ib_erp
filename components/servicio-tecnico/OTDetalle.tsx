@@ -14,6 +14,7 @@ import { formatMonto } from '@/lib/utils'
 import type { OrdenTrabajo } from '@/types'
 import { mensajeErrorDesconocido, mensajeErrorRespuesta } from '@/lib/errores'
 import { InventarioPicker, type InventarioOption } from '@/components/inventario/InventarioPicker'
+import { validarRepuestosOTCliente } from '@/lib/ots/repuestos-ot-client'
 
 const ESTADOS_TRANSICION = [
   { value: 'ABIERTA',    label: 'Abierta' },
@@ -77,6 +78,11 @@ export function OTDetalle({ ot }: { ot: any }) {
 
   async function guardarRepuestos() {
     const validos = repuestos.filter((r) => r.descripcion?.trim())
+    const errRep = validarRepuestosOTCliente(validos)
+    if (errRep) {
+      toast.error(errRep)
+      return
+    }
     setLoading(true)
     try {
       const res = await fetch(`/api/ots/${ot.id}`, {
@@ -233,6 +239,7 @@ export function OTDetalle({ ot }: { ot: any }) {
               </div>
               <InventarioPicker
                 className="max-w-md"
+                clienteId={ot.clienteId}
                 placeholder="Agregar desde inventario (nombre o SKU)…"
                 onSelect={(item: InventarioOption | null) => {
                   if (!item) return

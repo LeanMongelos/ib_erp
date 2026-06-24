@@ -4,6 +4,9 @@ import { prisma } from '@/lib/prisma'
 import { requireAuth, requirePermission, handleApiError, ApiError } from '@/lib/api-auth'
 import { otUpdateSchema } from '@/lib/validation'
 import { plain } from '@/lib/serialize'
+import { validarRepuestosOTCliente } from '@/lib/ots/repuestos-ot-client'
+import { aplicarPreciosRepuestosOT, validarStockRepuestosOT } from '@/lib/ots/repuestos-ot'
+import { registrarMovimientoStock } from '@/lib/inventario'
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -44,6 +47,34 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const body = await req.json()
     const { estado, nota, diagnostico, tecnicoId, repuestos } = otUpdateSchema.parse(body)
 
+    const otActual = await prisma.ordenTrabajo.findUnique({
+      where: { id },
+      select: { estado: true, numero: true, tipo: true, equipoId: true, clienteId: true },
+    })
+    if (!otActual) throw new ApiError(404, 'Orden de trabajo no encontrada')
+
+    const cerrando = estado === 'CERRADA' && otActual.estado !== 'CERRADA'
+
+    let repuestosNormalizados: typeof repuestos | undefined
+    if (repuestos !== undefined) {
+      const errRep = validarRepuestosOTCliente(repuestos)
+      if (errRep) throw new ApiError(400, errRep)
+      repuestosNormalizados = await aplicarPreciosRepuestosOT(repuestos, otActual.clienteId)
+    }
+
+    const repuestosParaCierre =
+      repuestosNormalizados ??
+      (cerrando
+        ? await prisma.repuestoOT.findMany({
+            where: { otId: id },
+            select: { descripcion: true, cantidad: true, precioUnit: true, inventarioId: true },
+          })
+        : [])
+
+    if (cerrando) {
+      await validarStockRepuestosOT(repuestosParaCierre)
+    }
+
     const updateData: Prisma.OrdenTrabajoUpdateInput = {}
     if (diagnostico !== undefined) updateData.diagnostico = diagnostico
     if (tecnicoId !== undefined) {
@@ -51,64 +82,58 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
     if (estado !== undefined) {
       updateData.estado = estado
-      // Al cerrar registramos la fecha; al reabrir la limpiamos
       updateData.fechaCierre = estado === 'CERRADA' ? new Date() : null
       updateData.historial = {
         create: { estado, nota: nota ?? `Estado cambiado a ${estado}` },
       }
     }
 
-    const otActual = await prisma.ordenTrabajo.findUnique({
-      where: { id },
-      select: { estado: true, numero: true, tipo: true, equipoId: true, clienteId: true },
-    })
-    if (!otActual) throw new ApiError(404, 'Orden de trabajo no encontrada')
-
-    if (repuestos !== undefined) {
-      await prisma.repuestoOT.deleteMany({ where: { otId: id } })
-      if (repuestos.length > 0) {
-        await prisma.repuestoOT.createMany({
-          data: repuestos.map((r) => ({
-            descripcion: r.descripcion,
-            cantidad: r.cantidad,
-            precioUnit: r.precioUnit,
-            inventarioId: r.inventarioId ?? null,
-            otId: id,
-          })),
-        })
-      }
-    }
-
-    const ot = await prisma.ordenTrabajo.update({
-      where: { id },
-      data: updateData,
-      include: {
-        equipo: { select: { id: true, numeroSerie: true } },
-        repuestos: true,
-      },
-    })
-
-    if (estado === 'CERRADA' && otActual.estado !== 'CERRADA') {
-      const { registrarMovimientoStock } = await import('@/lib/inventario')
-      for (const r of ot.repuestos) {
-        if (!r.inventarioId) continue
-        const item = await prisma.inventario.findUnique({ where: { id: r.inventarioId } })
-        if (!item) continue
-        if (item.stock < r.cantidad) {
-          throw new ApiError(400, `Stock insuficiente para «${item.nombre}» (disponible: ${item.stock})`)
+    const ot = await prisma.$transaction(async (tx) => {
+      if (repuestosNormalizados !== undefined) {
+        await tx.repuestoOT.deleteMany({ where: { otId: id } })
+        if (repuestosNormalizados.length > 0) {
+          await tx.repuestoOT.createMany({
+            data: repuestosNormalizados.map((r) => ({
+              descripcion: r.descripcion,
+              cantidad: r.cantidad,
+              precioUnit: r.precioUnit,
+              inventarioId: r.inventarioId ?? null,
+              otId: id,
+            })),
+          })
         }
-        await registrarMovimientoStock({
-          inventarioId: r.inventarioId,
-          tipo: 'SALIDA',
-          cantidad: r.cantidad,
-          motivo: `Repuesto OT ${ot.numero}`,
-          referencia: `ot:${id}:cierre`,
-          usuarioId: actor.id,
-        })
       }
-    }
 
-    if (estado === 'CERRADA' && ot.equipoId) {
+      const actualizada = await tx.ordenTrabajo.update({
+        where: { id },
+        data: updateData,
+        include: {
+          equipo: { select: { id: true, numeroSerie: true } },
+          repuestos: true,
+        },
+      })
+
+      if (cerrando) {
+        for (const r of actualizada.repuestos) {
+          if (!r.inventarioId) continue
+          await registrarMovimientoStock(
+            {
+              inventarioId: r.inventarioId,
+              tipo: 'SALIDA',
+              cantidad: r.cantidad,
+              motivo: `Repuesto OT ${actualizada.numero}`,
+              referencia: `ot:${id}:cierre`,
+              usuarioId: actor.id,
+            },
+            tx,
+          )
+        }
+      }
+
+      return actualizada
+    })
+
+    if (cerrando && ot.equipoId) {
       const { registrarEntradaHistoria } = await import('@/lib/equipos/historia-clinica')
       await registrarEntradaHistoria(ot.equipoId, {
         tipo: 'OT',
@@ -119,7 +144,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       })
     }
 
-    if (estado !== undefined && otActual) {
+    if (estado !== undefined) {
       const { sincronizarTrackingOt } = await import('@/lib/tracking-automation')
       await sincronizarTrackingOt({
         otId: id,
@@ -134,7 +159,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       }).catch(() => null)
     }
 
-    return NextResponse.json(ot)
+    return NextResponse.json(plain(ot))
   } catch (error) {
     return handleApiError(error)
   }

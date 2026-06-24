@@ -2,26 +2,32 @@
  * lib/inventario.ts — movimientos de stock y alertas de faltante.
  */
 
+import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 
-export async function registrarMovimientoStock(opts: {
-  inventarioId: string
-  tipo: 'ENTRADA' | 'SALIDA' | 'AJUSTE' | 'TRANSFERENCIA'
-  cantidad: number
-  motivo?: string
-  referencia?: string
-  depositoId?: string
-  usuarioId?: string
-}) {
-  const item = await prisma.inventario.findUnique({ where: { id: opts.inventarioId } })
-  if (!item) throw new Error('Ítem de inventario no encontrado')
+type DbClient = Prisma.TransactionClient | typeof prisma
 
-  const delta = opts.tipo === 'SALIDA' ? -opts.cantidad : opts.cantidad
-  const stockAntes = item.stock
-  const stockDespues = stockAntes + delta
+export async function registrarMovimientoStock(
+  opts: {
+    inventarioId: string
+    tipo: 'ENTRADA' | 'SALIDA' | 'AJUSTE' | 'TRANSFERENCIA'
+    cantidad: number
+    motivo?: string
+    referencia?: string
+    depositoId?: string
+    usuarioId?: string
+  },
+  db?: Prisma.TransactionClient,
+) {
+  const run = async (client: DbClient) => {
+    const item = await client.inventario.findUnique({ where: { id: opts.inventarioId } })
+    if (!item) throw new Error('Ítem de inventario no encontrado')
 
-  const [mov] = await prisma.$transaction([
-    prisma.movimientoStock.create({
+    const delta = opts.tipo === 'SALIDA' ? -opts.cantidad : opts.cantidad
+    const stockAntes = item.stock
+    const stockDespues = stockAntes + delta
+
+    const mov = await client.movimientoStock.create({
       data: {
         inventarioId: opts.inventarioId,
         depositoId: opts.depositoId ?? null,
@@ -33,13 +39,16 @@ export async function registrarMovimientoStock(opts: {
         referencia: opts.referencia ?? null,
         usuarioId: opts.usuarioId ?? null,
       },
-    }),
-    prisma.inventario.update({
+    })
+    await client.inventario.update({
       where: { id: opts.inventarioId },
       data: { stock: stockDespues },
-    }),
-  ])
-  return mov
+    })
+    return mov
+  }
+
+  if (db) return run(db)
+  return prisma.$transaction((tx) => run(tx))
 }
 
 export async function getFaltantesStock() {
