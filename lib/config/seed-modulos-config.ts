@@ -69,6 +69,14 @@ const PLANTILLAS = [
       'Estimado/a {{cliente}},\n\nLa orden {{numero}} ({{tipo}}) fue finalizada el {{fecha}}.\nEquipo: {{equipo}}\nTrabajo: {{descripcion}}\nDiagnóstico: {{diagnostico}}\n\nRepuestos:\n{{repuestos}}\n\n— Ingeniería Biomédica',
   },
   {
+    codigo: 'OT_ASIGNADA',
+    nombre: 'OT asignada al técnico',
+    canal: 'EMAIL',
+    asunto: 'OT {{numero}} asignada — {{cliente}}',
+    cuerpo:
+      'Hola {{tecnico}},\n\nSe te asignó la orden {{numero}} ({{tipo}}).\n\nCliente: {{cliente}} ({{ciudad}})\nEquipo: {{equipo}}\nPrioridad: {{prioridad}}\nDescripción: {{descripcion}}\n\nVer OT: {{url}}\n\n— Ingeniería Biomédica ERP',
+  },
+  {
     codigo: 'PRESUPUESTO_ENVIADO',
     nombre: 'Presupuesto enviado al cliente',
     canal: 'EMAIL',
@@ -118,7 +126,7 @@ export async function seedModulosConfigIfEmpty() {
     }
   }
 
-  for (const codigo of ['FACTURA_EMITIDA', 'COBRANZA_RECORDATORIO', 'OT_CERRADA', 'PRESUPUESTO_ENVIADO'] as const) {
+  for (const codigo of ['FACTURA_EMITIDA', 'COBRANZA_RECORDATORIO', 'OT_CERRADA', 'OT_ASIGNADA', 'PRESUPUESTO_ENVIADO'] as const) {
     const plantilla = PLANTILLAS.find((p) => p.codigo === codigo)
     if (plantilla) {
       await prisma.plantillaNotificacion.upsert({

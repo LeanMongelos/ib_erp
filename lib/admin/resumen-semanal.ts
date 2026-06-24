@@ -9,6 +9,7 @@ import { prisma } from '@/lib/prisma'
 import { registrarError } from '@/lib/error-log'
 import { sendSystemEmail, getAdminNotifyEmails } from '@/lib/mail/system-mail'
 import { contarAdvertenciasIntegridad } from '@/lib/admin/integridad-advertencias'
+import { verificarFreshnessBackupVps } from '@/lib/admin/verificar-backups-vps'
 
 const ORIGEN = 'admin-resumen-semanal'
 const PREFIX = 'resumen-semanal:'
@@ -32,6 +33,44 @@ async function marcarEnviado(emails: string[]): Promise<void> {
     mensaje: `${claveSemana()}:ok`,
     metadata: { emails },
   })
+}
+
+function claveBackupMensual(dia = new Date()): string {
+  return `backup-dry-run:${format(dia, 'yyyy-MM')}`
+}
+
+async function yaVerificadoBackupEsteMes(): Promise<boolean> {
+  const prev = await prisma.systemLog.findFirst({
+    where: {
+      origen: 'admin-backup-check',
+      mensaje: { startsWith: `${claveBackupMensual()}:` },
+    },
+    select: { id: true },
+  })
+  return Boolean(prev)
+}
+
+/** Dry-run mensual: WARN en SystemLog si no hay backup reciente (<7 días). */
+export async function verificarBackupMensualVps(): Promise<{ verificado: boolean; ok?: boolean }> {
+  if (await yaVerificadoBackupEsteMes()) {
+    return { verificado: false }
+  }
+
+  const resultado = verificarFreshnessBackupVps(7)
+  const clave = claveBackupMensual()
+
+  await registrarError({
+    nivel: resultado.ok ? NivelLog.INFO : NivelLog.WARN,
+    origen: 'admin-backup-check',
+    mensaje: `${clave}:${resultado.ok ? 'ok' : 'warn'}`,
+    metadata: {
+      mensaje: resultado.mensaje,
+      archivo: resultado.archivo,
+      diasDesdeUltimo: resultado.diasDesdeUltimo,
+    },
+  })
+
+  return { verificado: true, ok: resultado.ok }
 }
 
 export type ResumenSemanalKpis = {
@@ -104,6 +143,8 @@ export type ProcesarResumenSemanalResult = {
 }
 
 export async function procesarResumenSemanalAdmin(): Promise<ProcesarResumenSemanalResult> {
+  void verificarBackupMensualVps().catch(() => null)
+
   if (await yaEnviadoEstaSemana()) {
     return { enviado: false, omitido: true, motivo: 'ya_enviado_esta_semana' }
   }

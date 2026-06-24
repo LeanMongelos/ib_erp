@@ -1,16 +1,17 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Search, Plus, ChevronRight, Truck, Pencil, Trash2 } from 'lucide-react'
+import { Search, Plus, ChevronRight, Truck, Pencil, Trash2, Download, Upload } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useCan } from '@/components/auth/useCan'
 import { ProveedorModal } from '@/components/proveedores/ProveedorModal'
 import { formatMonto } from '@/lib/utils'
+import { mensajeErrorDesconocido, mensajeErrorRespuesta } from '@/lib/errores'
 import type { Proveedor } from '@/types'
 
 interface ProveedorRow extends Proveedor {
@@ -25,12 +26,14 @@ const ORIGENES = [
 
 export function ProveedoresManager({ proveedores }: { proveedores: ProveedorRow[] }) {
   const router = useRouter()
+  const fileRef = useRef<HTMLInputElement>(null)
   const puedeCrear = useCan('proveedores.create')
   const puedeEditar = useCan('proveedores.update')
   const puedeBaja = useCan('proveedores.deactivate')
   const [search, setSearch] = useState('')
   const [origen, setOrigen] = useState('TODOS')
   const [modal, setModal] = useState<null | 'nuevo' | string>(null)
+  const [importando, setImportando] = useState(false)
 
   const filtered = proveedores.filter((p) => {
     const s = search.toLowerCase()
@@ -49,6 +52,48 @@ export function ProveedoresManager({ proveedores }: { proveedores: ProveedorRow[
     const res = await fetch(`/api/proveedores/${p.id}`, { method: 'DELETE' })
     if (res.ok) { toast.success('Proveedor dado de baja'); router.refresh() }
     else toast.error('No se pudo dar de baja')
+  }
+
+  async function descargarPlantilla() {
+    try {
+      const res = await fetch('/api/proveedores/plantilla', { credentials: 'include' })
+      if (!res.ok) throw new Error(await mensajeErrorRespuesta(res, 'No se pudo descargar la plantilla'))
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'plantilla-proveedores-ibiomedica.csv'
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      toast.error(mensajeErrorDesconocido(e, 'No se pudo descargar la plantilla'))
+    }
+  }
+
+  async function importarCsv(file: File) {
+    setImportando(true)
+    try {
+      const fd = new FormData()
+      fd.append('archivo', file)
+      const res = await fetch('/api/proveedores/import', {
+        method: 'POST',
+        credentials: 'include',
+        body: fd,
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Error en la importación')
+      toast.success(`Importación: ${data.creados} creados, ${data.omitidos} omitidos`)
+      if (data.errores?.length) {
+        toast.warning(`${data.errores.length} fila(s) con error — revisá el detalle en consola`)
+        console.warn('Errores importación proveedores:', data.errores)
+      }
+      router.refresh()
+    } catch (e) {
+      toast.error(mensajeErrorDesconocido(e, 'No se pudo importar el archivo'))
+    } finally {
+      setImportando(false)
+      if (fileRef.current) fileRef.current.value = ''
+    }
   }
 
   return (
@@ -73,6 +118,34 @@ export function ProveedoresManager({ proveedores }: { proveedores: ProveedorRow[
           </select>
         </div>
         <div className="flex-1" />
+        {puedeCrear && (
+          <>
+            <Button variant="outline" size="md" className="gap-2" onClick={descargarPlantilla}>
+              <Download size={16} strokeWidth={2.4} />
+              Plantilla CSV
+            </Button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".csv"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0]
+                if (f) importarCsv(f)
+              }}
+            />
+            <Button
+              variant="outline"
+              size="md"
+              className="gap-2"
+              loading={importando}
+              onClick={() => fileRef.current?.click()}
+            >
+              <Upload size={16} strokeWidth={2.4} />
+              Importar CSV
+            </Button>
+          </>
+        )}
         {puedeCrear && (
           <Button onClick={() => setModal('nuevo')} size="md" className="gap-2">
             <Plus size={16} strokeWidth={2.4} /> Nuevo Proveedor

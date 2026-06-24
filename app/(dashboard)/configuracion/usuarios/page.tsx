@@ -2,6 +2,7 @@ import { Header } from '@/components/layout/Header'
 import { prisma } from '@/lib/prisma'
 import { requirePagePermission } from '@/lib/page-guard'
 import { UsuariosManager } from '@/components/configuracion/UsuariosManager'
+import { OnboardingChecklist } from '@/components/configuracion/OnboardingChecklist'
 
 export default async function UsuariosPage() {
   await requirePagePermission('usuarios.read')
@@ -24,6 +25,7 @@ export default async function UsuariosPage() {
     <>
       <Header title="Usuarios y Roles" subtitle={`${usuarios.length} usuarios`} />
       <div className="flex-1 overflow-y-auto bg-[#F4F6F9] p-6">
+        <OnboardingChecklist />
         <UsuariosManager
           usuarios={JSON.parse(JSON.stringify(usuarios))}
           roles={roles}

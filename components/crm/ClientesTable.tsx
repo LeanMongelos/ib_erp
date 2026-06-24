@@ -31,9 +31,11 @@ export function ClientesTable({ clientes }: { clientes: ClienteRow[] }) {
   const router = useRouter()
   const fileRef = useRef<HTMLInputElement>(null)
   const puedeCrear = useCan('clientes.create')
+  const puedeLeer = useCan('clientes.read')
   const [search, setSearch] = useState('')
   const [tipo, setTipo] = useState('TODOS')
   const [importando, setImportando] = useState(false)
+  const [exportando, setExportando] = useState(false)
 
   const filtered = clientes.filter((c) => {
     const matchSearch =
@@ -62,6 +64,26 @@ export function ClientesTable({ clientes }: { clientes: ClienteRow[] }) {
       URL.revokeObjectURL(url)
     } catch (e) {
       toast.error(mensajeErrorDesconocido(e, 'No se pudo descargar la plantilla'))
+    }
+  }
+
+  async function exportarCsv() {
+    setExportando(true)
+    try {
+      const res = await fetch('/api/clientes/export', { credentials: 'include' })
+      if (!res.ok) throw new Error(await mensajeErrorRespuesta(res, 'No se pudo exportar clientes'))
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `clientes-ibiomedica-${new Date().toISOString().slice(0, 10)}.csv`
+      a.click()
+      URL.revokeObjectURL(url)
+      toast.success('Exportación de clientes descargada')
+    } catch (e) {
+      toast.error(mensajeErrorDesconocido(e, 'No se pudo exportar clientes'))
+    } finally {
+      setExportando(false)
     }
   }
 
@@ -118,6 +140,13 @@ export function ClientesTable({ clientes }: { clientes: ClienteRow[] }) {
         </div>
 
         <div className="flex-1" />
+
+        {puedeLeer && (
+          <Button variant="outline" size="md" className="gap-2" loading={exportando} onClick={exportarCsv}>
+            <Download size={16} strokeWidth={2.4} />
+            Exportar CSV
+          </Button>
+        )}
 
         {puedeCrear && (
           <>

@@ -3,6 +3,7 @@
  */
 
 import { execSync } from 'child_process'
+import fs from 'fs'
 import { prisma } from '@/lib/prisma'
 import { validarEnvProd, type EnvCheck } from '@/lib/env/validar-prod'
 import {
@@ -278,8 +279,131 @@ async function validarCrmGoLive(items: GoLiveItem[], env: NodeJS.ProcessEnv) {
   }
 }
 
+async function validarOnboardingGoLive(items: GoLiveItem[]) {
+  const admin = await prisma.usuario.findFirst({
+    where: {
+      activo: true,
+      roles: { some: { rol: { clave: { in: ['SUPERADMIN', 'GERENTE'] } } } },
+    },
+    select: { email: true, nombre: true },
+    orderBy: { creadoEn: 'asc' },
+  })
+  if (admin) {
+    addItem(
+      items,
+      'onboarding',
+      'pass',
+      `Administrador activo: ${admin.nombre} (${admin.email})`,
+      'onboarding_admin',
+    )
+  } else {
+    addItem(
+      items,
+      'onboarding',
+      'fail',
+      'Sin usuario SUPERADMIN/GERENTE activo — crear admin en Usuarios',
+      'onboarding_admin',
+    )
+  }
+
+  const emisorActivo = await prisma.emisor.findFirst({
+    where: { activo: true },
+    select: { razonSocial: true, ambiente: true, predeterminado: true },
+  })
+  if (emisorActivo) {
+    const pred = emisorActivo.predeterminado ? ' [predeterminado]' : ''
+    addItem(
+      items,
+      'onboarding',
+      'pass',
+      `Emisor configurado: ${emisorActivo.razonSocial}${pred} (${emisorActivo.ambiente})`,
+      'onboarding_emisor',
+    )
+  } else {
+    addItem(
+      items,
+      'onboarding',
+      'fail',
+      'Sin emisor activo — Configuración → Emisores',
+      'onboarding_emisor',
+    )
+  }
+
+  const smtpOk = smtpEnvConfigurado(process.env)
+  if (smtpOk) {
+    addItem(items, 'onboarding', 'pass', 'SMTP del sistema configurado (SYSTEM_SMTP_*)', 'onboarding_smtp')
+  } else {
+    const canal = await prisma.canalIntegracion.findUnique({ where: { tipo: 'EMAIL_IMAP' } })
+    if (canal?.activo && canal.estado === 'CONECTADO') {
+      addItem(
+        items,
+        'onboarding',
+        'pass',
+        'Canal EMAIL_IMAP conectado — envío de correos disponible',
+        'onboarding_smtp',
+      )
+    } else {
+      addItem(
+        items,
+        'onboarding',
+        'fail',
+        'SMTP no configurado — definir SYSTEM_SMTP_* o conectar EMAIL_IMAP',
+        'onboarding_smtp',
+      )
+    }
+  }
+
+  let cronOk = false
+  try {
+    if (fs.existsSync('/etc/cron.d/ibiomedica-cron')) {
+      cronOk = true
+      addItem(
+        items,
+        'onboarding',
+        'pass',
+        'Cron del VPS instalado (/etc/cron.d/ibiomedica-cron)',
+        'onboarding_cron',
+      )
+    }
+  } catch {
+    /* Windows / sin permisos */
+  }
+
+  if (!cronOk) {
+    const hace48h = new Date(Date.now() - 48 * 60 * 60 * 1000)
+    const actividadCron = await prisma.systemLog.findFirst({
+      where: {
+        fecha: { gte: hace48h },
+        OR: [
+          { origen: { startsWith: 'cron-' } },
+          { origen: 'admin-resumen-semanal' },
+          { origen: { contains: 'cobranza' } },
+        ],
+      },
+      select: { id: true },
+    })
+    if (actividadCron) {
+      addItem(
+        items,
+        'onboarding',
+        'pass',
+        'Actividad de cron detectada en logs (últimas 48 h)',
+        'onboarding_cron',
+      )
+    } else {
+      addItem(
+        items,
+        'onboarding',
+        'warn',
+        'Cron no detectado — en VPS: sudo bash scripts/vps-install-cron.sh',
+        'onboarding_cron',
+      )
+    }
+  }
+}
+
 async function validarPlantillasNotificacionGoLive(items: GoLiveItem[]) {
-  const requeridas = ['OT_CERRADA', 'PRESUPUESTO_ENVIADO'] as const
+  const requeridas = ['OT_CERRADA', 'PRESUPUESTO_ENVIADO', 'OT_ASIGNADA'] as const
   const faltantes: string[] = []
 
   for (const codigo of requeridas) {
@@ -295,7 +419,7 @@ async function validarPlantillasNotificacionGoLive(items: GoLiveItem[]) {
       items,
       'seed',
       'pass',
-      'Plantillas OT_CERRADA y PRESUPUESTO_ENVIADO presentes — emails al cliente OK',
+      'Plantillas OT_CERRADA, OT_ASIGNADA y PRESUPUESTO_ENVIADO presentes',
     )
   } else {
     addItem(
@@ -472,6 +596,7 @@ export async function obtenerGoLiveStatus(): Promise<GoLiveStatus> {
   }
 
   await validarCrmGoLive(items, process.env)
+  await validarOnboardingGoLive(items)
   await validarPlantillasNotificacionGoLive(items)
 
   const pass = items.filter((i) => i.nivel === 'pass').length

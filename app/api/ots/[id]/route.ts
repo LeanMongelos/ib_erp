@@ -49,7 +49,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     const otActual = await prisma.ordenTrabajo.findUnique({
       where: { id },
-      select: { estado: true, numero: true, tipo: true, equipoId: true, clienteId: true },
+      select: { estado: true, numero: true, tipo: true, equipoId: true, clienteId: true, tecnicoId: true },
     })
     if (!otActual) throw new ApiError(404, 'Orden de trabajo no encontrada')
 
@@ -162,6 +162,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (cerrando) {
       void import('@/lib/ots/notify-cliente-cerrada').then(({ notifyClienteOtCerrada }) =>
         notifyClienteOtCerrada(id).catch(() => null),
+      )
+    }
+
+    if (
+      tecnicoId !== undefined &&
+      tecnicoId &&
+      tecnicoId !== otActual.tecnicoId
+    ) {
+      void import('@/lib/ots/notify-tecnico-asignada').then(({ notifyTecnicoOtAsignada }) =>
+        notifyTecnicoOtAsignada(id, tecnicoId).catch(() => null),
       )
     }
 
