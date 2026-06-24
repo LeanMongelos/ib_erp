@@ -27,6 +27,18 @@ on_deploy_error() {
 }
 trap on_deploy_error ERR
 
+# Pasos idempotentes post-build: un fallo no debe tumbar el deploy (app ya reiniciada).
+run_optional_step() {
+  local label="$1"
+  shift
+  echo "==> $label..."
+  if "$@"; then
+    echo "    OK: $label"
+  else
+    echo "WARN: $label falló (exit $?). Revisar logs; el deploy continúa."
+  fi
+}
+
 cd "$APP_DIR"
 
 if [[ ! -d .git ]]; then
@@ -101,39 +113,29 @@ for worker in worker-afip worker-cobranzas worker-crm-email worker-crm-graph; do
 done
 pm2 save
 
-echo "==> Migración emails @ib.com + cierre de sesiones (idempotente)..."
-npx tsx --env-file=.env scripts/migrate-emails-ib-com.ts --execute || {
-  echo "WARN: migración emails falló; revisar logs."
-}
+run_optional_step "Migración emails @ib.com + cierre de sesiones (idempotente)" \
+  npx tsx --env-file=.env scripts/migrate-emails-ib-com.ts --execute
 
-echo "==> Backfill plantillaId en facturas/presupuestos (idempotente)..."
-npx tsx --env-file=.env scripts/backfill-plantillas-documentos.ts --execute || {
-  echo "WARN: backfill plantillas falló; revisar logs."
-}
+run_optional_step "Backfill plantillaId en facturas/presupuestos (idempotente)" \
+  npx tsx --env-file=.env scripts/backfill-plantillas-documentos.ts --execute
 
-echo "==> Contraseñas go-live ib2026 (excluye Leandro, idempotente)..."
-npx tsx --env-file=.env scripts/reset-passwords-ib2026.ts --execute || {
-  echo "WARN: reset contraseñas falló; revisar logs."
-}
+run_optional_step "Contraseñas go-live ib2026 (excluye Leandro, idempotente)" \
+  npx tsx --env-file=.env scripts/reset-passwords-ib2026.ts --execute
 
-echo "==> Limpieza datos demo (go-live, idempotente)..."
-npx tsx --env-file=.env scripts/prod-limpieza-demo.ts || {
-  echo "WARN: limpieza demo falló; revisar logs. Continuando deploy..."
-}
+run_optional_step "Limpieza datos demo (go-live, idempotente)" \
+  npx tsx --env-file=.env scripts/prod-limpieza-demo.ts
 
-echo "==> Tracking backfill (idempotente, obligatorio)..."
-npx tsx --env-file=.env scripts/sync-tracking-demo.ts
+run_optional_step "Tracking backfill mapa ST (idempotente)" \
+  npx tsx --env-file=.env scripts/sync-tracking-demo.ts
 
-echo "==> Listas de precios (MIN-ARS / MAY-ARS, idempotente)..."
-npx tsx --env-file=.env scripts/sync-listas-precios.ts
+run_optional_step "Listas de precios MIN-ARS / MAY-ARS (idempotente)" \
+  npx tsx --env-file=.env scripts/sync-listas-precios.ts
 
-echo "==> Integridad post-deploy..."
-npm run integridad:prod
+run_optional_step "Integridad post-deploy (reporte; no bloquea deploy)" \
+  npm run integridad:prod
 
-echo "==> Reparación segura I2/Pr3 (idempotente)..."
-npm run integridad:reparar -- --execute --only I2,Pr3 || {
-  echo "WARN: reparación integridad I2/Pr3 falló; revisar logs."
-}
+run_optional_step "Reparación segura I2/Pr3 (idempotente)" \
+  npm run integridad:reparar -- --execute --only I2,Pr3
 
 echo "==> Caddy (dominio + HTTPS, no sobrescribir con HTTP plano)..."
 bash scripts/vps-caddy-apply.sh

@@ -115,7 +115,9 @@ npx tsx --env-file=.env scripts/sync-logs-permiso.ts
 
 ## 5. Actualizaciones (releases)
 
-En el VPS, el flujo habitual es **`bash scripts/vps-deploy-from-git.sh`** (también vía GitHub Actions). Ese script incluye: pull, `validar:env-prod`, build, `test:invariants`, `integridad:prod`, reinicio de `ibiomedica` y —si están registrados en PM2— `worker-afip` / `worker-cobranzas` / `worker-crm-email` / `worker-crm-graph`, y Caddy.
+En el VPS, el flujo habitual es **`bash scripts/vps-deploy-from-git.sh`** (también vía GitHub Actions). Ese script incluye: pull, `validar:env-prod`, build, `test:invariants`, reinicio de `ibiomedica` y —si están registrados en PM2— workers, scripts idempotentes post-deploy (con **`run_optional_step`**: un fallo emite WARN y **no tumba** el deploy), `integridad:prod` (reporte, no bloqueante) y Caddy.
+
+**Pasos que sí bloquean el deploy si fallan:** `validar:env-prod`, `npm run build`, `test:invariants`, reinicio PM2 de `ibiomedica`.
 
 **Primera vez (workers aún no en PM2):** en lugar de iniciar cada worker manualmente, usar el script idempotente:
 
@@ -182,7 +184,7 @@ Con Nginx: proxy_pass a `:3000`, headers `X-Forwarded-For`, `X-Forwarded-Proto`.
 | Vencimientos cobranza | `POST /api/cron/cobranzas-vencimientos` + header `Authorization: Bearer $CRON_SECRET` | Diario |
 | OT SLA vencidas | `POST /api/cron/ots-vencidas` + header `Authorization: Bearer $CRON_SECRET` (o `npm run cron:ots-vencidas`) | Cada hora |
 | Presupuestos vencidos | `POST /api/cron/presupuestos-vencidos` + header `Authorization: Bearer $CRON_SECRET` (o `npm run cron:presupuestos-vencidos`) | Diario |
-| Integridad datos | `npm run integridad:prod` (incluido en `vps-deploy-from-git.sh`) | Post-deploy |
+| Integridad datos | `npm run integridad:prod` (post-deploy, WARN si falla — no bloquea deploy) | Post-deploy / manual |
 | Backup BD | `scripts/vps-backup-postgres.sh` | Diario 03:00 |
 | Validación env | `npm run validar:env-prod` | Pre-deploy |
 
