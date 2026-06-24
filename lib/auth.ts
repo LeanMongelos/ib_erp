@@ -31,7 +31,7 @@ import {
 } from '@/lib/auth/login-rate-limit'
 import { registrarAuditoria } from '@/lib/audit'
 import { notifyAdminLoginLockout } from '@/lib/auth/login-lock-notify'
-import { obtenerPoliticaSeguridad } from '@/lib/config/politica-seguridad'
+import { obtenerPoliticaSeguridad, obtenerSesionEpoch } from '@/lib/config/politica-seguridad'
 
 const DEFAULT_SESION_MAX_HORAS = 8
 
@@ -156,13 +156,25 @@ function buildAuthOptions(maxAge: number): NextAuthOptions {
 
     callbacks: {
       async jwt({ token, user, trigger, session }) {
+        const sesionEpochActual = await obtenerSesionEpoch()
+
         if (user) {
+          token.sesionEpoch = sesionEpochActual
           token.role        = user.role
           token.id          = user.id
           token.roles       = (user as { roles?: string[] }).roles ?? []
           token.permissions = (user as { permissions?: string[] }).permissions ?? []
           token.avatarUrl   = (user as { avatarUrl?: string | null }).avatarUrl ?? null
           token.exigirCambioPassword = (user as { exigirCambioPassword?: boolean }).exigirCambioPassword ?? false
+        } else if ((token.sesionEpoch as number | undefined) !== sesionEpochActual) {
+          delete token.id
+          delete token.sub
+          delete token.role
+          delete token.roles
+          delete token.permissions
+          delete token.avatarUrl
+          delete token.exigirCambioPassword
+          token.sesionEpoch = sesionEpochActual
         }
         if (trigger === 'update' && session) {
           const s = session as {
@@ -178,8 +190,11 @@ function buildAuthOptions(maxAge: number): NextAuthOptions {
       },
 
       async session({ session, token }) {
+        if (!token?.id) {
+          return { ...session, user: undefined, expires: new Date(0).toISOString() }
+        }
         if (token && session.user) {
-          session.user.role        = token.role
+          session.user.role        = token.role ?? ''
           session.user.id          = token.id
           session.user.roles       = token.roles ?? []
           session.user.permissions = token.permissions ?? []

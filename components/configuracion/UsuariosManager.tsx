@@ -307,7 +307,7 @@ function UsuarioModal({
         ) : (
           <div className="p-5 flex flex-col gap-3.5">
             <Input label="Nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Nombre y apellido" autoComplete="name" />
-            <Input label="Email" type="email" value={email} disabled={esEdicion} onChange={(e) => setEmail(e.target.value)} placeholder="usuario@ibiomedica.com" autoComplete="email" />
+            <Input label="Email" type="email" value={email} disabled={esEdicion} onChange={(e) => setEmail(e.target.value)} placeholder="usuario@ib.com" autoComplete="email" />
             <Input label="Teléfono" value={telefono} onChange={(e) => setTelefono(e.target.value)} placeholder="Opcional" autoComplete="tel" />
 
             <div>

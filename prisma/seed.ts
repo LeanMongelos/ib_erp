@@ -71,13 +71,13 @@ async function main() {
   const passDefault = await bcrypt.hash('admin123', 10)
 
   const organigrama: Array<{ nombre: string; email: string; rol: any; roles: string[] }> = [
-    { nombre: 'Leandro Mongelos', email: 'admin@ibiomedica.com',     rol: 'ADMIN',       roles: ['SUPERADMIN'] },
-    { nombre: 'Cesar Ramirez',    email: 'cesar@ibiomedica.com',     rol: 'ADMIN',       roles: ['GERENTE'] },
-    { nombre: 'Guillermo Aquiles',email: 'guillermo@ibiomedica.com', rol: 'VENTAS',      roles: ['ADMINISTRACION', 'VENTAS', 'FACTURACION'] },
-    { nombre: 'Lucas Alloi',      email: 'lucas@ibiomedica.com',     rol: 'FACTURACION', roles: ['FACTURACION', 'CONTABILIDAD', 'VENTAS'] },
-    { nombre: 'Nicolás',          email: 'nicolas@ibiomedica.com',   rol: 'TECNICO',     roles: ['TECNICO', 'VENTAS'] },
-    { nombre: 'Joaquín',          email: 'joaquin@ibiomedica.com',   rol: 'TECNICO',     roles: ['TECNICO', 'VENTAS'] },
-    { nombre: 'Leonardo',         email: 'leonardo@ibiomedica.com',  rol: 'TECNICO',     roles: ['TECNICO', 'VENTAS'] },
+    { nombre: 'Leandro Mongelos', email: 'admin@ib.com',     rol: 'ADMIN',       roles: ['SUPERADMIN'] },
+    { nombre: 'Cesar Ramirez',    email: 'cesar@ib.com',     rol: 'ADMIN',       roles: ['GERENTE'] },
+    { nombre: 'Guillermo Aquiles',email: 'guillermo@ib.com', rol: 'VENTAS',      roles: ['ADMINISTRACION', 'VENTAS', 'FACTURACION'] },
+    { nombre: 'Lucas Alloi',      email: 'lucas@ib.com',     rol: 'FACTURACION', roles: ['FACTURACION', 'CONTABILIDAD', 'VENTAS'] },
+    { nombre: 'Nicolás',          email: 'nicolas@ib.com',   rol: 'TECNICO',     roles: ['TECNICO', 'VENTAS'] },
+    { nombre: 'Joaquín',          email: 'joaquin@ib.com',   rol: 'TECNICO',     roles: ['TECNICO', 'VENTAS'] },
+    { nombre: 'Leonardo',         email: 'leonardo@ib.com',  rol: 'TECNICO',     roles: ['TECNICO', 'VENTAS'] },
   ]
 
   let admin: any, tecnico: any, tecnico2: any
@@ -88,9 +88,9 @@ async function main() {
       create: { nombre: u.nombre, email: u.email, password: passDefault, rol: u.rol },
     })
     await asignarRoles(usuario.id, u.roles)
-    if (u.email === 'admin@ibiomedica.com') admin = usuario
-    if (u.email === 'nicolas@ibiomedica.com') tecnico = usuario
-    if (u.email === 'joaquin@ibiomedica.com') tecnico2 = usuario
+    if (u.email === 'admin@ib.com') admin = usuario
+    if (u.email === 'nicolas@ib.com') tecnico = usuario
+    if (u.email === 'joaquin@ib.com') tecnico2 = usuario
   }
   console.log(`✅ ${organigrama.length} usuarios del organigrama`)
 
@@ -201,7 +201,7 @@ async function main() {
     const canales = await prisma.canalIntegracion.findMany()
     const canalPorTipo = new Map(canales.map((c) => [c.tipo, c.id]))
     const clientesDemo = await prisma.cliente.findMany({ take: 4, orderBy: { nombre: 'asc' } })
-    const guillermo = await prisma.usuario.findUnique({ where: { email: 'guillermo@ibiomedica.com' } })
+    const guillermo = await prisma.usuario.findUnique({ where: { email: 'guillermo@ib.com' } })
 
     const demos: Array<{
       tipo: 'WHATSAPP' | 'INSTAGRAM' | 'FACEBOOK' | 'EMAIL_IMAP'
@@ -440,7 +440,7 @@ async function main() {
   if ((await prisma.cliente.count()) > 0) {
     console.log('ℹ️  Ya existen datos de negocio; se omite la carga demo.')
     console.log('\n🎉 Seed completado (RBAC + usuarios + emisores).')
-    console.log('📧 admin@ibiomedica.com / admin123')
+    console.log('📧 admin@ib.com / admin123')
     return
   }
 
@@ -783,8 +783,8 @@ async function main() {
   if (embudoCount > 0) console.log(`✅ ${embudoCount} negocios de ejemplo en embudo CRM`)
 
   console.log('\n🎉 Seed completado exitosamente!')
-  console.log('📧 admin@ibiomedica.com / admin123')
-  console.log('📧 tecnico@ibiomedica.com / tecnico123')
+  console.log('📧 admin@ib.com / admin123')
+  console.log('📧 nicolas@ib.com / admin123')
 }
 
 main()

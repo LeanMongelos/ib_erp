@@ -8,7 +8,7 @@ const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL })
 const prisma = new PrismaClient({ adapter })
 
 await prisma.usuario.update({
-  where: { email: 'admin@ibiomedica.com' },
+  where: { email: 'admin@ib.com' },
   data:  { nombre: 'Leandro Mongelos' },
 })
 

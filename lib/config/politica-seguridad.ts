@@ -11,6 +11,7 @@ export type PoliticaSeguridadData = {
   bloqueoMinutos: number
   maxIntentosIpHora: number
   sesionMaxHoras: number
+  sesionEpoch: number
   totpHabilitado: boolean
   actualizadoEn: Date
 }
@@ -31,6 +32,15 @@ export async function obtenerPoliticaSeguridad(): Promise<PoliticaSeguridadData>
 
 export function invalidarCachePolitica() {
   cache = null
+}
+
+/** Lectura directa (sin cache) para invalidación inmediata de sesiones JWT. */
+export async function obtenerSesionEpoch(): Promise<number> {
+  const row = await prisma.politicaSeguridad.findUnique({
+    where: { id: 'default' },
+    select: { sesionEpoch: true },
+  })
+  return row?.sesionEpoch ?? 1
 }
 
 export function validarPasswordSegunPolitica(

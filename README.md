@@ -69,8 +69,8 @@ omnicanal.
 
 | Rol     | Email                      | Contraseña    |
 | ------- | -------------------------- | ------------- |
-| ADMIN   | `admin@ibiomedica.com`     | `admin123`    |
-| TÉCNICO | `tecnico@ibiomedica.com`   | `tecnico123`  |
+| ADMIN   | `admin@ib.com`     | `admin123`    |
+| TÉCNICO | `nicolas@ib.com`   | `admin123`    |
 
 > Solo desarrollo. Cambiar antes de producción.
 

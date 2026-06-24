@@ -2,7 +2,7 @@ import { prisma } from '@/lib/prisma'
 import { sendSystemEmail } from '@/lib/mail/system-mail'
 import { formatFecha, formatMonto } from '@/lib/utils'
 
-const DEFAULT_COBRANZA_EMAILS = ['guillermo@ibiomedica.com', 'lucas@ibiomedica.com']
+const DEFAULT_COBRANZA_EMAILS = ['guillermo@ib.com', 'lucas@ib.com']
 
 export async function getCobranzaNotifyEmails(): Promise<string[]> {
   const fromEnv = process.env.COBRANZA_NOTIFY_EMAIL

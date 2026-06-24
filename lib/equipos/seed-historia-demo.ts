@@ -9,7 +9,7 @@ export async function seedHistoriaClinicaDemo(equipos: { id: string; nombre: str
 
   const proveedor = await prisma.proveedor.findFirst({ where: { activo: true } })
   const tecnico = await prisma.usuario.findFirst({
-    where: { email: { in: ['nicolas@ibiomedica.com', 'joaquin@ibiomedica.com'] } },
+    where: { email: { in: ['nicolas@ib.com', 'joaquin@ib.com'] } },
   })
 
   const e0 = equipos[0]

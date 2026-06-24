@@ -344,11 +344,11 @@ async function main() {
 
   const inv = await findInventarioPorSku()
   const tecnico =
-    (await prisma.usuario.findUnique({ where: { email: 'guillermo@ibiomedica.com' } })) ??
-    (await prisma.usuario.findUnique({ where: { email: 'admin@ibiomedica.com' } }))
+    (await prisma.usuario.findUnique({ where: { email: 'guillermo@ib.com' } })) ??
+    (await prisma.usuario.findUnique({ where: { email: 'admin@ib.com' } }))
 
   if (!tecnico) {
-    console.error('❌ No se encontró técnico guillermo@ibiomedica.com ni admin@ibiomedica.com')
+    console.error('❌ No se encontró técnico guillermo@ib.com ni admin@ib.com')
     process.exit(1)
   }
 

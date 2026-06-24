@@ -90,7 +90,7 @@ async function main() {
 
   if (ok) {
     log(`\n✅ ERP listo → ${url}/login\n`)
-    log('   admin@ibiomedica.com / admin123\n')
+    log('   admin@ib.com / admin123\n')
   } else {
     log('\n❌ No respondió a tiempo. Probá: npm run dev:reset\n')
     process.exit(1)

@@ -4,7 +4,7 @@
  * Uso: node scripts/e2e-smoke.mjs [baseUrl]
  */
 const base = process.argv[2] ?? process.env.NEXTAUTH_URL ?? `http://localhost:${process.env.PORT ?? '3001'}`
-const email = process.env.E2E_EMAIL ?? 'admin@ibiomedica.com'
+const email = process.env.E2E_EMAIL ?? 'admin@ib.com'
 const password = process.env.E2E_PASSWORD ?? 'admin123'
 
 const results = []

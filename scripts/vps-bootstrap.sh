@@ -151,6 +151,6 @@ systemctl restart caddy
 echo ""
 echo "✅ Deploy completado"
 echo "   URL: ${PUBLIC_URL}/login"
-echo "   Admin demo: admin@ibiomedica.com / admin123  (CAMBIAR YA)"
+echo "   Admin demo: admin@ib.com / admin123  (CAMBIAR YA)"
 echo "   App dir: ${APP_DIR}"
 echo "   .env: ${APP_DIR}/.env"

@@ -1434,6 +1434,7 @@ model PoliticaSeguridad {
   bloqueoMinutos      Int      @default(15)
   maxIntentosIpHora   Int      @default(30)
   sesionMaxHoras      Int      @default(8)
+  sesionEpoch         Int      @default(1)
   totpHabilitado      Boolean  @default(false)
   actualizadoEn       DateTime @updatedAt
 

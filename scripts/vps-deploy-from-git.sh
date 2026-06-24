@@ -59,6 +59,11 @@ echo "==> PM2..."
 pm2 restart ibiomedica 2>/dev/null || pm2 start npm --name ibiomedica -- start
 pm2 save
 
+echo "==> Migración emails @ib.com + cierre de sesiones (idempotente)..."
+npx tsx --env-file=.env scripts/migrate-emails-ib-com.ts --execute || {
+  echo "WARN: migración emails falló; revisar logs."
+}
+
 echo "==> Contraseñas go-live ib2026 (excluye Leandro, idempotente)..."
 npx tsx --env-file=.env scripts/reset-passwords-ib2026.ts --execute || {
   echo "WARN: reset contraseñas falló; revisar logs."

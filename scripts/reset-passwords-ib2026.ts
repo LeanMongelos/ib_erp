@@ -9,11 +9,11 @@ import { prisma } from '../lib/prisma'
 
 const PASSWORD = 'ib2026'
 const MARCA = 'RESET_PASSWORDS_IB2026'
-const EXCLUIR_EMAIL = 'admin@ibiomedica.com'
+const EXCLUIR_EMAILS = ['admin@ib.com', 'admin@ibiomedica.com']
 
 function esLeandro(u: { email: string; nombre: string }): boolean {
   return (
-    u.email.toLowerCase() === EXCLUIR_EMAIL ||
+    EXCLUIR_EMAILS.includes(u.email.toLowerCase()) ||
     u.nombre.toLowerCase().includes('leandro mongelos')
   )
 }
