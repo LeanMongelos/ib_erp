@@ -31,6 +31,16 @@ export const sucursalClienteSchema = z.object({
   lng: z.number().optional().nullable(),
   notas: z.string().trim().max(500).optional().nullable(),
 })
+
+/** POST /api/clientes/[id]/sucursales — misma forma que sucursalClienteSchema + activo. */
+export const sucursalInstalacionCreateSchema = sucursalClienteSchema.extend({
+  activo: z.boolean().optional(),
+})
+
+/** PATCH /api/clientes/[id]/sucursales/[sucursalId] */
+export const sucursalInstalacionUpdateSchema = sucursalInstalacionCreateSchema
+  .partial()
+  .refine((d) => Object.keys(d).length > 0, { message: 'Nada para actualizar' })
 export const estadoOTEnum = z.enum(['ABIERTA', 'EN_PROCESO', 'CERRADA', 'VENCIDA', 'CANCELADA'])
 export const prioridadEnum = z.enum(['BAJA', 'NORMAL', 'ALTA', 'URGENTE'])
 export const tipoFacturaEnum = z.enum(['A', 'B', 'C'])
@@ -323,6 +333,11 @@ export const ordenCompraCreateSchema = z.object({
     cantidad:     z.number().int().positive(),
     precioUnit:   z.number().nonnegative(),
   })).min(1),
+})
+
+/** POST /api/inventario/generar-oc — solo proveedor; ítems se resuelven en servidor. */
+export const generarOcFaltantesSchema = z.object({
+  proveedorId: z.string().min(1, 'El proveedor es obligatorio'),
 })
 
 export const planMantenimientoCreateSchema = z.object({

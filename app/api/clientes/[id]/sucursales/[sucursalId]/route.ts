@@ -1,21 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { requirePermission, handleApiError, ApiError } from '@/lib/api-auth'
 import { plain } from '@/lib/serialize'
 import { geocodificarSucursalPorId } from '@/lib/equipos/resolver-ubicacion-equipo'
 import { geocodificarEquipoPorId } from '@/lib/equipos/resolver-ubicacion-equipo'
-
-const patchSchema = z.object({
-  nombre: z.string().trim().min(2).max(120).optional(),
-  direccion: z.string().trim().max(200).optional().nullable(),
-  numero: z.string().trim().max(20).optional().nullable(),
-  ciudad: z.string().trim().max(100).optional().nullable(),
-  lat: z.number().optional().nullable(),
-  lng: z.number().optional().nullable(),
-  notas: z.string().trim().max(500).optional().nullable(),
-  activo: z.boolean().optional(),
-}).refine((d) => Object.keys(d).length > 0, { message: 'Nada para actualizar' })
+import { sucursalInstalacionUpdateSchema } from '@/lib/validation'
 
 export async function PATCH(
   req: NextRequest,
@@ -24,7 +13,7 @@ export async function PATCH(
   try {
     await requirePermission('clientes.update')
     const { id: clienteId, sucursalId } = await params
-    const data = patchSchema.parse(await req.json())
+    const data = sucursalInstalacionUpdateSchema.parse(await req.json())
 
     const existente = await prisma.clienteSucursal.findFirst({
       where: { id: sucursalId, clienteId },

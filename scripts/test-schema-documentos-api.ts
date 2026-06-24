@@ -9,6 +9,7 @@ import {
   inventarioCreateSchema,
   inventarioUpdateSchema,
   inventarioAjusteSchema,
+  generarOcFaltantesSchema,
 } from '../lib/validation'
 
 const errors: string[] = []
@@ -80,6 +81,16 @@ function main() {
 
   inventarioAjusteSchema.parse({ cantidad: 3, tipo: 'ENTRADA' })
   pass('inventarioAjusteSchema acepta ajuste de stock')
+
+  generarOcFaltantesSchema.parse({ proveedorId: 'prov-1' })
+  pass('generarOcFaltantesSchema acepta proveedorId')
+
+  try {
+    generarOcFaltantesSchema.parse({ proveedorId: '' })
+    fail('generarOcFaltantesSchema debería rechazar proveedorId vacío')
+  } catch {
+    pass('generarOcFaltantesSchema exige proveedorId')
+  }
 
   console.log('')
   if (errors.length > 0) {

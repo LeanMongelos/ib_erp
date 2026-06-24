@@ -1,20 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { requirePermission, handleApiError, ApiError } from '@/lib/api-auth'
 import { getFaltantesStock } from '@/lib/inventario'
 import { siguienteNumeroOC, crearConNumeroUnico } from '@/lib/sequences'
 import { plain } from '@/lib/serialize'
 import { registrarAuditoria, getIp } from '@/lib/audit'
-
-const generarSchema = z.object({
-  proveedorId: z.string().min(1),
-})
+import { generarOcFaltantesSchema } from '@/lib/validation'
 
 export async function POST(req: NextRequest) {
   try {
     const actor = await requirePermission('compras.create')
-    const { proveedorId } = generarSchema.parse(await req.json())
+    const { proveedorId } = generarOcFaltantesSchema.parse(await req.json())
 
     const proveedor = await prisma.proveedor.findUnique({ where: { id: proveedorId } })
     if (!proveedor) throw new ApiError(404, 'Proveedor no encontrado')

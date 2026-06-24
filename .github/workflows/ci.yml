@@ -39,3 +39,6 @@ jobs:
 
       - name: Test invariantes (plantillas + validaciones)
         run: npm run test:invariants
+
+      # smoke:http requiere servidor Next + PostgreSQL + seed (ver npm run smoke:http).
+      # No incluido en CI estándar; usar smoke (Prisma) en VPS post-deploy.

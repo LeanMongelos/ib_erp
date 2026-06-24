@@ -4,9 +4,8 @@
  * del servidor.
  *
  * `actualizarOTsVencidas` marca como VENCIDA toda OT abierta o en proceso cuyo
- * SLA ya expiró, dejando además una entrada en el historial. Se invoca antes
- * de leer/contar OTs (dashboard, listados) para que el estado refleje la
- * realidad sin depender de un cron externo.
+ * SLA ya expiró, dejando además una entrada en el historial. Idempotente: solo
+ * procesa ABIERTA/EN_PROCESO; cron, script VPS y listados comparten esta función.
  */
 
 import { prisma } from '@/lib/prisma'

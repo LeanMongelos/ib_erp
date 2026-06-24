@@ -44,6 +44,8 @@ Documento de referencia para desarrollo, code review y agentes. Si un cambio vio
 | ID | Invariante | Resolvedor | Test |
 |----|------------|------------|------|
 | I1 | Post-deploy: integridad de datos (plantillas, equipos, OT stock, config) | `scripts/integridad-prod.ts` | `npm run integridad:prod` (VPS vía `vps-deploy-from-git.sh`) |
+| I6 | Presupuesto CONVERTIDO debe tener factura vinculada | `integridad-prod.ts` | `integridad:prod` (error) |
+| I7 | Factura EMITIDA/PAGADA/VENCIDA debe tener `plantillaId` | `integridad-prod.ts` + backfill | `integridad:prod` (error) |
 | I2 | OT ABIERTA/EN_PROCESO con SLA vencido debe pasar a VENCIDA (`actualizarOTsVencidas`) | `lib/ots.ts` + cron `POST /api/cron/ots-vencidas` | `integridad:prod` (warn) · `npm run cron:ots-vencidas` |
 | I3 | Conversaciones CRM abiertas deben vincularse a cliente (`clienteId`) | bandeja CRM / crear-lead n8n | `integridad:prod` (warn) |
 | I4 | Predeterminado activo **único** por tipo (plantilla, emisor, lista precios) | APIs config + `integridad-prod.ts` | `integridad:prod` (warn) |
@@ -61,6 +63,7 @@ Documento de referencia para desarrollo, code review y agentes. Si un cambio vio
 | ID | Invariante | Resolvedor | Test |
 |----|------------|------------|------|
 | C1 | Sucursales: misma regla en UI y API (nombre, dirección, geo) | `lib/clientes/validar-sucursales.ts` | `npm run test:validaciones` |
+| C2 | POST/PATCH sucursales usan schemas de `lib/validation.ts` | `sucursalInstalacionCreateSchema`, `sucursalInstalacionUpdateSchema` | `npm run test:invariants` |
 
 ## Facturación
 
@@ -74,6 +77,7 @@ Documento de referencia para desarrollo, code review y agentes. Si un cambio vio
 | F5 | Documento USD exige cotización: mismo mensaje UI ↔ API | `lib/moneda-documento-client.ts` | `npm run test:validaciones` |
 | F6 | Ítems con `inventarioId`: precio re-resuelto en API al guardar | `lib/precios/aplicar-precios-documento.ts` | — |
 | F7 | POST/PATCH factura y POST/PATCH presupuesto/inventario usan schemas de `lib/validation.ts` | `facturaCreateSchema`, `facturaUpdateSchema`, etc. | `npm run test:invariants` |
+| F8 | POST generar OC desde faltantes usa `generarOcFaltantesSchema` | `lib/validation.ts` | `npm run test:invariants` |
 
 ## Auth y permisos
 
@@ -101,7 +105,7 @@ Documento de referencia para desarrollo, code review y agentes. Si un cambio vio
 | `npm run test:validaciones` | Reglas sucursales clientes + equipos en factura |
 | `npm run smoke` | Prisma + seeds contables (con DB) |
 | `npm run integridad:prod` | Chequeos de datos en producción (post-deploy) |
-| `npm run smoke:http` | Login HTTP + APIs/páginas (servidor levantado) |
+| `npm run smoke:http` | Login HTTP + APIs/páginas (servidor levantado; no en CI estándar) |
 | `backfill-plantillas-documentos.ts --execute` | Snapshot plantilla en docs viejos (prod) |
 
 ## Anti-patrones (no hacer)

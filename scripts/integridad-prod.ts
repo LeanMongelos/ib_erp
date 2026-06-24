@@ -50,6 +50,49 @@ async function checkPlantillaSnapshot() {
   }
 }
 
+async function checkFacturasEmitidasPlantilla() {
+  const count = await prisma.factura.count({
+    where: {
+      plantillaId: null,
+      estado: { in: ['EMITIDA', 'PAGADA', 'VENCIDA'] },
+    },
+  })
+  if (count === 0) {
+    ok('Facturas emitidas/cobradas: todas con plantillaId')
+  } else {
+    error(`${count} factura(s) EMITIDA/PAGADA/VENCIDA sin plantillaId — correr backfill-plantillas-documentos`)
+  }
+}
+
+async function checkPresupuestoConvertidoSinFactura() {
+  const count = await prisma.presupuesto.count({
+    where: {
+      estado: 'CONVERTIDO',
+      factura: { is: null },
+    },
+  })
+  if (count === 0) {
+    ok('Presupuestos CONVERTIDO: todos vinculados a factura')
+  } else {
+    error(`${count} presupuesto(s) CONVERTIDO sin factura vinculada`)
+  }
+}
+
+async function checkPresupuestosVigenciaVencida() {
+  const ahora = new Date()
+  const count = await prisma.presupuesto.count({
+    where: {
+      estado: { in: ['ENVIADO', 'APROBADO'] },
+      fechaVencimiento: { lt: ahora },
+    },
+  })
+  if (count === 0) {
+    ok('Presupuestos ENVIADO/APROBADO: ninguno con vigencia vencida sin marcar VENCIDO')
+  } else {
+    warn(`${count} presupuesto(s) ENVIADO/APROBADO con fechaVencimiento pasada — revisar estado VENCIDO`)
+  }
+}
+
 async function checkEquiposSinSucursal() {
   const count = await prisma.itemFactura.count({
     where: {
@@ -236,6 +279,9 @@ async function main() {
 
   await checkPlantillaPredeterminada()
   await checkPlantillaSnapshot()
+  await checkFacturasEmitidasPlantilla()
+  await checkPresupuestoConvertidoSinFactura()
+  await checkPresupuestosVigenciaVencida()
   await checkEquiposSinSucursal()
   await checkOtCierreStock()
   await checkOtSlaVencido()
