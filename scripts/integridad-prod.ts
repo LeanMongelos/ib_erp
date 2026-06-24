@@ -414,6 +414,45 @@ async function checkPagosChequeSinCartera() {
   }
 }
 
+async function checkColaAfip() {
+  const { evaluarSaludColaAfip } = await import('../lib/afip/health-cola')
+  const salud = await evaluarSaludColaAfip()
+
+  if (!salud.redisConfigurado) {
+    ok('Cola AFIP: REDIS_URL no configurado (emisión síncrona vía API)')
+    return
+  }
+
+  if (salud.colaError) {
+    warn(`Cola AFIP: no se pudo consultar Redis/BullMQ — ${salud.colaError}`)
+    return
+  }
+
+  if ((salud.colaFailed ?? 0) > 0) {
+    warn(`${salud.colaFailed} job(s) fallidos en cola afip-emision — revisar worker-afip y SystemLog`)
+  }
+
+  if ((salud.colaWaiting ?? 0) > 0 && (salud.colaActive ?? 0) === 0) {
+    warn(
+      `${salud.colaWaiting} emisión(es) en cola sin worker activo — verificar pm2 worker-afip`,
+    )
+  }
+
+  if (salud.pendientesCae > 0) {
+    warn(
+      `${salud.pendientesCae} factura(s) PENDIENTE_CAE — ${salud.pendientesCaeAntiguas} con más de 30 min`,
+    )
+  }
+
+  if (
+    (salud.colaFailed ?? 0) === 0 &&
+    !((salud.colaWaiting ?? 0) > 0 && (salud.colaActive ?? 0) === 0) &&
+    salud.pendientesCae === 0
+  ) {
+    ok('Cola AFIP: sin jobs fallidos ni emisiones atascadas')
+  }
+}
+
 async function checkChequesDuplicadosActivos() {
   const dupes = await prisma.$queryRaw<Array<{ numero: string; banco: string; cnt: bigint }>>`
     SELECT "numero", "banco", COUNT(*)::bigint AS cnt
@@ -453,6 +492,7 @@ async function main() {
   await checkChequesCarteraVencidos()
   await checkPagosChequeSinCartera()
   await checkChequesDuplicadosActivos()
+  await checkColaAfip()
 
   const errs = resultados.filter((r) => r.nivel === 'error')
   const warns = resultados.filter((r) => r.nivel === 'warn')

@@ -65,6 +65,10 @@ export function CobranzasForm({ clientes }: { clientes: Cliente[] }) {
       if (!chequeNumero.trim()) { toast.error('Indicá el número de cheque'); return }
       if (!chequeVencimiento) { toast.error('Indicá la fecha de vencimiento del cheque'); return }
     }
+    if (medio === 'TARJETA' && !referencia.trim()) {
+      toast.error('Indicá el N° de cupón o lote de la tarjeta')
+      return
+    }
 
     setLoading(true)
     try {
@@ -121,10 +125,19 @@ export function CobranzasForm({ clientes }: { clientes: Cliente[] }) {
           />
           <div className="col-span-2">
             <Input
-              label="Referencia"
+              label={medio === 'TARJETA' ? 'N° cupón / lote' : medio === 'OTRO' ? 'Referencia / acreditación' : 'Referencia'}
               value={referencia}
               onChange={(e) => setReferencia(e.target.value)}
-              placeholder={medio === 'CHEQUE' ? 'Opcional si completás N° cheque abajo' : 'N° transferencia…'}
+              placeholder={
+                medio === 'CHEQUE'
+                  ? 'Opcional si completás N° cheque abajo'
+                  : medio === 'TARJETA'
+                    ? 'N° cupón, lote o terminal…'
+                    : medio === 'OTRO'
+                      ? 'Detalle del pago o comprobante…'
+                      : 'N° transferencia…'
+              }
+              required={medio === 'TARJETA'}
               autoComplete="off"
             />
           </div>

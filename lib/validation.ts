@@ -333,10 +333,17 @@ export const pagoCreateSchema = z.object({
 }).refine(
   (d) => d.medio !== 'CHEQUE' || !!d.cheque,
   { message: 'Completá los datos del cheque', path: ['cheque'] },
+).refine(
+  (d) => d.medio !== 'TARJETA' || (d.referencia?.trim().length ?? 0) > 0,
+  { message: 'Indicá el N° de cupón o lote de la tarjeta', path: ['referencia'] },
 )
 
 export const chequeDepositoSchema = z.object({
   accion: z.enum(['depositar', 'rechazar', 'anular']),
+})
+
+export const pagoAccionSchema = z.object({
+  accion: z.enum(['anular', 'conciliar']),
 })
 
 export const ordenCompraCreateSchema = z.object({
@@ -404,6 +411,16 @@ export const inventarioAjusteSchema = z.object({
   cantidad: z.number().int().positive('La cantidad debe ser mayor a 0'),
   tipo:     z.enum(['ENTRADA', 'SALIDA', 'AJUSTE']),
   motivo:   z.string().trim().max(200).optional(),
+})
+
+export const inventarioTransferenciaSchema = z.object({
+  depositoOrigenId:  z.string().min(1, 'Seleccioná depósito de origen'),
+  depositoDestinoId: z.string().min(1, 'Seleccioná depósito de destino'),
+  cantidad:          z.number().int().positive('La cantidad debe ser mayor a 0'),
+  motivo:            z.string().trim().max(200).optional(),
+}).refine((d) => d.depositoOrigenId !== d.depositoDestinoId, {
+  message: 'Origen y destino deben ser distintos',
+  path: ['depositoDestinoId'],
 })
 
 export const inventarioUpdateSchema = inventarioCreateSchema.partial().extend({

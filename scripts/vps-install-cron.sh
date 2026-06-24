@@ -46,6 +46,9 @@ PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 # Vencimientos cobranza — diario 06:00
 0 6 * * * ${CRON_USER} bash -c 'set -a; source ${APP_DIR}/.env; set +a; curl -sf -X POST ${APP_URL}/api/cron/cobranzas-vencimientos -H "Authorization: Bearer \$CRON_SECRET"' >> /var/log/ibiomedica-cron.log 2>&1
 
+# Emails preventivo próximo — diario 06:30
+30 6 * * * ${CRON_USER} bash -c 'set -a; source ${APP_DIR}/.env; set +a; curl -sf -X POST ${APP_URL}/api/cron/notificaciones-operativas -H "Authorization: Bearer \$CRON_SECRET"' >> /var/log/ibiomedica-cron.log 2>&1
+
 # Alertas stock mínimo — diario 07:00
 0 7 * * * ${CRON_USER} bash -c 'set -a; source ${APP_DIR}/.env; set +a; curl -sf -X POST ${APP_URL}/api/cron/stock-minimo -H "Authorization: Bearer \$CRON_SECRET"' >> /var/log/ibiomedica-cron.log 2>&1
 

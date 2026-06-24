@@ -26,7 +26,7 @@ function assertLimpiezaDemoFkOrder() {
 }
 
 function assertSyncTrackingSyntax() {
-  const files = ['scripts/sync-tracking-demo.ts', 'scripts/prod-limpieza-demo.ts']
+  const files = ['scripts/sync-tracking-demo.ts', 'scripts/prod-limpieza-demo.ts', 'scripts/sync-permisos-post-deploy.ts']
   for (const file of files) {
     const code = readFileSync(file, 'utf8')
     transformSync(code, { loader: 'ts', sourcefile: file })

@@ -15,13 +15,16 @@ import type { OrdenTrabajo } from '@/types'
 import { mensajeErrorDesconocido, mensajeErrorRespuesta } from '@/lib/errores'
 import { InventarioPicker, type InventarioOption } from '@/components/inventario/InventarioPicker'
 import { validarRepuestosOTCliente } from '@/lib/ots/repuestos-ot-client'
+import { transicionesOTPermitidas, validarTransicionOT } from '@/lib/ots/transiciones-client'
+import type { EstadoOT } from '@/types'
 
-const ESTADOS_TRANSICION = [
-  { value: 'ABIERTA',    label: 'Abierta' },
-  { value: 'EN_PROCESO', label: 'En proceso' },
-  { value: 'CERRADA',    label: 'Cerrada' },
-  { value: 'CANCELADA',  label: 'Cancelada' },
-]
+const ESTADO_LABEL: Record<EstadoOT, string> = {
+  ABIERTA: 'Abierta',
+  EN_PROCESO: 'En proceso',
+  CERRADA: 'Cerrada',
+  VENCIDA: 'Vencida',
+  CANCELADA: 'Cancelada',
+}
 
 export function OTDetalle({ ot }: { ot: any }) {
   const router = useRouter()
@@ -34,6 +37,11 @@ export function OTDetalle({ ot }: { ot: any }) {
 
   async function cambiarEstado(nuevoEstado: string) {
     setEstadoMenu(false)
+    const err = validarTransicionOT(ot.estado as EstadoOT, nuevoEstado as EstadoOT)
+    if (err) {
+      toast.error(err)
+      return
+    }
     setLoading(true)
     try {
       const res = await fetch(`/api/ots/${ot.id}`, {
@@ -162,13 +170,13 @@ export function OTDetalle({ ot }: { ot: any }) {
               </Button>
               {estadoMenu && (
                 <div className="absolute right-0 top-full mt-1 w-40 bg-white border border-[#e9ebef] rounded-[10px] shadow-lg py-1 z-50">
-                  {ESTADOS_TRANSICION.filter((e) => e.value !== ot.estado).map((e) => (
+                  {transicionesOTPermitidas(ot.estado as EstadoOT).map((value) => (
                     <button
-                      key={e.value}
-                      onClick={() => cambiarEstado(e.value)}
+                      key={value}
+                      onClick={() => cambiarEstado(value)}
                       className="w-full text-left px-4 py-2.5 text-[12.5px] font-medium text-[#3a4150] hover:bg-gray-50"
                     >
-                      {e.label}
+                      {ESTADO_LABEL[value]}
                     </button>
                   ))}
                 </div>
@@ -179,7 +187,11 @@ export function OTDetalle({ ot }: { ot: any }) {
               variant="dark"
               size="sm"
               onClick={() => cambiarEstado('CERRADA')}
-              disabled={loading || ot.estado === 'CERRADA'}
+              disabled={
+                loading ||
+                ot.estado === 'CERRADA' ||
+                !transicionesOTPermitidas(ot.estado as EstadoOT).includes('CERRADA')
+              }
             >
               Cerrar OT
             </Button>

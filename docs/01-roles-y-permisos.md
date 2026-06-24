@@ -6,6 +6,10 @@ Modelar permisos **granulares por acción** y permitir que un usuario tenga
 **varios roles a la vez** (el organigrama real lo exige). Solo Administrador y
 Gerente pueden dar de alta usuarios; cualquiera puede editar su propio perfil.
 
+**Fuente de verdad en código:** `lib/rbac.ts` (`PERMISSIONS`, `ROLE_PERMISSIONS`).
+
+Post-deploy (permisos nuevos sin pisar custom UI): `npx tsx --env-file=.env scripts/sync-permisos-post-deploy.ts`.
+
 ---
 
 ## 1. Organigrama actual → roles del sistema
@@ -67,53 +71,63 @@ Se elige **RBAC con permisos explícitos** (no solo enum de rol) porque:
 
 ## 3. Catálogo de permisos (clave `modulo.accion`)
 
-| Módulo        | Permisos                                                                 |
-| ------------- | ------------------------------------------------------------------------ |
-| `usuarios`    | `read`, `create`, `update`, `deactivate`, `assign_roles`                 |
-| `perfil`      | `edit_own` (todos)                                                        |
-| `clientes`    | `read`, `create`, `update`, `deactivate`, `export`                        |
-| `proveedores` | `read`, `create`, `update`, `deactivate`                                  |
-| `presupuestos`| `read`, `create`, `update`, `send`, `approve`, `delete`                   |
-| `facturas`    | `read`, `create`, `emit_afip`, `cancel`, `credit_note`, `export`         |
-| `cobranzas`   | `read`, `register_payment`, `reconcile`                                   |
-| `inventario`  | `read`, `create`, `update`, `adjust_stock`, `transfer`                    |
-| `compras`     | `read`, `create`, `approve`, `receive`                                    |
-| `servicio`    | `read`, `create`, `update`, `close`, `assign`                            |
-| `preventivo`  | `read`, `schedule`, `complete`                                            |
-| `crm`         | `read`, `reply`, `assign`, `manage_channels`                              |
-| `reportes`    | `read_comercial`, `read_financiero`, `read_operativo`                     |
-| `config`      | `read`, `update`, `manage_integrations`, `manage_billing_templates`       |
-| `auditoria`   | `read`                                                                    |
+Sincronizado con `lib/rbac.ts` (jun 2026).
+
+| Módulo         | Permisos |
+| -------------- | -------- |
+| `usuarios`     | `read`, `create`, `update`, `deactivate`, `assign_roles` |
+| `perfil`       | `edit_own` |
+| `clientes`     | `read`, `create`, `update`, `deactivate`, `export` |
+| `proveedores`  | `read`, `create`, `update`, `deactivate` |
+| `presupuestos` | `read`, `create`, `update`, `send`, `approve`, `delete` |
+| `facturas`     | `read`, `create`, `emit_afip`, `cancel`, `credit_note`, `export` |
+| `cobranzas`    | `read`, `register_payment`, `reconcile`, `cheques.read`, `cheques.manage` |
+| `inventario`   | `read`, `create`, `update`, `adjust_stock`, `transfer` |
+| `compras`      | `read`, `create`, `approve`, `receive` |
+| `servicio`     | `read`, `create`, `update`, `close`, `assign` |
+| `preventivo`   | `read`, `schedule`, `complete` |
+| `tracking`     | `read`, `create` |
+| `crm`          | `read`, `reply`, `assign`, `manage_channels` |
+| `reportes`     | `read_comercial`, `read_financiero`, `read_operativo`, `read_fiscal` |
+| `emisores`     | `read`, `create`, `update`, `delete` |
+| `config`       | `read`, `update`, `manage_accounting`, `manage_integrations`, `manage_billing_templates` |
+| `auditoria`    | `read` |
+| `logs`         | `read` |
+| `listas_precios` | `read`, `manage` |
+
+`SUPERADMIN` tiene comodín `*` (todos los permisos).
 
 ---
 
 ## 4. Matriz Rol × Permiso (resumen)
 
-| Permiso \ Rol            | SUPERADMIN | GERENTE | ADMINISTRACION | VENTAS | FACTURACION | CONTABILIDAD | TECNICO |
-| ------------------------ | :--------: | :-----: | :------------: | :----: | :---------: | :----------: | :-----: |
-| usuarios.create          | ✅         | ✅      | ❌             | ❌     | ❌          | ❌           | ❌      |
-| usuarios.assign_roles    | ✅         | ✅      | ❌             | ❌     | ❌          | ❌           | ❌      |
-| perfil.edit_own          | ✅         | ✅      | ✅             | ✅     | ✅          | ✅           | ✅      |
-| clientes.create/update   | ✅         | ✅      | ✅             | ✅     | ❌          | ❌           | ❌      |
-| proveedores.*            | ✅         | ✅      | ✅             | 👁️read | ❌          | 👁️read       | 👁️read  |
-| presupuestos.create      | ✅         | ✅      | ✅             | ✅     | ✅          | ❌           | ✅      |
-| presupuestos.approve     | ✅         | ✅      | ✅             | ❌     | ❌          | ❌           | ❌      |
-| facturas.emit_afip       | ✅         | ✅      | ✅             | ❌     | ✅          | ✅           | ❌      |
-| facturas.cancel          | ✅         | ✅      | ❌             | ❌     | ✅          | ✅           | ❌      |
-| cobranzas.register_payment| ✅        | ✅      | ✅             | ❌     | ✅          | ✅           | ❌      |
-| inventario.adjust_stock  | ✅         | ✅      | ✅             | ❌     | ❌          | ❌           | ✅      |
-| compras.approve          | ✅         | ✅      | ✅             | ❌     | ❌          | ✅           | ❌      |
-| compras.create           | ✅         | ✅      | ✅             | ✅     | ❌          | ❌           | ✅      |
-| servicio.*               | ✅         | ✅      | 👁️read         | ✅     | ❌          | ❌           | ✅      |
-| preventivo.schedule      | ✅         | ✅      | ✅             | ✅     | ❌          | ❌           | ✅      |
-| crm.reply                | ✅         | ✅      | ✅             | ✅     | ✅          | ❌           | ✅      |
-| crm.manage_channels      | ✅         | ✅      | ❌             | ❌     | ❌          | ❌           | ❌      |
-| reportes.read_financiero | ✅         | ✅      | ✅             | ❌     | ✅          | ✅           | ❌      |
-| config.*                 | ✅         | 👁️read  | ❌             | ❌     | ❌          | ❌           | ❌      |
-| auditoria.read           | ✅         | ✅      | ❌             | ❌     | ❌          | ❌           | ❌      |
+| Permiso \ Rol | SUPER | GER | ADM | VEN | FACT | CONT | TEC |
+| --- | :-: | :-: | :-: | :-: | :-: | :-: | :-: |
+| usuarios.create / assign_roles | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| clientes.create/update | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| clientes.export | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| proveedores.* | ✅ | ✅ | ✅ | 👁️ | ❌ | 👁️ | 👁️ |
+| presupuestos.approve | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| facturas.emit_afip | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ❌ |
+| facturas.cancel / credit_note | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ | ❌ |
+| cobranzas.register_payment | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ❌ |
+| cobranzas.reconcile | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ | ❌ |
+| cobranzas.cheques.* | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ❌ |
+| inventario.adjust_stock | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ |
+| inventario.transfer | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| compras.approve | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ | ❌ |
+| servicio.* (full) | ✅ | ✅ | 👁️ | parcial | ❌ | ❌ | ✅ |
+| preventivo.schedule | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ |
+| tracking.* | ✅ | ✅ | 👁️ | ✅ | ❌ | ❌ | ✅ |
+| crm.reply | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ |
+| crm.manage_channels | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| reportes.read_financiero / fiscal | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ❌ |
+| emisores.create | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ |
+| config.read / manage_accounting | ✅ | ✅/parcial | ❌ | ❌ | ❌ | ✅ | ❌ |
+| auditoria.read / logs.read | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| listas_precios.manage | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 
-> 👁️read = solo lectura. La matriz completa y editable vive en
-> Configuración → Roles (`config.update`).
+> 👁️ = solo lectura donde aplica. Matriz editable en Configuración → Roles (`config.update`).
 
 ---
 
@@ -150,8 +164,11 @@ sequenceDiagram
 - **Editar perfil propio** (`perfil.edit_own`, todos): nombre visible, teléfono,
   avatar, contraseña (con verificación de la actual), preferencias (idioma,
   notificaciones). **No** puede cambiar sus propios roles.
-- **Seguridad**: política de contraseñas, 2FA opcional (TOTP), bloqueo tras N
-  intentos, registro de `ultimoAcceso` e historial de sesiones.
+- **Seguridad**: política de contraseñas, bloqueo tras N intentos, registro de
+  `ultimoAcceso` e historial de sesiones.
+- **2FA (TOTP)**: **fuera de alcance** en esta versión del ERP. No hay flujo de
+  enrolamiento ni validación en login; documentado para evitar confusión con la
+  política de seguridad futura.
 - Toda acción sobre usuarios queda en `AuditLog`.
 
 ---
@@ -164,5 +181,6 @@ sequenceDiagram
 | **Carga rápida de sucursal al facturar** | `clientes.update` **o** `facturas.create` |
 | Ver historial cliente (bandeja CRM) | `crm.read` **o** `clientes.read` |
 | Vincular conversación a cliente (solo `clienteId`) | `crm.reply` |
+| Listar facturas (cobranzas) | `facturas.read` **o** `cobranzas.read` |
 
 Esto permite que facturación cree sedes de instalación sin permiso completo de edición de clientes, siempre que tenga `facturas.create`.

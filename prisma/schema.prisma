@@ -203,6 +203,7 @@ model Usuario {
   equiposInstalados       Equipo[] @relation("EquipoInstaladoPor")
   entradasHistoriaClinica HistoriaClinicaEntrada[]
   historialEmbudo         HistorialEmbudo[]
+  pagosConciliados        Pago[] @relation("PagosConciliados")
 
   @@map("usuarios")
 }
@@ -1094,13 +1095,19 @@ model Pago {
   medio      MedioPago @default(TRANSFERENCIA)
   fecha      DateTime  @default(now())
   referencia String?
-  notas      String?
-  creadoEn   DateTime  @default(now())
+  notas             String?
+  anuladoEn         DateTime?
+  conciliadoEn      DateTime?
+  conciliadoPorId   String?
+  creadoEn          DateTime  @default(now())
 
-  cliente     Cliente       @relation(fields: [clienteId], references: [id])
-  imputaciones PagoFactura[]
-  cheque      ChequeCobranza?
+  cliente       Cliente       @relation(fields: [clienteId], references: [id])
+  conciliadoPor Usuario?      @relation("PagosConciliados", fields: [conciliadoPorId], references: [id])
+  imputaciones  PagoFactura[]
+  cheque        ChequeCobranza?
 
+  @@index([anuladoEn])
+  @@index([conciliadoEn])
   @@map("pagos")
 }
 

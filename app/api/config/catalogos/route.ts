@@ -20,6 +20,16 @@ export async function GET(req: NextRequest) {
       return NextResponse.json(plain(categorias))
     }
 
+    if (tipo === 'depositos') {
+      await requirePermission('inventario.read')
+      const depositos = await prisma.deposito.findMany({
+        where: { activo: true },
+        orderBy: { nombre: 'asc' },
+        select: { id: true, nombre: true, direccion: true },
+      })
+      return NextResponse.json(plain(depositos))
+    }
+
     await requirePermission('config.update')
     const [categorias, depositos, condicionesPago] = await Promise.all([
       prisma.categoriaInventarioCat.findMany({ orderBy: [{ orden: 'asc' }, { nombre: 'asc' }] }),

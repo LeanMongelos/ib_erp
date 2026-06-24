@@ -5,22 +5,9 @@
 import { prisma } from '@/lib/prisma'
 import type { Prisma } from '@prisma/client'
 import { imputarPagoAVencimientos, revertirImputacionVencimientos } from '@/lib/cobranzas/vencimientos'
+import { recalcularEstadoFacturaTrasReversion } from '@/lib/cobranzas/estado-factura-cobranza'
 
 type Tx = Prisma.TransactionClient
-
-async function recalcularEstadoFacturaTrasRechazo(facturaId: string, tx: Tx) {
-  const vencida = await tx.vencimientoCobranza.count({
-    where: {
-      facturaId,
-      estado: { in: ['PENDIENTE', 'AVISO_ENVIADO'] },
-      fechaVencimiento: { lt: new Date() },
-    },
-  })
-  await tx.factura.update({
-    where: { id: facturaId },
-    data: { estado: vencida > 0 ? 'VENCIDA' : 'EMITIDA', fechaPago: null },
-  })
-}
 
 export async function confirmarFacturasPagadasPorImputaciones(
   facturaIds: string[],
@@ -90,7 +77,7 @@ export async function marcarChequeRechazado(chequeId: string) {
 
     for (const imp of cheque.pago.imputaciones) {
       await revertirImputacionVencimientos(imp.facturaId, imp.monto, tx)
-      await recalcularEstadoFacturaTrasRechazo(imp.facturaId, tx)
+      await recalcularEstadoFacturaTrasReversion(imp.facturaId, tx)
     }
 
     await tx.chequeCobranza.update({
@@ -113,7 +100,7 @@ export async function marcarChequeAnulado(chequeId: string) {
 
     for (const imp of cheque.pago.imputaciones) {
       await revertirImputacionVencimientos(imp.facturaId, imp.monto, tx)
-      await recalcularEstadoFacturaTrasRechazo(imp.facturaId, tx)
+      await recalcularEstadoFacturaTrasReversion(imp.facturaId, tx)
     }
 
     await tx.chequeCobranza.update({

@@ -19,6 +19,7 @@ import type { EstadoOT } from '@/types'
 import { formatMonto } from '@/lib/utils'
 import { useCan } from '@/components/auth/useCan'
 import { mensajeErrorDesconocido, mensajeErrorJson, mensajeErrorRespuesta } from '@/lib/errores'
+import { validarTransicionOT } from '@/lib/ots/transiciones-client'
 
 interface PresupuestoVinculado {
   id: string
@@ -117,6 +118,11 @@ export function OTFlujoComercial({
   }
 
   async function cambiarEstadoOt(nuevoEstado: string, mensaje: string) {
+    const err = validarTransicionOT(otEstado as EstadoOT, nuevoEstado as EstadoOT)
+    if (err) {
+      toast.error(err)
+      return
+    }
     try {
       const res = await fetch(`/api/ots/${otId}`, {
         method: 'PATCH',

@@ -2,13 +2,15 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { Search } from 'lucide-react'
+import { toast } from 'sonner'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { MEDIO_PAGO } from '@/lib/form-options'
 import { formatFecha, formatMonto } from '@/lib/utils'
-import { mensajeErrorRespuesta } from '@/lib/errores'
+import { mensajeErrorDesconocido, mensajeErrorJson, mensajeErrorRespuesta } from '@/lib/errores'
+import { useCan } from '@/components/auth/useCan'
 
 interface Cliente {
   id: string
@@ -24,11 +26,15 @@ interface PagoRow {
   cliente: { id: string; nombre: string }
   imputaciones: Array<{ monto: number; factura: { numero: string } }>
   registradoPor: { id: string; nombre: string } | null
+  conciliadoEn: string | null
+  conciliadoPor: { id: string; nombre: string } | null
 }
 
 const MEDIO_LABEL = Object.fromEntries(MEDIO_PAGO.map((m) => [m.value, m.label]))
 
 export function PagosRegistradosList({ clientes }: { clientes: Cliente[] }) {
+  const puedeAnular = useCan('cobranzas.register_payment')
+  const puedeConciliar = useCan('cobranzas.reconcile')
   const [pagos, setPagos] = useState<PagoRow[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -38,6 +44,7 @@ export function PagosRegistradosList({ clientes }: { clientes: Cliente[] }) {
   const [referencia, setReferencia] = useState('')
   const [fechaDesde, setFechaDesde] = useState('')
   const [fechaHasta, setFechaHasta] = useState('')
+  const [accionId, setAccionId] = useState<string | null>(null)
 
   const cargar = useCallback(async (p = page) => {
     setLoading(true)
@@ -75,6 +82,32 @@ export function PagosRegistradosList({ clientes }: { clientes: Cliente[] }) {
     if (p.imputaciones.length === 0) return '—'
     return p.imputaciones.map((i) => i.factura.numero).join(', ')
   }
+
+  async function accionPago(id: string, accion: 'anular' | 'conciliar') {
+    const msg =
+      accion === 'anular'
+        ? '¿Anular este pago? Se revertirá la imputación en las facturas.'
+        : '¿Marcar este pago como conciliado con extracto bancario?'
+    if (!confirm(msg)) return
+    setAccionId(id)
+    try {
+      const res = await fetch(`/api/cobranzas/pagos/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accion }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(mensajeErrorJson(data, 'No se pudo completar la acción'))
+      toast.success(accion === 'anular' ? 'Pago anulado' : 'Pago conciliado')
+      cargar(page)
+    } catch (e) {
+      toast.error(mensajeErrorDesconocido(e, 'No se pudo completar la acción'))
+    } finally {
+      setAccionId(null)
+    }
+  }
+
+  const puedeAnularPago = (medio: string) => medio !== 'CHEQUE'
 
   return (
     <div className="flex flex-col gap-4">
@@ -132,7 +165,7 @@ export function PagosRegistradosList({ clientes }: { clientes: Cliente[] }) {
             <table className="w-full">
               <thead>
                 <tr>
-                  {['Fecha', 'Cliente', 'Monto', 'Medio', 'Referencia', 'Facturas imputadas', 'Registrado por'].map((h, i) => (
+                  {['Fecha', 'Cliente', 'Monto', 'Medio', 'Referencia', 'Facturas imputadas', 'Registrado por', 'Conciliación', 'Acciones'].map((h, i) => (
                     <th
                       key={h}
                       className={`px-5 py-2.5 text-[10px] font-bold text-[#8a909a] uppercase border-b whitespace-nowrap ${
@@ -167,6 +200,39 @@ export function PagosRegistradosList({ clientes }: { clientes: Cliente[] }) {
                     </td>
                     <td className="px-5 py-3 text-[12.5px] text-[#6b7280] border-b whitespace-nowrap">
                       {p.registradoPor?.nombre ?? '—'}
+                    </td>
+                    <td className="px-5 py-3 text-[12.5px] border-b whitespace-nowrap">
+                      {p.conciliadoEn ? (
+                        <span className="text-green-700 font-semibold" title={p.conciliadoPor?.nombre ?? undefined}>
+                          {formatFecha(p.conciliadoEn)}
+                        </span>
+                      ) : (
+                        <span className="text-[#9aa1ab]">Pendiente</span>
+                      )}
+                    </td>
+                    <td className="px-5 py-3 text-[12.5px] border-b whitespace-nowrap">
+                      <div className="flex gap-1">
+                        {puedeConciliar && !p.conciliadoEn && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={accionId === p.id}
+                            onClick={() => accionPago(p.id, 'conciliar')}
+                          >
+                            Conciliar
+                          </Button>
+                        )}
+                        {puedeAnular && puedeAnularPago(p.medio) && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={accionId === p.id}
+                            onClick={() => accionPago(p.id, 'anular')}
+                          >
+                            Anular
+                          </Button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

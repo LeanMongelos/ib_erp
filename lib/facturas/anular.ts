@@ -75,7 +75,17 @@ export async function procesarAnulacionFactura(facturaId: string, usuarioId?: st
     include: {
       items: true,
       emisor: true,
-      pagos: true,
+      pagos: {
+        where: {
+          pago: {
+            anuladoEn: null,
+            OR: [
+              { medio: { not: 'CHEQUE' } },
+              { cheque: { estado: { in: ['EN_CARTERA', 'DEPOSITADO'] } } },
+            ],
+          },
+        },
+      },
       notasCredito: {
         where: { estado: { in: ['EMITIDA', 'PENDIENTE_CAE', 'BORRADOR'] } },
       },

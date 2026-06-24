@@ -29,6 +29,8 @@ Documento de referencia para desarrollo, code review y agentes. Si un cambio vio
 | O2 | Cierre OT: stock validado y descontado en **una transacción** | `app/api/ots/[id]/route.ts` | — |
 | O3 | Repuestos con `inventarioId`: precio re-resuelto en API | `lib/ots/repuestos-ot.ts` | — |
 | O4 | SLA vencido: cron HTTP o script VPS ejecuta `actualizarOTsVencidas` (idempotente) | `app/api/cron/ots-vencidas` · `scripts/actualizar-ots-vencidas.ts` | — |
+| O5 | Transiciones OT validadas en UI y API | `lib/ots/transiciones-client.ts` | `test-ots-transiciones.ts` |
+| O6 | GET `/api/ots` acepta filtros de listado (`q`, `estado`, `tecnicoId`, `sla`, …) | `app/api/ots/route.ts` | — |
 
 ## Integraciones / n8n
 
@@ -59,6 +61,9 @@ Documento de referencia para desarrollo, code review y agentes. Si un cambio vio
 | Co2 | Pago `CHEQUE` tiene fila en `cheques_cobranza`; cartera vencida alerta en integridad | `lib/cobranzas/cheques.ts` · `integridad-prod.ts` | `integridad:prod` (warn/error) |
 | Co3 | OC en `BORRADOR` no se recepciona; aprobación → `ENVIADA` | `app/api/ordenes-compra/[id]/aprobar` · recibir | manual |
 | I10 | Emisor `PRODUCCION` activo exige `ADMIN_NOTIFY_EMAIL` + SMTP (o EMAIL_IMAP) para alertas AFIP | `lib/admin/go-live-status.ts` · `validar-env-prod` | `go-live:check` (warn/fail) |
+| I11 | Cola AFIP (Redis): jobs fallidos o PENDIENTE_CAE atascadas alertan en integridad | `lib/afip/health-cola.ts` · `integridad-prod.ts` | `integridad:prod` (warn) |
+| Inv1 | Transferencia entre depósitos (`TRANSFERENCIA`) no altera stock global | `lib/inventario.ts` · POST `.../transferir` | manual |
+| N1 | Email OT SLA / preventivo respeta `ReglaNotificacion` activa; dedup diaria | `lib/notificaciones/procesar-emails-operativos.ts` | cron manual |
 
 ## Presupuestos
 
@@ -93,6 +98,8 @@ Documento de referencia para desarrollo, code review y agentes. Si un cambio vio
 | F11 | Tras emisión `EMITIDA`, email al cliente con PDF adjunto si tiene email y no opt-out (`[no-email-factura]` en notas); no bloquea emisión | `lib/facturas/notify-cliente-emitida.ts` · `FACTURA_EMAIL_CLIENTE` | smoke manual · SystemLog `factura-cliente-email` |
 | F12 | Factura emitida con CAE se anula vía NC AFIP (`POST /api/facturas/[id]/anular`); borrador sin CAE → `ANULADA` directa; bloqueo si hay cobranzas o cheques en cartera | `lib/facturas/anular.ts` · `lib/afip/emitir-nota-credito.ts` | `test-anular-factura.ts` |
 | Co5 | Cheque `(numero, banco)` único entre activos; anular revierte imputación | `lib/cobranzas/cheques.ts` · migración unique | `test-cheques-cobranza.ts` · `integridad:prod` |
+| Co6 | Pago no-cheque anulable revierte imputación; factura recalcula EMITIDA/VENCIDA/PAGADA | `lib/cobranzas/revertir-pago.ts` · PATCH pagos | manual |
+| Co7 | Conciliación cobranza marca `conciliadoEn` + usuario | PATCH pagos `conciliar` · `cobranzas.reconcile` | manual |
 
 ## Operación (OT / inventario)
 

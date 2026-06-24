@@ -114,6 +114,8 @@ Usado por `SucursalUbicacionFields` y `SucursalRapidaModal` al validar direcció
 | Método | Ruta | Permiso | Descripción |
 |--------|------|---------|-------------|
 | GET/POST | `/api/inventario` | 🔐 / `inventario.create` | Stock |
+| POST | `/api/inventario/[id]/ajustar` | `inventario.adjust_stock` | Ajuste ENTRADA/SALIDA/AJUSTE |
+| POST | `/api/inventario/[id]/transferir` | `inventario.transfer` | Transferencia entre depósitos (trazabilidad) |
 | GET | `/api/inventario/faltantes` | `compras.read` | Ítems bajo mínimo |
 | POST | `/api/inventario/generar-oc` | `compras.create` | Generar OC desde faltantes |
 | GET/POST | `/api/ordenes-compra` | `compras.read/create` | Órdenes de compra |
@@ -123,7 +125,7 @@ Usado por `SucursalUbicacionFields` y `SucursalRapidaModal` al validar direcció
 
 | Método | Ruta | Permiso | Descripción |
 |--------|------|---------|-------------|
-| GET/POST | `/api/ots` | 🔐 / `servicio.create` | Listar / crear OT |
+| GET/POST | `/api/ots` | 🔐 / `servicio.create` | Listar (filtros: `q`, `estado`, `tecnicoId`, `clienteId`, `sla`, `prioridad`, `tipo`) / crear OT |
 | GET/PATCH | `/api/ots/[id]` | 🔐 / `servicio.update` | Detalle JSON (`plain()`) con historial y repuestos |
 | GET/PATCH | `/api/equipos/[id]` | 🔐 / `servicio.update` | Equipo |
 | * | `/api/equipos/[id]/notas` | `servicio.update` | Notas |
@@ -217,8 +219,9 @@ Ver detalle: [`12-PLANTILLAS-PDF.md`](12-PLANTILLAS-PDF.md).
 | * | `/api/webhooks/whatsapp` | Meta verify | WhatsApp |
 | * | `/api/webhooks/meta` | Meta verify | Meta |
 | POST | `/api/cron/cobranzas-vencimientos` | `CRON_SECRET` | Job vencimientos |
-| POST | `/api/cron/ots-vencidas` | `CRON_SECRET` | Marcar OTs con SLA vencido |
+| POST | `/api/cron/ots-vencidas` | `CRON_SECRET` | Marcar OTs con SLA vencido + email SLA próximo |
 | POST | `/api/cron/presupuestos-vencidos` | `CRON_SECRET` | Marcar presupuestos con vigencia vencida |
+| POST | `/api/cron/notificaciones-operativas` | `CRON_SECRET` | Email preventivo próximo (respeta reglas) |
 | POST | `/api/cron/stock-minimo` | `CRON_SECRET` | Alertas stock mínimo (dedup diaria) |
 | POST | `/api/cron/resumen-semanal` | `CRON_SECRET` | Email KPIs admin (dedup semanal, dom 08:00) |
 

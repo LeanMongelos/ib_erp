@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
     const limit = Math.min(100, Math.max(10, Number(searchParams.get('limit') ?? 25)))
     const skip = (page - 1) * limit
 
-    const where: Record<string, unknown> = {}
+    const where: Record<string, unknown> = { anuladoEn: null }
     if (clienteId) where.clienteId = clienteId
     if (referencia) {
       where.referencia = { contains: referencia, mode: 'insensitive' }
@@ -44,6 +44,7 @@ export async function GET(req: NextRequest) {
         take: limit,
         include: {
           cliente: { select: { id: true, nombre: true } },
+          conciliadoPor: { select: { id: true, nombre: true } },
           imputaciones: {
             include: { factura: { select: { numero: true } } },
           },

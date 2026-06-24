@@ -121,3 +121,12 @@ Implementación actual (`PlantillasManager` + `PdfPreviewFrame`):
 Presupuesto IB: logo, fila fiscal, caja cliente 2 cols, tabla encabezado naranja `#E8650A`, totales derecha, observaciones, importe en letras.
 
 Datos ejemplo: `sample-datos.ts` (Haemonetics + ítem corto "Filtro de aire").
+
+## 10. Emisión REMITO / NC — alcance actual
+
+| Tipo | Plantilla / preview | Emisión de negocio |
+|------|---------------------|-------------------|
+| **NOTA_CREDITO** | Sí (tipo en BD + plantilla predeterminada) | Sí vía `POST /api/facturas/[id]/anular` (NC AFIP) |
+| **REMITO** | Sí (preview + editor) | **Diferido** — no hay entrega de mercadería ni numeración R- en flujo productivo |
+
+El remito queda documentado y editable para cuando exista el módulo logístico (OC → recepción → remito cliente).

@@ -12,6 +12,7 @@ export async function GET() {
   try {
     await requirePermission('cobranzas.read')
     const pagos = await prisma.pago.findMany({
+      where: { anuladoEn: null },
       orderBy: { fecha: 'desc' },
       include: {
         cliente: { select: { nombre: true } },
@@ -43,7 +44,12 @@ export async function POST(req: NextRequest) {
     const facturaIds = data.imputaciones.map((i) => i.facturaId)
     const facturas = await prisma.factura.findMany({
       where: { id: { in: facturaIds }, clienteId: data.clienteId },
-      include: { pagos: { select: { monto: true } } },
+      include: {
+        pagos: {
+          where: { pago: { anuladoEn: null } },
+          select: { monto: true },
+        },
+      },
     })
     if (facturas.length !== facturaIds.length) {
       throw new ApiError(400, 'Una o más facturas no pertenecen al cliente')

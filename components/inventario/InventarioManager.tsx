@@ -4,7 +4,7 @@ import { useMemo, useRef, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import {
-  AlertTriangle, Download, Package, Plus, RefreshCw, Search, Upload, Pencil, SlidersHorizontal,
+  AlertTriangle, Download, Package, Plus, RefreshCw, Search, Upload, Pencil, SlidersHorizontal, ArrowLeftRight,
 } from 'lucide-react'
 import Link from 'next/link'
 import { Card } from '@/components/ui/card'
@@ -141,12 +141,18 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
   const puedeCrear = useCan('inventario.create')
   const puedeEditar = useCan('inventario.update')
   const puedeAjustar = useCan('inventario.adjust_stock')
+  const puedeTransferir = useCan('inventario.transfer')
 
   const [items, setItems] = useState(inicial)
   const [busqueda, setBusqueda] = useState('')
   const [modalAlta, setModalAlta] = useState(false)
   const [editando, setEditando] = useState<ItemInventario | null>(null)
   const [ajustando, setAjustando] = useState<ItemInventario | null>(null)
+  const [transfiriendo, setTransfiriendo] = useState<ItemInventario | null>(null)
+  const [depositos, setDepositos] = useState<Array<{ id: string; nombre: string }>>([])
+  const [transferOrigen, setTransferOrigen] = useState('')
+  const [transferDestino, setTransferDestino] = useState('')
+  const [transferCant, setTransferCant] = useState('1')
   const [importando, setImportando] = useState(false)
   const [form, setForm] = useState<FormData>(formVacio())
   const [loading, setLoading] = useState(false)
@@ -176,6 +182,16 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
       })
       .catch(() => {})
   }, [])
+
+  useEffect(() => {
+    if (!puedeTransferir) return
+    fetch('/api/config/catalogos?tipo=depositos', { credentials: 'include' })
+      .then((r) => r.json())
+      .then((rows: { id: string; nombre: string }[]) => {
+        if (Array.isArray(rows)) setDepositos(rows)
+      })
+      .catch(() => {})
+  }, [puedeTransferir])
 
   const filtrados = useMemo(() => {
     let list = items
@@ -313,6 +329,43 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
       await recargar()
     } catch (e) {
       toast.error(mensajeErrorDesconocido(e, 'No se pudo ajustar el stock'))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function guardarTransferencia() {
+    if (!transfiriendo) return
+    const cantidad = Number(transferCant)
+    if (!transferOrigen || !transferDestino) {
+      toast.error('Seleccioná depósito de origen y destino')
+      return
+    }
+    if (!Number.isInteger(cantidad) || cantidad <= 0) {
+      toast.error('Cantidad inválida')
+      return
+    }
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/inventario/${transfiriendo.id}/transferir`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          depositoOrigenId: transferOrigen,
+          depositoDestinoId: transferDestino,
+          cantidad,
+        }),
+      })
+      if (!res.ok) throw new Error(await mensajeErrorRespuesta(res, 'No se pudo transferir'))
+      toast.success('Transferencia registrada')
+      setTransfiriendo(null)
+      setTransferOrigen('')
+      setTransferDestino('')
+      setTransferCant('1')
+      await recargar()
+    } catch (e) {
+      toast.error(mensajeErrorDesconocido(e, 'No se pudo transferir'))
     } finally {
       setLoading(false)
     }
@@ -533,6 +586,21 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
                             <SlidersHorizontal size={14} />
                           </button>
                         )}
+                        {puedeTransferir && depositos.length >= 2 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setTransfiriendo(item)
+                              setTransferOrigen(depositos[0]?.id ?? '')
+                              setTransferDestino(depositos[1]?.id ?? '')
+                              setTransferCant('1')
+                            }}
+                            className="p-1.5 rounded hover:bg-gray-100 text-[#6b7280]"
+                            title="Transferir entre depósitos"
+                          >
+                            <ArrowLeftRight size={14} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -584,6 +652,39 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
             <div className="flex justify-end gap-2 mt-4">
               <Button variant="secondary" onClick={() => setAjustando(null)}>Cancelar</Button>
               <Button variant="primary" loading={loading} onClick={guardarAjuste}>Aplicar</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {transfiriendo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setTransfiriendo(null)}>
+          <div className="bg-white rounded-[14px] w-full max-w-sm shadow-xl p-5" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-[14px] font-bold mb-1">Transferir entre depósitos</h3>
+            <p className="text-[12px] text-[#6b7280] mb-4">
+              {transfiriendo.nombre} · stock disponible: {transfiriendo.stock}
+            </p>
+            <p className="text-[11px] text-[#9aa1ab] mb-3">
+              El stock global no cambia; queda trazabilidad entre ubicaciones.
+            </p>
+            <div className="flex flex-col gap-3">
+              <select value={transferOrigen} onChange={(e) => setTransferOrigen(e.target.value)} className="border border-[#e4e7eb] rounded-[9px] px-3 py-2 text-[13px]">
+                <option value="">Depósito origen…</option>
+                {depositos.map((d) => (
+                  <option key={d.id} value={d.id}>{d.nombre}</option>
+                ))}
+              </select>
+              <select value={transferDestino} onChange={(e) => setTransferDestino(e.target.value)} className="border border-[#e4e7eb] rounded-[9px] px-3 py-2 text-[13px]">
+                <option value="">Depósito destino…</option>
+                {depositos.map((d) => (
+                  <option key={d.id} value={d.id}>{d.nombre}</option>
+                ))}
+              </select>
+              <input value={transferCant} onChange={(e) => setTransferCant(e.target.value)} type="number" min={1} max={transfiriendo.stock} className="border border-[#e4e7eb] rounded-[9px] px-3 py-2 text-[13px]" />
+            </div>
+            <div className="flex justify-end gap-2 mt-4">
+              <Button variant="secondary" onClick={() => setTransfiriendo(null)}>Cancelar</Button>
+              <Button variant="primary" loading={loading} onClick={guardarTransferencia}>Transferir</Button>
             </div>
           </div>
         </div>

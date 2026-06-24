@@ -55,6 +55,7 @@ Componentes clave: `SucursalesEditor`, `ClienteHistorialInbox`, `InboxPanel`, `N
 | UI | API | lib | Permiso |
 |----|-----|-----|---------|
 | `/inventario` | `/api/inventario*` | `lib/inventario-kit.ts` | `inventario.*` |
+| Transferir stock | `POST /api/inventario/[id]/transferir` | `lib/inventario/transferir-stock.ts` | `inventario.transfer` |
 | `/compras` | `/api/ordenes-compra*` | — | `compras.*` |
 | Provisión equipo | `POST .../provisionar-equipos` | `lib/equipos/provisionar-venta.ts` | `facturas.create` |
 
@@ -96,8 +97,11 @@ Componentes clave: `SucursalesEditor`, `ClienteHistorialInbox`, `InboxPanel`, `N
 | Meta WhatsApp | `/api/webhooks/whatsapp` | verify token + HMAC |
 | Microsoft Graph | OAuth + `worker:crm-graph` | OAuth tokens en BD |
 | Cron cobranzas | `/api/cron/cobranzas-vencimientos` | `CRON_SECRET` |
-| Cron OT SLA | `/api/cron/ots-vencidas` | `CRON_SECRET` |
+| Cron OT SLA | `/api/cron/ots-vencidas` | `CRON_SECRET` (marca VENCIDA + email SLA próximo) |
 | Cron presupuestos | `/api/cron/presupuestos-vencidos` | `CRON_SECRET` |
+| Cron stock mínimo | `/api/cron/stock-minimo` | `CRON_SECRET` · diario 07:00 · `lib/inventario/alerta-stock-minimo.ts` |
+| Cron resumen semanal | `/api/cron/resumen-semanal` | `CRON_SECRET` · dom 08:00 · `lib/admin/resumen-semanal.ts` |
+| Cron notif. operativas | `/api/cron/notificaciones-operativas` | `CRON_SECRET` · preventivo próximo (email) |
 
 ---
 

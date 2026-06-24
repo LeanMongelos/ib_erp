@@ -5,9 +5,11 @@ import { requireAuth, requirePermission, handleApiError, ApiError } from '@/lib/
 import { tienePermiso } from '@/lib/rbac'
 import { otUpdateSchema } from '@/lib/validation'
 import { plain } from '@/lib/serialize'
+import type { EstadoOT } from '@/types'
 import { validarRepuestosOTCliente } from '@/lib/ots/repuestos-ot-client'
 import { aplicarPreciosRepuestosOT, validarStockRepuestosOT } from '@/lib/ots/repuestos-ot'
 import { registrarMovimientoStock } from '@/lib/inventario'
+import { validarTransicionOT } from '@/lib/ots/transiciones'
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -51,6 +53,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       select: { estado: true, numero: true, tipo: true, equipoId: true, clienteId: true, tecnicoId: true },
     })
     if (!otActual) throw new ApiError(404, 'Orden de trabajo no encontrada')
+
+    if (estado !== undefined) {
+      const errTrans = validarTransicionOT(otActual.estado as EstadoOT, estado)
+      if (errTrans) throw new ApiError(400, errTrans)
+    }
 
     const cerrando = estado === 'CERRADA' && otActual.estado !== 'CERRADA'
 

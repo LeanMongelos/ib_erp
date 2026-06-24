@@ -33,37 +33,39 @@ Auditoría post-cartera de cheques (jun 2026). Objetivo: cerrar gaps donde el **
 
 ---
 
-## Fase 2 — Estado y operación (en curso)
+## Fase 2 — Estado y operación ✅
 
 | ID | Hueco | Acción propuesta | Estado |
 |----|-------|------------------|--------|
 | C1 | Anulación / NC AFIP | `POST /api/facturas/[id]/anular` + NC + `anularVencimientosPendientes` | ✅ Implementado |
-| H3 | `cobranzas.reconcile` sin UI | Conciliación mínima o retirar permiso | pendiente |
+| H3 | `cobranzas.reconcile` sin UI | PATCH conciliar pago + columna en listado | ✅ Implementado |
 | H9 | Cheque duplicado / ANULADO | Unique `(numero,banco)` + acción anular | ✅ Implementado |
-| H10 | OT sin máquina de estados | `lib/ots/transiciones.ts` compartido UI/API |
-| H12 | Health cola AFIP | Alerta en integridad si worker caído |
-| — | Reversión pagos transferencia | PATCH anular pago no-cheque |
+| H10 | OT sin máquina de estados | `lib/ots/transiciones.ts` compartido UI/API | ✅ Implementado |
+| H12 | Health cola AFIP | `checkColaAfip` en integridad-prod | ✅ Implementado |
+| — | Reversión pagos transferencia | PATCH `/api/cobranzas/pagos/[id]` anular | ✅ Implementado |
 
 ---
 
-## Fase 3 — Completitud producto
+## Fase 3 — Completitud producto ✅
 
-| ID | Hueco | Acción |
-|----|-------|--------|
-| M1 | `inventario.transfer` sin feature | Implementar o quitar permiso |
-| M2 | Plantillas REMITO/NC sin emisión | Decisión producto |
-| M3 | TARJETA/OTRO sin reglas | Campos cupón / acreditación |
-| M4 | Reglas inbox sin email | Cron por evento (OT SLA, preventivo) |
-| M8 | Filtros OT solo en UI | Query params en GET `/api/ots` |
+| ID | Hueco | Acción | Estado |
+|----|-------|--------|--------|
+| M1 | `inventario.transfer` sin feature | POST `/api/inventario/[id]/transferir` + UI modal | ✅ Implementado |
+| M2 | Plantillas REMITO/NC sin emisión | NC vía anulación AFIP; remito sin flujo de negocio | ⏸ Diferido (ver `docs/12-PLANTILLAS-PDF.md`) |
+| M3 | TARJETA/OTRO sin reglas | Cupón obligatorio en TARJETA; referencia/acreditación en OTRO | ✅ Implementado |
+| M4 | Reglas inbox sin email | Cron `notificaciones-operativas` + emails en `ots-vencidas` (SLA) | ✅ Implementado |
+| M8 | Filtros OT solo en UI | Query params en GET `/api/ots` (`q`, `estado`, `tecnicoId`, `sla`, …) | ✅ Implementado |
 
 ---
 
-## Fase 4 — Documentación y polish
+## Fase 4 — Documentación y polish ✅
 
-- Sincronizar `docs/01-roles-y-permisos.md` con `lib/rbac.ts`
-- Listar crons `stock-minimo`, `resumen-semanal` en mapa de módulos
-- 2FA: implementar o marcar explícitamente fuera de alcance
-- Script genérico post-deploy: sync permisos nuevos desde `PERMISSIONS` (sin pisar custom UI)
+| Ítem | Estado |
+|------|--------|
+| Sincronizar `docs/01-roles-y-permisos.md` con `lib/rbac.ts` | ✅ |
+| Crons `stock-minimo`, `resumen-semanal` en mapa de módulos | ✅ `docs/22-MAPA-MODULOS.md` |
+| 2FA fuera de alcance explícito | ✅ Nota en `docs/01-roles-y-permisos.md` |
+| Script post-deploy permisos | ✅ `scripts/sync-permisos-post-deploy.ts` |
 
 ---
 
@@ -74,12 +76,22 @@ Auditoría post-cartera de cheques (jun 2026). Objetivo: cerrar gaps donde el **
 | Co1 | Imputación ≤ saldo pendiente; factura en estado cobrable | `test-validar-cobranza-saldo.ts` |
 | Co2 | Pago CHEQUE ⇒ fila `cheques_cobranza` | `integridad:prod` |
 | Co3 | OC BORRADOR no recepcionable | API recibir |
-| Co4 | Cheque rechazado ⇒ factura VENCIDA si cuota vencida | unit en cheques |
+| Co4 | Cheque rechazado ⇒ factura VENCIDA si cuota vencida | `test-cheque-rechazado-estado.ts` |
+| Inv1 | Transferencia entre depósitos no altera stock global | `lib/inventario.ts` tipo `TRANSFERENCIA` |
 
 ---
 
 ## Deploy / operación
 
-Tras cada cambio de RBAC: `scripts/sync-cheques-permisos.ts` (incluye emisores.create) + re-login usuarios.
+Tras cada cambio de RBAC:
+
+```bash
+npx tsx --env-file=.env scripts/sync-permisos-post-deploy.ts
+# o scripts puntuales: sync-cheques-permisos.ts, sync-logs-permiso.ts
+```
+
+Re-login usuarios si cambió el set de permisos en sesión.
+
+Migración pendiente en prod (Fase 2): `20260625100000_pago_anulado_conciliado`.
 
 Ver también: `docs/INVARIANTES.md`, `npm run integridad:prod`.

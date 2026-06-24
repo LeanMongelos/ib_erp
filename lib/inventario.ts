@@ -23,7 +23,12 @@ export async function registrarMovimientoStock(
     const item = await client.inventario.findUnique({ where: { id: opts.inventarioId } })
     if (!item) throw new Error('Ítem de inventario no encontrado')
 
-    const delta = opts.tipo === 'SALIDA' ? -opts.cantidad : opts.cantidad
+    const delta =
+      opts.tipo === 'SALIDA'
+        ? -opts.cantidad
+        : opts.tipo === 'TRANSFERENCIA'
+          ? 0
+          : opts.cantidad
     const stockAntes = item.stock
     const stockDespues = stockAntes + delta
 
