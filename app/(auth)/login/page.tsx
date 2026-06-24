@@ -186,7 +186,7 @@ export default function LoginPage() {
               {...register('email')}
               type="email"
               placeholder="tu@email.com"
-              className="flex-1 bg-transparent border-none outline-none text-white text-[14px] font-sans py-3"
+              className="login-input flex-1 bg-transparent border-none outline-none text-white text-[14px] font-sans py-3"
               autoComplete="email"
             />
           </div>
@@ -206,7 +206,7 @@ export default function LoginPage() {
               {...register('password')}
               type={showPass ? 'text' : 'password'}
               placeholder="••••••••••"
-              className="flex-1 bg-transparent border-none outline-none text-white text-[14px] font-sans py-3 tracking-widest placeholder:tracking-normal"
+              className="login-input flex-1 bg-transparent border-none outline-none text-white text-[14px] font-sans py-3 tracking-widest placeholder:tracking-normal"
               autoComplete="current-password"
             />
             <button

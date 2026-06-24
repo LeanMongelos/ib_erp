@@ -3,6 +3,7 @@
 .login-page {
   position: relative;
   overflow: hidden;
+  color-scheme: dark;
   background:
     radial-gradient(900px 520px at 50% -8%, rgba(232, 101, 10, 0.26), rgba(232, 101, 10, 0) 60%),
     radial-gradient(700px 500px at 50% 120%, rgba(245, 184, 0, 0.1), transparent 60%),
@@ -440,6 +441,34 @@
   box-shadow:
     0 0 0 1px rgba(232, 101, 10, 0.35),
     0 0 22px rgba(232, 101, 10, 0.14);
+}
+
+/* Autofill del navegador: mantener tema oscuro (evita fondo blanco/azul) */
+.login-input-wrap input.login-input {
+  color: #ffffff;
+  caret-color: #ffffff;
+}
+
+.login-input-wrap input.login-input::placeholder {
+  color: #6b7280;
+  opacity: 1;
+}
+
+.login-input-wrap input.login-input:-webkit-autofill,
+.login-input-wrap input.login-input:-webkit-autofill:hover,
+.login-input-wrap input.login-input:-webkit-autofill:focus,
+.login-input-wrap input.login-input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #121212 inset !important;
+  box-shadow: 0 0 0 1000px #121212 inset !important;
+  -webkit-text-fill-color: #ffffff !important;
+  caret-color: #ffffff;
+  transition: background-color 99999s ease-out 0s;
+}
+
+.login-input-wrap input.login-input:-moz-autofill {
+  box-shadow: 0 0 0 1000px #121212 inset !important;
+  -moz-text-fill-color: #ffffff !important;
+  caret-color: #ffffff;
 }
 
 .login-btn {
