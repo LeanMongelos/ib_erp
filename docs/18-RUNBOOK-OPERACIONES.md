@@ -50,6 +50,12 @@ Recargar con Ctrl+Shift+R o ventana incógnito. Archivos: `app/favicon.ico`, `ap
    ```
 3. **Cerrar sesión y volver a entrar** (JWT cachea permisos).
 
+4. Auditar matriz de permisos críticos (solo reporte, sin tocar BD):
+   ```bash
+   npm run audit:permisos
+   ```
+   Lista roles que no tienen permisos mínimos (`facturas.emit_afip`, `config.read`, etc.) según `lib/rbac.ts`. Útil al dar de alta usuarios nuevos.
+
 ---
 
 ## 5. AFIP no emite / factura en PENDIENTE_CAE

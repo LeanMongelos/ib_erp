@@ -4,6 +4,29 @@ set -euo pipefail
 
 APP_DIR="/opt/ibiomedica"
 BRANCH="${DEPLOY_BRANCH:-master}"
+
+notify_deploy_webhook() {
+  local status="$1"
+  local http_code="${2:-}"
+  local url="${DEPLOY_WEBHOOK_URL:-}"
+  [[ -z "$url" ]] && return 0
+  local commit host ts payload
+  commit="$(git -C "$APP_DIR" rev-parse --short HEAD 2>/dev/null || echo unknown)"
+  host="$(hostname -s 2>/dev/null || echo vps)"
+  ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  payload=$(printf '{"status":"%s","host":"%s","branch":"%s","commit":"%s","http_code":"%s","ts":"%s"}' \
+    "$status" "$host" "$BRANCH" "$commit" "$http_code" "$ts")
+  curl -sS -m 5 -X POST "$url" \
+    -H 'Content-Type: application/json' \
+    -d "$payload" >/dev/null 2>&1 || true
+}
+
+on_deploy_error() {
+  notify_deploy_webhook "fail" ""
+  exit 1
+}
+trap on_deploy_error ERR
+
 cd "$APP_DIR"
 
 if [[ ! -d .git ]]; then
@@ -116,7 +139,10 @@ echo "==> Caddy (dominio + HTTPS, no sobrescribir con HTTP plano)..."
 bash scripts/vps-caddy-apply.sh
 
 sleep 2
-curl -s -o /dev/null -w "deploy_ok:%{http_code}\n" http://127.0.0.1:3000/login
+HEALTH_CODE="$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:3000/login)"
+echo "deploy_ok:${HEALTH_CODE}"
+
+notify_deploy_webhook "ok" "$HEALTH_CODE"
 
 echo "==> Cron del sistema (opcional)..."
 CRON_SCRIPT="$APP_DIR/scripts/vps-install-cron.sh"

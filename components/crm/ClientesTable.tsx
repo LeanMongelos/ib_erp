@@ -1,13 +1,16 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Search, Plus, ChevronRight, ChevronDown } from 'lucide-react'
+import { Search, Plus, ChevronRight, Download, Upload } from 'lucide-react'
+import { toast } from 'sonner'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { BadgeTipoCliente } from '@/components/ui/badge'
 import { formatFecha } from '@/lib/utils'
+import { mensajeErrorDesconocido, mensajeErrorRespuesta } from '@/lib/errores'
+import { useCan } from '@/components/auth/useCan'
 import type { Cliente, TipoCliente } from '@/types'
 
 const TIPOS: { value: string; label: string }[] = [
@@ -26,8 +29,11 @@ interface ClienteRow extends Cliente {
 
 export function ClientesTable({ clientes }: { clientes: ClienteRow[] }) {
   const router = useRouter()
+  const fileRef = useRef<HTMLInputElement>(null)
+  const puedeCrear = useCan('clientes.create')
   const [search, setSearch] = useState('')
   const [tipo, setTipo] = useState('TODOS')
+  const [importando, setImportando] = useState(false)
 
   const filtered = clientes.filter((c) => {
     const matchSearch =
@@ -41,6 +47,48 @@ export function ClientesTable({ clientes }: { clientes: ClienteRow[] }) {
 
   function handleSearch(e: React.ChangeEvent<HTMLInputElement>) {
     setSearch(e.target.value)
+  }
+
+  async function descargarPlantilla() {
+    try {
+      const res = await fetch('/api/clientes/plantilla', { credentials: 'include' })
+      if (!res.ok) throw new Error(await mensajeErrorRespuesta(res, 'No se pudo descargar la plantilla'))
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'plantilla-clientes-ibiomedica.csv'
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      toast.error(mensajeErrorDesconocido(e, 'No se pudo descargar la plantilla'))
+    }
+  }
+
+  async function importarCsv(file: File) {
+    setImportando(true)
+    try {
+      const fd = new FormData()
+      fd.append('archivo', file)
+      const res = await fetch('/api/clientes/import', {
+        method: 'POST',
+        credentials: 'include',
+        body: fd,
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Error en la importación')
+      toast.success(`Importación: ${data.creados} creados, ${data.omitidos} omitidos`)
+      if (data.errores?.length) {
+        toast.warning(`${data.errores.length} fila(s) con error — revisá el detalle en consola`)
+        console.warn('Errores importación clientes:', data.errores)
+      }
+      router.refresh()
+    } catch (e) {
+      toast.error(mensajeErrorDesconocido(e, 'No se pudo importar el archivo'))
+    } finally {
+      setImportando(false)
+      if (fileRef.current) fileRef.current.value = ''
+    }
   }
 
   return (
@@ -70,6 +118,35 @@ export function ClientesTable({ clientes }: { clientes: ClienteRow[] }) {
         </div>
 
         <div className="flex-1" />
+
+        {puedeCrear && (
+          <>
+            <Button variant="outline" size="md" className="gap-2" onClick={descargarPlantilla}>
+              <Download size={16} strokeWidth={2.4} />
+              Plantilla CSV
+            </Button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".csv"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0]
+                if (f) importarCsv(f)
+              }}
+            />
+            <Button
+              variant="outline"
+              size="md"
+              className="gap-2"
+              loading={importando}
+              onClick={() => fileRef.current?.click()}
+            >
+              <Upload size={16} strokeWidth={2.4} />
+              Importar CSV
+            </Button>
+          </>
+        )}
 
         <Button
           onClick={() => router.push('/crm/nuevo')}
