@@ -63,13 +63,16 @@ function printResumen(items: GoLiveItem[]) {
   console.log(`PASS: ${pass} | WARN: ${warn} | FAIL: ${fail}`)
 
   if (fail > 0) {
-    console.log('\n❌ NO LISTO para primera factura real — corregir FAIL antes de emitir.\n')
+    console.log('\n❌ NO LISTO para primera factura real — corregir FAIL antes de emitir.')
+    console.log('   Revisar: emisores PRODUCCION, certificados, ADMIN_NOTIFY_EMAIL, SMTP y worker AFIP.\n')
     process.exit(1)
   }
   if (warn > 0) {
-    console.log('\n⚠️  Listo con advertencias — revisar WARN antes del primer comprobante fiscal.\n')
+    console.log('\n⚠️  Listo con advertencias — revisar WARN antes del primer comprobante fiscal.')
+    console.log('   Recomendado: ADMIN_NOTIFY_EMAIL explícito, smoke AFIP y npm run post-go-live:smoke en el VPS.\n')
   } else {
-    console.log('\n✅ Checklist OK — puede proceder con homologación o producción según ambiente.\n')
+    console.log('\n✅ Checklist OK — puede proceder con homologación o producción según ambiente.')
+    console.log('   Siguiente paso sugerido: npm run post-go-live:smoke\n')
   }
 }
 
@@ -88,6 +91,9 @@ async function main() {
 
   console.log('\n--- 2b. Worker AFIP ---\n')
   for (const item of status.items.filter((i) => i.seccion === 'worker')) printItem(item)
+
+  console.log('\n--- 2c. Alertas AFIP / correo ---\n')
+  for (const item of status.items.filter((i) => i.seccion === 'alertas')) printItem(item)
 
   const allItems = [...status.items]
   checkIntegridad(allItems)

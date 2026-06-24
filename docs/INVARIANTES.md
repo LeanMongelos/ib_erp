@@ -52,6 +52,8 @@ Documento de referencia para desarrollo, code review y agentes. Si un cambio vio
 | I3 | Conversaciones CRM abiertas deben vincularse a cliente (`clienteId`) | bandeja CRM / crear-lead n8n | `integridad:prod` (warn) |
 | I4 | Predeterminado activo **único** por tipo (plantilla, emisor, lista precios) | APIs config + `integridad-prod.ts` | `integridad:prod` (warn) |
 | I5 | Negocios embudo activos (≠ CIERRE) con `clienteId` en BD cuando hay cliente real | formulario embudo | `integridad:prod` (warn) |
+| I9 | Cuotas vencidas deben pasar a `AVISO_ENVIADO` (cron cobranzas idempotente) | `procesarVencimientosDelDia` · `POST /api/cron/cobranzas-vencimientos` | `integridad:prod` (warn) |
+| I10 | Emisor `PRODUCCION` activo exige `ADMIN_NOTIFY_EMAIL` + SMTP (o EMAIL_IMAP) para alertas AFIP | `lib/admin/go-live-status.ts` · `validar-env-prod` | `go-live:check` (warn/fail) |
 
 ## Presupuestos
 
@@ -81,6 +83,8 @@ Documento de referencia para desarrollo, code review y agentes. Si un cambio vio
 | F6 | Ítems con `inventarioId`: precio re-resuelto en API al guardar | `lib/precios/aplicar-precios-documento.ts` | — |
 | F7 | POST/PATCH factura y POST/PATCH presupuesto/inventario usan schemas de `lib/validation.ts` | `facturaCreateSchema`, `facturaUpdateSchema`, etc. | `npm run test:invariants` |
 | F8 | POST generar OC desde faltantes usa `generarOcFaltantesSchema` | `lib/validation.ts` | `npm run test:invariants` |
+| F9 | Tras emisión `EMITIDA` con CAE, PDF disponible on-demand vía `GET /api/facturas/[id]/pdf` (`renderDocumentoPDF`) | `app/api/facturas/[id]/pdf/route.ts` | smoke manual post go-live |
+| F10 | Cuotas cobranza se crean al **crear** factura con plazos (`sincronizarVencimientosCobranza`), no al emitir AFIP | `app/api/facturas/route.ts` POST | — |
 
 ## Auth y permisos
 
@@ -111,6 +115,8 @@ Documento de referencia para desarrollo, code review y agentes. Si un cambio vio
 | `npm run smoke:http` | Login HTTP + APIs/páginas (servidor levantado; no en CI estándar) |
 | `backfill-plantillas-documentos.ts --execute` | Snapshot plantilla en docs viejos (prod; incluido en `vps-deploy-from-git.sh`) |
 | `npm run cron:presupuestos-vencidos` | Marcar presupuestos con vigencia vencida |
+| `npm run go-live:check` | Checklist pre primera factura real (entorno + emisores + alertas + integridad) |
+| `npm run post-go-live:smoke` | Smoke operador post go-live (checklist + AFIP homolog + health + PM2) |
 
 ## Anti-patrones (no hacer)
 

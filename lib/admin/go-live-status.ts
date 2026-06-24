@@ -6,9 +6,15 @@ import { execSync } from 'child_process'
 import { prisma } from '@/lib/prisma'
 import { validarEnvProd, type EnvCheck } from '@/lib/env/validar-prod'
 import {
+  adminNotifyEmailDefinido,
+  smtpEnvConfigurado,
+  validarAlertasEnvProd,
+} from '@/lib/env/alertas-prod'
+import {
   emisorTieneCertificados,
   estadoPreparacionAfip,
 } from '@/lib/afip/validar-emision'
+import { getAdminNotifyEmails } from '@/lib/mail/system-mail'
 
 export type GoLiveNivel = 'pass' | 'warn' | 'fail'
 
@@ -148,6 +154,53 @@ export async function obtenerGoLiveStatus(): Promise<GoLiveStatus> {
     } else if (emisores.some((e) => e.ambiente === 'PRODUCCION')) {
       addItem(items, 'emisores', 'pass', 'Todos los emisores PRODUCCION tienen certificados')
     }
+  }
+
+  const hayEmisorProduccion = emisores.some((e) => e.ambiente === 'PRODUCCION')
+  if (hayEmisorProduccion) {
+    for (const c of validarAlertasEnvProd(process.env, { hayEmisorProduccion: true })) {
+      addItem(items, 'alertas', envToNivel(c), c.msg)
+    }
+
+    const recipients = await getAdminNotifyEmails()
+    if (recipients.length === 0) {
+      addItem(
+        items,
+        'alertas',
+        'fail',
+        'Sin destinatarios para alertas AFIP — definir ADMIN_NOTIFY_EMAIL o activar SUPERADMIN/GERENTE',
+        'sin_destinatarios_alertas',
+      )
+    } else if (!adminNotifyEmailDefinido(process.env)) {
+      addItem(
+        items,
+        'alertas',
+        'warn',
+        `${recipients.length} destinatario(s) vía fallback RBAC (${recipients.slice(0, 2).join(', ')}${recipients.length > 2 ? '…' : ''})`,
+      )
+    }
+
+    if (!smtpEnvConfigurado(process.env)) {
+      const canal = await prisma.canalIntegracion.findUnique({ where: { tipo: 'EMAIL_IMAP' } })
+      if (canal?.activo && canal.estado === 'CONECTADO') {
+        addItem(items, 'alertas', 'pass', 'Canal EMAIL_IMAP conectado — SMTP disponible para alertas')
+      } else {
+        addItem(
+          items,
+          'alertas',
+          'fail',
+          'Sin SYSTEM_SMTP_* ni EMAIL_IMAP conectado — alertas AFIP no se enviarán por correo',
+          'smtp_ausente',
+        )
+      }
+    }
+  } else {
+    addItem(
+      items,
+      'alertas',
+      'pass',
+      'Sin emisor PRODUCCION — alertas AFIP no requeridas aún',
+    )
   }
 
   const workerAfip = detectarWorkerAfipPm2()

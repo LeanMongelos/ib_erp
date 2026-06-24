@@ -5,7 +5,12 @@
  */
 import { prisma } from '../lib/prisma'
 import { validarEnvProd, type EnvCheck } from '../lib/env/validar-prod'
+import {
+  smtpEnvConfigurado,
+  validarAlertasEnvProd,
+} from '../lib/env/alertas-prod'
 import { emisorTieneCertificados } from '../lib/afip/validar-emision'
+import { getAdminNotifyEmails } from '../lib/mail/system-mail'
 
 function printCheck(c: EnvCheck) {
   const icon = c.nivel === 'ok' ? '✅' : c.nivel === 'warn' ? '⚠️ ' : '❌'
@@ -13,7 +18,7 @@ function printCheck(c: EnvCheck) {
   fn(`${icon} ${c.msg}`)
 }
 
-async function validarEmisoresAfip(): Promise<EnvCheck[]> {
+async function validarEmisoresAfip(): Promise<{ checks: EnvCheck[]; hayProduccion: boolean }> {
   const checks: EnvCheck[] = []
   const emisores = await prisma.emisor.findMany({
     where: { activo: true },
@@ -33,7 +38,7 @@ async function validarEmisoresAfip(): Promise<EnvCheck[]> {
       nivel: 'ok',
       msg: `AFIP: sin emisor activo en PRODUCCION (${homo.length} en homologación)`,
     })
-    return checks
+    return { checks, hayProduccion: false }
   }
 
   const sinCert = prod.filter((e) => !emisorTieneCertificados(e))
@@ -49,7 +54,44 @@ async function validarEmisoresAfip(): Promise<EnvCheck[]> {
     })
   }
 
-  return checks
+  return { checks, hayProduccion: true }
+}
+
+async function validarAlertasProduccion(hayEmisorProduccion: boolean): Promise<{
+  checks: EnvCheck[]
+  errores: number
+  advertencias: number
+}> {
+  const checks = validarAlertasEnvProd(process.env, { hayEmisorProduccion })
+  if (!hayEmisorProduccion) {
+    return { checks, errores: 0, advertencias: checks.filter((c) => c.nivel === 'warn').length }
+  }
+
+  const recipients = await getAdminNotifyEmails()
+  if (recipients.length === 0) {
+    checks.push({
+      nivel: 'error',
+      msg: 'Alertas AFIP: sin destinatarios (ADMIN_NOTIFY_EMAIL ni SUPERADMIN/GERENTE activos)',
+    })
+  }
+
+  if (!smtpEnvConfigurado(process.env)) {
+    const canal = await prisma.canalIntegracion.findUnique({ where: { tipo: 'EMAIL_IMAP' } })
+    if (!(canal?.activo && canal.estado === 'CONECTADO')) {
+      checks.push({
+        nivel: 'error',
+        msg: 'Alertas AFIP: sin SYSTEM_SMTP_* ni canal EMAIL_IMAP conectado — correos no se enviarán',
+      })
+    } else {
+      checks.push({ nivel: 'ok', msg: 'Alertas AFIP: canal EMAIL_IMAP conectado (fallback SMTP)' })
+    }
+  }
+
+  return {
+    checks,
+    errores: checks.filter((c) => c.nivel === 'error').length,
+    advertencias: checks.filter((c) => c.nivel === 'warn').length,
+  }
 }
 
 async function main() {
@@ -59,18 +101,27 @@ async function main() {
   for (const c of envResult.checks) printCheck(c)
 
   let dbErrores = 0
+  let dbWarns = 0
   try {
-    const afipChecks = await validarEmisoresAfip()
+    const { checks: afipChecks, hayProduccion } = await validarEmisoresAfip()
     for (const c of afipChecks) {
       printCheck(c)
       if (c.nivel === 'error') dbErrores++
     }
+
+    console.log('\n--- Alertas AFIP / correo ---\n')
+    const alertas = await validarAlertasProduccion(hayProduccion)
+    for (const c of alertas.checks) {
+      printCheck(c)
+    }
+    dbErrores += alertas.errores
+    dbWarns += alertas.advertencias
   } catch (e) {
     console.warn('⚠️  No se pudo validar emisores AFIP en BD:', (e as Error).message)
   }
 
   const totalErrores = envResult.errores + dbErrores
-  const totalWarns = envResult.advertencias
+  const totalWarns = envResult.advertencias + dbWarns
 
   console.log(`\n--- ${totalErrores} error(es) | ${totalWarns} advertencia(s) ---\n`)
 

@@ -100,6 +100,8 @@ Tras el go-live, revisar periódicamente:
 | CLI completo (incl. integridad) | `npm run go-live:check` en el VPS |
 | Rechazos AFIP | Facturación (estado `RECHAZADA`), Logs (`origen: afip-notify` o `worker-afip`) |
 | Alerta email admin | `ADMIN_NOTIFY_EMAIL` — un correo por factura rechazada (sin spam) |
+| SMTP alertas | `SYSTEM_SMTP_*` o canal EMAIL_IMAP conectado — ver sección alertas en `npm run go-live:check` |
+| Post go-live smoke | `npm run post-go-live:smoke` en el VPS tras primera factura o deploy |
 | Cambio de ambiente emisor | Auditoría (`emisor.ambiente_change`) + Logs WARN (`emisor.ambiente_change` en metadata) |
 
 **Qué hace el sistema automáticamente:**

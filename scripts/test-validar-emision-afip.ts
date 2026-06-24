@@ -9,6 +9,11 @@ import {
   validarEmisionAfip,
 } from '../lib/afip/validar-emision'
 import { validarEnvProd } from '../lib/env/validar-prod'
+import {
+  adminNotifyEmailDefinido,
+  smtpEnvConfigurado,
+  validarAlertasEnvProd,
+} from '../lib/env/alertas-prod'
 
 const errors: string[] = []
 
@@ -94,6 +99,29 @@ function main() {
   const envBad = validarEnvProd({ NODE_ENV: 'production', FORCE_PROD: '1' })
   if (envBad.errores === 0) fail('env prod vacío debe tener errores')
   else pass(`validarEnvProd: ${envBad.errores} errores en env vacío`)
+
+  const alertasSinProd = validarAlertasEnvProd(process.env, { hayEmisorProduccion: false })
+  if (alertasSinProd.length !== 0) fail('alertas sin prod no deben generar checks')
+  else pass('validarAlertasEnvProd: sin prod → vacío')
+
+  const alertasProd = validarAlertasEnvProd(
+    { ADMIN_NOTIFY_EMAIL: 'admin@ib.com', SYSTEM_SMTP_HOST: 'smtp.test', SYSTEM_SMTP_USER: 'u' },
+    { hayEmisorProduccion: true },
+  )
+  if (alertasProd.some((c) => c.nivel === 'warn' || c.nivel === 'error')) {
+    fail('alertas prod completas no deben warn/error')
+  } else pass('validarAlertasEnvProd: prod con email+SMTP OK')
+
+  const alertasProdSinEmail = validarAlertasEnvProd({}, { hayEmisorProduccion: true })
+  if (!alertasProdSinEmail.some((c) => c.nivel === 'warn' && c.msg.includes('ADMIN_NOTIFY_EMAIL'))) {
+    fail('prod sin ADMIN_NOTIFY_EMAIL debe warn')
+  } else pass('validarAlertasEnvProd: prod sin email → warn')
+
+  if (!adminNotifyEmailDefinido({ ADMIN_NOTIFY_EMAIL: 'a@b.com' })) fail('adminNotifyEmailDefinido')
+  else pass('adminNotifyEmailDefinido: true con env')
+
+  if (smtpEnvConfigurado({ SYSTEM_SMTP_HOST: 'h', SYSTEM_SMTP_USER: 'u' })) pass('smtpEnvConfigurado: true')
+  else fail('smtpEnvConfigurado debe ser true')
 
   console.log('')
   if (errors.length) {

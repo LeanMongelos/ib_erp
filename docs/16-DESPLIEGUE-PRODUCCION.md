@@ -195,6 +195,8 @@ sudo APP_URL=https://erp.tudominio.com bash scripts/vps-install-cron.sh
 
 Genera `/etc/cron.d/ibiomedica-cron` con: backup PostgreSQL (03:00), `logs:purge` (04:00), OT SLA (cada hora), presupuestos vencidos (05:00), cobranzas (06:00). Requiere `CRON_SECRET` en `/opt/ibiomedica/.env`.
 
+**Rotación de `CRON_SECRET`:** generar valor nuevo (`openssl rand -base64 32`), actualizar `.env` en el VPS, reiniciar la app (`pm2 restart ibiomedica`), y actualizar el mismo valor en `/etc/cron.d/ibiomedica-cron` (o re-ejecutar `vps-install-cron.sh`). Probar con `curl -sf -X POST $APP_URL/api/cron/ots-vencidas -H "Authorization: Bearer $CRON_SECRET"`. Sin reinicio de app + cron, las rutas `/api/cron/*` rechazan con 401.
+
 Ejemplo manual equivalente:
 
 ```bash

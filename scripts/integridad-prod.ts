@@ -324,6 +324,25 @@ async function checkUsuariosActivos() {
   }
 }
 
+async function checkCuotasVencidasSinAviso() {
+  const ahora = new Date()
+  const count = await prisma.vencimientoCobranza.count({
+    where: {
+      estado: 'PENDIENTE',
+      fechaVencimiento: { lt: ahora },
+      factura: { estado: { in: ['EMITIDA', 'VENCIDA', 'PAGADA'] } },
+    },
+  })
+
+  if (count === 0) {
+    ok('Cobranzas: ninguna cuota vencida PENDIENTE sin aviso')
+  } else {
+    warn(
+      `${count} cuota(s) vencida(s) en estado PENDIENTE — ejecutar cron cobranzas (POST /api/cron/cobranzas-vencimientos)`,
+    )
+  }
+}
+
 async function main() {
   console.log('\n=== Integridad producción ===\n')
 
@@ -342,6 +361,7 @@ async function main() {
   await checkNegociosEmbudoSinCliente()
   await checkConfigOperativa()
   await checkUsuariosActivos()
+  await checkCuotasVencidasSinAviso()
 
   const errs = resultados.filter((r) => r.nivel === 'error')
   const warns = resultados.filter((r) => r.nivel === 'warn')
