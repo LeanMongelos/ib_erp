@@ -19,6 +19,7 @@
     "smoke:http": "node scripts/e2e-smoke.mjs",
     "test:plantillas": "tsx scripts/test-plantillas-parity.ts",
     "integridad:prod": "tsx --env-file=.env scripts/integridad-prod.ts",
+    "integridad:reparar": "tsx --env-file=.env scripts/reparar-integridad.ts",
     "validar:env-prod": "tsx --env-file=.env scripts/validar-env-prod.ts",
     "go-live:check": "tsx --env-file=.env scripts/go-live-check.ts",
     "post-go-live:smoke": "bash scripts/post-go-live-smoke.sh",

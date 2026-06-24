@@ -4,13 +4,17 @@ import { OTsChart } from '@/components/dashboard/OTsChart'
 import { RecentOTsTable } from '@/components/dashboard/RecentOTsTable'
 import { ExportVentasMesButton } from '@/components/dashboard/ExportVentasMesButton'
 import { ExportCobranzasMesButton } from '@/components/cobranzas/ExportCobranzasMesButton'
+import { ExportOtsAbiertasButton } from '@/components/servicio-tecnico/ExportOtsAbiertasButton'
+import { ExportPresupuestosPendientesButton } from '@/components/presupuestos/ExportPresupuestosPendientesButton'
 import { Card, CardHeader, CardTitle } from '@/components/ui/card'
-import { ClipboardList, ShieldCheck, FileText, Users, AlertCircle, TrendingUp, Clock } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import Link from 'next/link'
+import { ClipboardList, ShieldCheck, FileText, Users, AlertCircle, TrendingUp, Clock, BarChart3 } from 'lucide-react'
 import { formatMonto } from '@/lib/utils'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { requirePagePermissionAny } from '@/lib/page-guard'
-import { DASHBOARD_ACCESS_PERMISSIONS } from '@/lib/page-permissions'
+import { DASHBOARD_ACCESS_PERMISSIONS, REPORTES_ACCESS_PERMISSIONS } from '@/lib/page-permissions'
 import { getDashboardMetrics } from '@/lib/dashboard/metrics'
 import { tienePermiso } from '@/lib/rbac'
 
@@ -24,6 +28,20 @@ export default async function DashboardPage() {
   const puedeExportarCobranzas =
     tienePermiso(user.permissions, 'cobranzas.read') ||
     tienePermiso(user.permissions, 'reportes.read_financiero')
+  const puedeExportarOts =
+    tienePermiso(user.permissions, 'servicio.read') ||
+    tienePermiso(user.permissions, 'reportes.read_operativo')
+  const puedeExportarPresupuestos =
+    tienePermiso(user.permissions, 'presupuestos.read') ||
+    tienePermiso(user.permissions, 'reportes.read_comercial')
+  const puedeVerReportes = REPORTES_ACCESS_PERMISSIONS.some((p) =>
+    tienePermiso(user.permissions, p),
+  )
+  const hayExportaciones =
+    (puedeExportarVentas && visibility.facturas) ||
+    puedeExportarCobranzas ||
+    (puedeExportarOts && visibility.servicio) ||
+    (puedeExportarPresupuestos && visibility.presupuestos)
 
   const estadoMap: Record<string, number> = data.estadosCounts
     ? Object.fromEntries(
@@ -47,12 +65,24 @@ export default async function DashboardPage() {
       />
 
       <div className="flex-1 overflow-y-auto bg-[#F4F6F9] p-6 flex flex-col gap-[18px]">
-        {(puedeExportarVentas && visibility.facturas) || puedeExportarCobranzas ? (
-          <div className="flex justify-end gap-2">
+        {(hayExportaciones || puedeVerReportes) && (
+          <div className="flex justify-end gap-2 flex-wrap">
             {puedeExportarVentas && visibility.facturas && <ExportVentasMesButton />}
             {puedeExportarCobranzas && <ExportCobranzasMesButton />}
+            {puedeExportarOts && visibility.servicio && <ExportOtsAbiertasButton />}
+            {puedeExportarPresupuestos && visibility.presupuestos && (
+              <ExportPresupuestosPendientesButton />
+            )}
+            {puedeVerReportes && (
+              <Link href="/reportes">
+                <Button variant="outline" size="sm">
+                  <BarChart3 size={14} />
+                  Centro de reportes
+                </Button>
+              </Link>
+            )}
           </div>
-        ) : null}
+        )}
         {!tieneMetricas && (
           <Card>
             <p className="text-[13px] text-[#7c828c]">

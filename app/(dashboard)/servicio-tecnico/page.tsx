@@ -4,8 +4,10 @@ import { OTsTable } from '@/components/servicio-tecnico/OTsTable'
 import { prisma } from '@/lib/prisma'
 import { actualizarOTsVencidas } from '@/lib/ots'
 import { Button } from '@/components/ui/button'
+import { ExportOtsAbiertasButton } from '@/components/servicio-tecnico/ExportOtsAbiertasButton'
 import { Calendar, Map } from 'lucide-react'
 import { requirePagePermission } from '@/lib/page-guard'
+import { tienePermiso } from '@/lib/rbac'
 
 async function getOTs() {
   await actualizarOTsVencidas()
@@ -31,7 +33,10 @@ async function getOTs() {
 }
 
 export default async function ServicioTecnicoPage() {
-  await requirePagePermission('servicio.read')
+  const user = await requirePagePermission('servicio.read')
+  const puedeExportarOts =
+    tienePermiso(user.permissions, 'servicio.read') ||
+    tienePermiso(user.permissions, 'reportes.read_operativo')
   const ots = await getOTs()
   const abiertas = ots.filter((o) => o.estado === 'ABIERTA' || o.estado === 'EN_PROCESO').length
   const vencidas = ots.filter((o) => o.estado === 'VENCIDA').length
@@ -43,7 +48,8 @@ export default async function ServicioTecnicoPage() {
         subtitle={`${abiertas} abiertas · ${vencidas} vencidas`}
       />
       <div className="flex-1 overflow-y-auto bg-[#F4F6F9] p-6">
-        <div className="flex justify-end gap-2 mb-4">
+        <div className="flex justify-end gap-2 mb-4 flex-wrap">
+          {puedeExportarOts && <ExportOtsAbiertasButton />}
           <Link href="/servicio-tecnico/mapa">
             <Button variant="outline" size="sm">
               <Map size={15} /> Mapa de equipos

@@ -5,6 +5,7 @@ import { BarChart3, TrendingUp, Wallet, Wrench, FileSpreadsheet, Download } from
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle } from '@/components/ui/card'
 import { KPICard } from '@/components/dashboard/KPICard'
+import { ReportesCsvCentro } from '@/components/reportes/ReportesCsvCentro'
 import { formatMonto } from '@/lib/utils'
 import { LABEL_SEGMENTO, type SegmentoCliente } from '@/lib/clientes-metrics'
 
@@ -73,6 +74,7 @@ export function ReportesPanel() {
 
   return (
     <div className="flex flex-col gap-5">
+      <ReportesCsvCentro />
       <div className="flex gap-2 flex-wrap">
         {tabsVisibles.map(({ id, label, icon: Icon }) => (
           <button

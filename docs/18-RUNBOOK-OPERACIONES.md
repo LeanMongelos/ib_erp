@@ -143,7 +143,39 @@ Ver [`21-TESTING-Y-CALIDAD.md`](21-TESTING-Y-CALIDAD.md).
 
 ---
 
-## 12. Contactos y escalamiento
+## 12. Integridad de datos (I2–I5) — reparación opcional
+
+Chequeo completo post-deploy (solo lectura, bloquea errores críticos):
+
+```bash
+npm run integridad:prod
+```
+
+Para **advertencias reparables** (OTs con SLA vencido, presupuestos con vigencia pasada):
+
+```bash
+# 1. Informe sin cambios (default)
+npm run integridad:reparar
+
+# 2. Revisar salida I2 / Pr3 / I3 / I4 / I5
+
+# 3. Solo si el operador confirma — aplicar fixes automáticos seguros
+npm run integridad:reparar -- --execute
+```
+
+| Código | Auto-reparable | Acción |
+|--------|----------------|--------|
+| I2 | Sí | Marca OT ABIERTA/EN_PROCESO → VENCIDA si `slaVence` pasó |
+| Pr3 | Sí | Marca presupuesto ENVIADO/APROBADO → VENCIDO si `fechaVencimiento` pasó |
+| I3 | No | Vincular conversaciones CRM en `/crm/inbox` |
+| I4 | No | Un solo predeterminado activo por plantilla/emisor/lista |
+| I5 | No | Vincular `clienteId` en negocios del embudo |
+
+Hallazgos I3–I5 requieren intervención manual; no usar `--execute` esperando que los resuelva.
+
+---
+
+## 13. Contactos y escalamiento
 
 | Nivel | Acción |
 |-------|--------|

@@ -5,6 +5,8 @@ import { formatMonto } from '@/lib/utils'
 import { plain } from '@/lib/serialize'
 import { requirePagePermission } from '@/lib/page-guard'
 import { actualizarPresupuestosVencidos } from '@/lib/presupuestos/actualizar-vencidos'
+import { ExportPresupuestosPendientesButton } from '@/components/presupuestos/ExportPresupuestosPendientesButton'
+import { tienePermiso } from '@/lib/rbac'
 
 async function getPresupuestos() {
   await actualizarPresupuestosVencidos()
@@ -15,7 +17,10 @@ async function getPresupuestos() {
 }
 
 export default async function PresupuestosPage() {
-  await requirePagePermission('presupuestos.read')
+  const user = await requirePagePermission('presupuestos.read')
+  const puedeExportar =
+    tienePermiso(user.permissions, 'presupuestos.read') ||
+    tienePermiso(user.permissions, 'reportes.read_comercial')
   const presupuestos = await getPresupuestos()
 
   const total = presupuestos.reduce((a, p) => a + Number(p.total), 0)
@@ -26,6 +31,11 @@ export default async function PresupuestosPage() {
     <>
       <Header title="Presupuestos" subtitle="Cotizaciones comerciales" />
       <div className="flex-1 overflow-y-auto bg-[#F4F6F9] p-6">
+        {puedeExportar && (
+          <div className="flex justify-end mb-4">
+            <ExportPresupuestosPendientesButton />
+          </div>
+        )}
         <div className="grid grid-cols-3 gap-4 mb-4">
           {[
             { label: 'Total cotizado', monto: total, color: 'text-[#16181d]' },
