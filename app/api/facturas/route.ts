@@ -10,6 +10,7 @@ import { parsePlazosCobranza, formatCondicionPago } from '@/lib/cobranzas/plazos
 import { sincronizarVencimientosCobranza } from '@/lib/cobranzas/vencimientos'
 import { resolverCotizacionUsdDocumento, CotizacionUsdFaltanteError } from '@/lib/moneda'
 import { validarSucursalesInstalacionEquipo } from '@/lib/facturas/validar-sucursal-equipo'
+import { datosItemsFacturaNestedCreate } from '@/lib/facturas/datos-items-factura'
 import { resolverPlantillaIdEmision } from '@/lib/plantillas/resolver-plantilla'
 
 export async function GET() {
@@ -126,21 +127,14 @@ export async function POST(req: NextRequest) {
               ? undefined
               : undefined,
             items: {
-              create: itemsCalculados.map((i) => ({
-                codigo: i.codigo ?? null,
-                descripcion: i.descripcion,
-                descripcionLarga: i.descripcionLarga ?? null,
-                fotoUrl: i.fotoUrl || null,
-                cantidad: i.cantidad,
-                precioUnit: i.precioUnit,
-                bonificacionPct: i.bonificacionPct ?? 0,
-                alicuotaIvaPct: i.alicuotaIvaPct ?? null,
-                subtotal: i.subtotal,
-                inventarioId: i.inventarioId ?? null,
-                numeroSerie: i.numeroSerie ?? null,
-                proximoPreventivo: i.proximoPreventivo ? new Date(i.proximoPreventivo as string | Date) : null,
-                sucursalInstalacionId: i.sucursalInstalacionId ?? null,
-              })),
+              create: datosItemsFacturaNestedCreate(
+                itemsCalculados,
+                data.items.map((i) => ({
+                  numeroSerie: i.numeroSerie,
+                  proximoPreventivo: i.proximoPreventivo,
+                  sucursalInstalacionId: i.sucursalInstalacionId,
+                })),
+              ),
             },
           },
           include: { cliente: true, items: true, emisor: true },

@@ -36,3 +36,11 @@ export function datosItemsFacturaCreate(
     }
   })
 }
+
+/** Para `items: { create: [...] }` en prisma.presupuesto/factura.create */
+export function datosItemsFacturaNestedCreate(
+  items: ItemDocumentoCalculado[],
+  extras?: ItemFacturaExtra[],
+) {
+  return datosItemsFacturaCreate('', items, extras).map(({ facturaId: _f, ...rest }) => rest)
+}
