@@ -278,6 +278,36 @@ async function validarCrmGoLive(items: GoLiveItem[], env: NodeJS.ProcessEnv) {
   }
 }
 
+async function validarPlantillasNotificacionGoLive(items: GoLiveItem[]) {
+  const requeridas = ['OT_CERRADA', 'PRESUPUESTO_ENVIADO'] as const
+  const faltantes: string[] = []
+
+  for (const codigo of requeridas) {
+    const row = await prisma.plantillaNotificacion.findUnique({
+      where: { codigo },
+      select: { id: true, activo: true },
+    })
+    if (!row) faltantes.push(codigo)
+  }
+
+  if (faltantes.length === 0) {
+    addItem(
+      items,
+      'seed',
+      'pass',
+      'Plantillas OT_CERRADA y PRESUPUESTO_ENVIADO presentes — emails al cliente OK',
+    )
+  } else {
+    addItem(
+      items,
+      'seed',
+      'warn',
+      `Plantilla(s) ausente(s): ${faltantes.join(', ')} — ejecutar npm run db:seed en el VPS`,
+      'plantillas_notificacion_ausentes',
+    )
+  }
+}
+
 export async function obtenerGoLiveStatus(): Promise<GoLiveStatus> {
   const items: GoLiveItem[] = []
   const fecha = new Date().toISOString()
@@ -442,6 +472,7 @@ export async function obtenerGoLiveStatus(): Promise<GoLiveStatus> {
   }
 
   await validarCrmGoLive(items, process.env)
+  await validarPlantillasNotificacionGoLive(items)
 
   const pass = items.filter((i) => i.nivel === 'pass').length
   const warn = items.filter((i) => i.nivel === 'warn').length

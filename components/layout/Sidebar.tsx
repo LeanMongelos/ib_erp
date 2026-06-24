@@ -38,7 +38,7 @@ const navItems = [
   { label: 'Configuración',     href: '/configuracion',               icon: Settings        },
 ]
 
-export function Sidebar() {
+export function Sidebar({ stockBajoCount = null }: { stockBajoCount?: number | null }) {
   const pathname = usePathname()
   const { sidebarHidden } = useEmbudoSidebar()
 
@@ -81,6 +81,10 @@ export function Sidebar() {
 
         {navItems.map(({ label, href, icon: Icon }) => {
           const active = isActive(href)
+          const badge =
+            href === '/compras' && stockBajoCount != null && stockBajoCount > 0
+              ? stockBajoCount
+              : null
           return (
             <Link
               key={href}
@@ -96,7 +100,15 @@ export function Sidebar() {
               aria-current={active ? 'page' : undefined}
             >
               <Icon size={19} strokeWidth={1.8} />
-              <span>{label}</span>
+              <span className="flex-1">{label}</span>
+              {badge != null && (
+                <span
+                  className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[#E8650A] text-white min-w-[1.25rem] text-center"
+                  title={`${badge} artículo(s) bajo mínimo`}
+                >
+                  {badge}
+                </span>
+              )}
             </Link>
           )
         })}

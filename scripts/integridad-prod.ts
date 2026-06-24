@@ -357,6 +357,27 @@ async function checkStockMinimo() {
   }
 }
 
+async function checkPlantillasNotificacionCliente() {
+  const requeridas = ['OT_CERRADA', 'PRESUPUESTO_ENVIADO'] as const
+  const faltantes: string[] = []
+
+  for (const codigo of requeridas) {
+    const row = await prisma.plantillaNotificacion.findUnique({
+      where: { codigo },
+      select: { id: true },
+    })
+    if (!row) faltantes.push(codigo)
+  }
+
+  if (faltantes.length === 0) {
+    ok('Plantillas OT_CERRADA y PRESUPUESTO_ENVIADO presentes')
+  } else {
+    warn(
+      `Plantilla(s) ausente(s): ${faltantes.join(', ')} — ejecutar npm run db:seed`,
+    )
+  }
+}
+
 async function main() {
   console.log('\n=== Integridad producción ===\n')
 
@@ -377,6 +398,7 @@ async function main() {
   await checkUsuariosActivos()
   await checkCuotasVencidasSinAviso()
   await checkStockMinimo()
+  await checkPlantillasNotificacionCliente()
 
   const errs = resultados.filter((r) => r.nivel === 'error')
   const warns = resultados.filter((r) => r.nivel === 'warn')

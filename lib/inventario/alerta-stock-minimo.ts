@@ -38,6 +38,10 @@ export async function listarArticulosStockBajo(): Promise<ArticuloStockBajo[]> {
   return items.filter((i) => i.stock <= i.stockMinimo)
 }
 
+export async function contarArticulosStockBajo(): Promise<number> {
+  return (await listarArticulosStockBajo()).length
+}
+
 async function yaEnviadoHoy(articuloId: string): Promise<boolean> {
   const prev = await prisma.systemLog.findFirst({
     where: { origen: ORIGEN, mensaje: { startsWith: claveDia(articuloId) } },

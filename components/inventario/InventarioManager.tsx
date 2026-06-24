@@ -163,6 +163,8 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
     if (q) setBusqueda(q)
   }, [searchParams])
 
+  const soloBajo = searchParams.get('bajo') === '1'
+
   useEffect(() => {
     fetch('/api/config/catalogos?tipo=categorias', { credentials: 'include' })
       .then((r) => r.json())
@@ -175,15 +177,19 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
   }, [])
 
   const filtrados = useMemo(() => {
+    let list = items
+    if (soloBajo) {
+      list = list.filter((i) => i.stock <= i.stockMinimo)
+    }
     const q = busqueda.trim().toLowerCase()
-    if (!q) return items
-    return items.filter(
+    if (!q) return list
+    return list.filter(
       (i) =>
         i.nombre.toLowerCase().includes(q) ||
         (i.sku?.toLowerCase().includes(q) ?? false) ||
         (i.categoria?.toLowerCase().includes(q) ?? false),
     )
-  }, [items, busqueda])
+  }, [items, busqueda, soloBajo])
 
   const stockBajo = items.filter((i) => i.stock <= i.stockMinimo)
 

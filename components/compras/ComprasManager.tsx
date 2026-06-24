@@ -2,8 +2,9 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { toast } from 'sonner'
-import { Package, RefreshCw, Truck } from 'lucide-react'
+import { Package, RefreshCw, Truck, ShoppingCart } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ProveedorCombobox } from '@/components/proveedores/ProveedorCombobox'
@@ -104,14 +105,15 @@ export function ComprasManager({
     }
   }
 
-  async function generarOC() {
-    if (!proveedorId) { toast.error('Seleccioná un proveedor'); return }
+  async function generarOC(proveedorOverride?: string) {
+    const prov = proveedorOverride ?? proveedorId
+    if (!prov) { toast.error('Seleccioná un proveedor'); return }
     setGenerando(true)
     try {
       const res = await fetch('/api/inventario/generar-oc', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ proveedorId }),
+        body: JSON.stringify({ proveedorId: prov }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(mensajeErrorJson(data, 'No se pudo generar la orden de compra'))
@@ -131,22 +133,42 @@ export function ComprasManager({
       {faltantes.length > 0 && (
         <Card>
           <div className="flex items-start justify-between gap-4">
-            <div>
+            <div className="flex-1 min-w-0">
               <h3 className="text-[13.5px] font-bold text-[#1f242c] flex items-center gap-2">
                 <Package size={16} className="text-[#E8650A]" />
                 Faltantes de stock ({faltantes.length})
+                <Link
+                  href="/inventario?bajo=1"
+                  className="text-[11px] font-semibold text-[#E8650A] hover:underline ml-1"
+                >
+                  Ver inventario
+                </Link>
               </h3>
-              <ul className="mt-2 space-y-1">
-                {faltantes.slice(0, 5).map((f) => (
-                  <li key={f.id} className="text-[12px] text-[#6b7280]">
-                    {f.nombre} — faltan {f.faltante} u. (stock {f.stock}/{f.stockMinimo})
-                    {f.ultimoProveedor && (
-                      <span className="text-[#9aa1ab]"> · {f.ultimoProveedor.razonSocial}</span>
+              <ul className="mt-2 space-y-2">
+                {faltantes.slice(0, 8).map((f) => (
+                  <li key={f.id} className="flex items-center justify-between gap-3 text-[12px] text-[#6b7280]">
+                    <span className="min-w-0 truncate">
+                      {f.nombre} — faltan {f.faltante} u. (stock {f.stock}/{f.stockMinimo})
+                      {f.ultimoProveedor && (
+                        <span className="text-[#9aa1ab]"> · {f.ultimoProveedor.razonSocial}</span>
+                      )}
+                    </span>
+                    {puedeCrear && f.ultimoProveedor && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-shrink-0 h-7 text-[11px]"
+                        loading={generando}
+                        onClick={() => generarOC(f.ultimoProveedor!.id)}
+                      >
+                        <ShoppingCart size={12} />
+                        OC
+                      </Button>
                     )}
                   </li>
                 ))}
-                {faltantes.length > 5 && (
-                  <li className="text-[11px] text-[#9aa1ab]">+{faltantes.length - 5} más…</li>
+                {faltantes.length > 8 && (
+                  <li className="text-[11px] text-[#9aa1ab]">+{faltantes.length - 8} más…</li>
                 )}
               </ul>
             </div>
@@ -159,7 +181,7 @@ export function ComprasManager({
                   label="Proveedor"
                   className="min-w-[200px]"
                 />
-                <Button variant="primary" size="sm" onClick={generarOC} loading={generando}>
+                <Button variant="primary" size="sm" onClick={() => generarOC()} loading={generando}>
                   Generar OC
                 </Button>
               </div>

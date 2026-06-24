@@ -2,6 +2,7 @@ import { Header } from '@/components/layout/Header'
 import { KPICard } from '@/components/dashboard/KPICard'
 import { OTsChart } from '@/components/dashboard/OTsChart'
 import { RecentOTsTable } from '@/components/dashboard/RecentOTsTable'
+import { ExportVentasMesButton } from '@/components/dashboard/ExportVentasMesButton'
 import { Card, CardHeader, CardTitle } from '@/components/ui/card'
 import { ClipboardList, ShieldCheck, FileText, Users, AlertCircle, TrendingUp, Clock } from 'lucide-react'
 import { formatMonto } from '@/lib/utils'
@@ -10,11 +11,15 @@ import { es } from 'date-fns/locale'
 import { requirePagePermissionAny } from '@/lib/page-guard'
 import { DASHBOARD_ACCESS_PERMISSIONS } from '@/lib/page-permissions'
 import { getDashboardMetrics } from '@/lib/dashboard/metrics'
+import { tienePermiso } from '@/lib/rbac'
 
 export default async function DashboardPage() {
   const user = await requirePagePermissionAny(...DASHBOARD_ACCESS_PERMISSIONS)
   const data = await getDashboardMetrics(user.permissions)
   const { visibility } = data
+  const puedeExportarVentas =
+    tienePermiso(user.permissions, 'facturas.read') ||
+    tienePermiso(user.permissions, 'reportes.read_comercial')
 
   const estadoMap: Record<string, number> = data.estadosCounts
     ? Object.fromEntries(
@@ -38,6 +43,11 @@ export default async function DashboardPage() {
       />
 
       <div className="flex-1 overflow-y-auto bg-[#F4F6F9] p-6 flex flex-col gap-[18px]">
+        {puedeExportarVentas && visibility.facturas && (
+          <div className="flex justify-end">
+            <ExportVentasMesButton />
+          </div>
+        )}
         {!tieneMetricas && (
           <Card>
             <p className="text-[13px] text-[#7c828c]">
