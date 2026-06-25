@@ -21,6 +21,11 @@ export default async function PresupuestoDetallePage({ params }: { params: Promi
       vendedor: { select: { nombre: true } },
       factura: { select: { id: true, numero: true } },
       ot: { select: { id: true, numero: true } },
+      negociosEmbudo: {
+        where: { activo: true },
+        select: { id: true, numero: true, etapa: true, vendedor: true },
+        take: 1,
+      },
     },
   })
   if (!presupuesto) notFound()

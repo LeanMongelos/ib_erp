@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { FileText, Send, CheckCircle, Receipt } from 'lucide-react'
+import { FileText, Send, CheckCircle, Receipt, Kanban } from 'lucide-react'
+import Link from 'next/link'
 import { toast } from 'sonner'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -46,6 +47,7 @@ interface PresupuestoDetalleProps {
       inventario?: { tipoArticulo?: string | null } | null
     }[]
     factura?: { id: string; numero: string } | null
+    negociosEmbudo?: Array<{ id: string; numero: number; etapa: string; vendedor: string }>
   }
 }
 
@@ -113,10 +115,19 @@ export function PresupuestoDetalle({ presupuesto: p }: PresupuestoDetalleProps) 
             <button
               type="button"
               onClick={() => router.push(`/servicio-tecnico/${p.ot!.id}`)}
-              className="text-[12px] text-[#E8650A] font-semibold hover:underline mt-1"
+              className="text-[12px] text-[#E8650A] font-semibold hover:underline mt-1 block"
             >
               Vinculado a OT {p.ot.numero}
             </button>
+          )}
+          {p.negociosEmbudo && p.negociosEmbudo[0] && (
+            <Link
+              href="/crm/embudo"
+              className="text-[12px] text-[#E8650A] font-semibold hover:underline mt-1 inline-flex items-center gap-1"
+            >
+              <Kanban size={12} />
+              Negocio embudo #{p.negociosEmbudo[0].numero} · {p.negociosEmbudo[0].etapa}
+            </Link>
           )}
         </div>
         <BadgeEstadoPresupuesto estado={p.estado} />

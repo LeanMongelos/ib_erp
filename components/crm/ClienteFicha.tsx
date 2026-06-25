@@ -15,7 +15,7 @@ import { Select } from '@/components/ui/select'
 import { Combobox } from '@/components/ui/combobox'
 import { Badge } from '@/components/ui/badge'
 import { CONDICION_IVA, CONDICION_PAGO } from '@/lib/form-options'
-import { BadgeEstadoOT, BadgeEstadoFactura } from '@/components/ui/badge'
+import { BadgeEstadoOT, BadgeEstadoFactura, BadgeEstadoPresupuesto } from '@/components/ui/badge'
 import { useCan } from '@/components/auth/useCan'
 import { mensajeErrorDesconocido, mensajeErrorJson } from '@/lib/errores'
 import { validarEmailOpcional } from '@/lib/form-validation'
@@ -63,11 +63,28 @@ interface ClienteCompleto extends Cliente {
   equipos: Equipo[]
   ots: any[]
   facturas: Factura[]
+  presupuestos?: Array<{
+    id: string
+    numero: string
+    estado: string
+    total: number
+    fechaEmision: string
+    moneda?: string
+  }>
+  negociosEmbudo?: Array<{
+    id: string
+    numero: number
+    nombre: string
+    etapa: string
+    monto: number
+    vendedor: string
+    activo: boolean
+  }>
   contactos?: ContactoCliente[]
   _count?: { equipos: number; ots: number }
 }
 
-const TABS = ['Comportamiento', 'Datos generales', 'Equipos', 'Historial OTs', 'Facturas'] as const
+const TABS = ['Comportamiento', 'Datos generales', 'Presupuestos', 'Negocios embudo', 'Equipos', 'Historial OTs', 'Facturas'] as const
 type Tab = typeof TABS[number]
 
 export function ClienteFicha({
@@ -124,6 +141,9 @@ export function ClienteFicha({
               <Pencil size={15} /> Editar ficha
             </Button>
           )}
+          <Button variant="secondary" onClick={() => router.push(`/presupuestos/nuevo?clienteId=${cliente.id}`)}>
+            <FileText size={16} /> Nuevo presupuesto
+          </Button>
           <Button onClick={() => router.push(`/servicio-tecnico/nueva?clienteId=${cliente.id}`)}>
             <Wrench size={16} strokeWidth={2.2} />
             Nueva OT
@@ -347,6 +367,65 @@ export function ClienteFicha({
                 />
                 <ClienteSucursalesPanel clienteId={cliente.id} puedeEditar={puedeEditar} />
               </div>
+            )}
+
+            {tab === 'Presupuestos' && (
+              <table className="w-full">
+                <thead>
+                  <tr>
+                    {['N°', 'Emisión', 'Total', 'Estado', ''].map((h) => (
+                      <th key={h} className="px-5 py-[11px] text-left text-[10.5px] font-bold text-[#8a909a] tracking-[0.6px] uppercase border-b border-[#f0f1f4]">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {(cliente.presupuestos ?? []).map((pr, i) => (
+                    <tr key={pr.id} className={i % 2 === 0 ? 'bg-white' : 'bg-[#fafbfc]'}>
+                      <td className="px-5 py-3 border-b border-[#f4f5f7]">
+                        <Link href={`/presupuestos/${pr.id}`} className="text-[12.5px] font-bold text-[#E8650A] hover:underline">{pr.numero}</Link>
+                      </td>
+                      <td className="px-5 py-3 text-[12.5px] text-[#6b7280] border-b border-[#f4f5f7]">{formatFecha(pr.fechaEmision)}</td>
+                      <td className="px-5 py-3 text-[12.5px] font-bold text-[#1f242c] border-b border-[#f4f5f7]">{formatMonto(pr.total)}</td>
+                      <td className="px-5 py-3 border-b border-[#f4f5f7]"><BadgeEstadoPresupuesto estado={pr.estado as any} /></td>
+                      <td className="px-5 py-3 border-b border-[#f4f5f7]" />
+                    </tr>
+                  ))}
+                  {(cliente.presupuestos ?? []).length === 0 && (
+                    <tr><td colSpan={5} className="px-5 py-8 text-center text-[12.5px] text-[#9aa1ab]">Sin presupuestos</td></tr>
+                  )}
+                </tbody>
+              </table>
+            )}
+
+            {tab === 'Negocios embudo' && (
+              <table className="w-full">
+                <thead>
+                  <tr>
+                    {['N°', 'Nombre', 'Etapa', 'Monto', 'Vendedor'].map((h) => (
+                      <th key={h} className="px-5 py-[11px] text-left text-[10.5px] font-bold text-[#8a909a] tracking-[0.6px] uppercase border-b border-[#f0f1f4]">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {(cliente.negociosEmbudo ?? []).map((n, i) => (
+                    <tr key={n.id} className={i % 2 === 0 ? 'bg-white' : 'bg-[#fafbfc]'}>
+                      <td className="px-5 py-3 border-b border-[#f4f5f7]">
+                        <Link href="/crm/embudo" className="text-[12.5px] font-bold text-[#E8650A] hover:underline">#{n.numero}</Link>
+                      </td>
+                      <td className="px-5 py-3 text-[12.5px] text-[#3a4150] border-b border-[#f4f5f7]">{n.nombre}</td>
+                      <td className="px-5 py-3 text-[12.5px] border-b border-[#f4f5f7]">
+                        <span className="font-semibold">{n.etapa}</span>
+                        {!n.activo && <span className="ml-1 text-[10px] text-red-600 font-bold">INACTIVO</span>}
+                      </td>
+                      <td className="px-5 py-3 text-[12.5px] font-bold border-b border-[#f4f5f7]">{formatMonto(n.monto)}</td>
+                      <td className="px-5 py-3 text-[12.5px] text-[#6b7280] border-b border-[#f4f5f7]">{n.vendedor}</td>
+                    </tr>
+                  ))}
+                  {(cliente.negociosEmbudo ?? []).length === 0 && (
+                    <tr><td colSpan={5} className="px-5 py-8 text-center text-[12.5px] text-[#9aa1ab]">Sin negocios en el embudo</td></tr>
+                  )}
+                </tbody>
+              </table>
             )}
 
             {tab === 'Equipos' && (

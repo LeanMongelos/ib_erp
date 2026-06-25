@@ -26,6 +26,20 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     })
     if (!conversacion) throw new ApiError(404, 'Conversación no encontrada')
 
+    const negocioEmbudo = await prisma.negocioEmbudo.findFirst({
+      where: {
+        activo: true,
+        datos: { path: ['conversacionId'], equals: id },
+      },
+      select: {
+        id: true,
+        numero: true,
+        etapa: true,
+        presupuestoId: true,
+        presupuesto: { select: { numero: true } },
+      },
+    })
+
     if (conversacion.sinLeer > 0) {
       await prisma.conversacionCRM.update({
         where: { id },
@@ -33,7 +47,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       })
     }
 
-    return NextResponse.json(plain({ ...conversacion, sinLeer: 0 }))
+    return NextResponse.json(plain({ ...conversacion, sinLeer: 0, negocioEmbudo }))
   } catch (error) {
     return handleApiError(error)
   }

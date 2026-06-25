@@ -4,6 +4,7 @@ import { requirePermission, handleApiError, ApiError } from '@/lib/api-auth'
 import { plain } from '@/lib/serialize'
 import { embudoNegocioPatchSchema } from '@/lib/validation'
 import { diffEdicionNegocio, registrarEventoEmbudo } from '@/lib/crm/embudo-historial'
+import { vincularPresupuestoNegocioEmbudo } from '@/lib/crm/vincular-presupuesto-embudo'
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -15,6 +16,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (!exists) throw new ApiError(404, 'Negocio no encontrado')
     if (!exists.activo) throw new ApiError(400, 'No se puede editar un negocio eliminado')
 
+    if (body.presupuestoId) {
+      await vincularPresupuestoNegocioEmbudo(id, body.presupuestoId, user.id)
+      const { presupuestoId: _p, ...rest } = body
+      if (Object.keys(rest).length === 0) {
+        const negocio = await prisma.negocioEmbudo.findUnique({ where: { id } })
+        return NextResponse.json(plain(negocio))
+      }
+    }
+
     const updateData = {
       ...body,
       proximaAccionFecha: body.proximaAccionFecha === undefined
@@ -23,6 +33,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           ? new Date(body.proximaAccionFecha)
           : null,
     }
+    delete (updateData as { presupuestoId?: string }).presupuestoId
 
     const cambios = diffEdicionNegocio(
       exists as unknown as Record<string, unknown>,

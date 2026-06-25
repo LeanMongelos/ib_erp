@@ -46,7 +46,7 @@ export function DealCard({
   const alerta = alertaTarjeta(negocio.etapaDesde, negocio.proximaAccionFecha)
   const vendedorColor = VENDEDOR_COLORS[negocio.vendedor] ?? VENDEDOR_COLORS.OTRO
   const tienePresupuesto = Boolean(negocio.presupuestoId)
-  const clienteQ = negocio.clienteId ? `?clienteId=${negocio.clienteId}` : ''
+  const clienteQ = negocio.clienteId ? `?clienteId=${negocio.clienteId}&negocioEmbudoId=${negocio.id}` : `?negocioEmbudoId=${negocio.id}`
 
   const alertClass =
     alerta === 'rojo' ? styles.cardAlertRojo

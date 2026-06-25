@@ -194,8 +194,9 @@ export const embudoNegocioCreateSchema = z.object({
   nombre: z.string().min(1),
   cliente: z.string().min(1),
   clienteId: z.string().min(1).optional().nullable(),
-  productoServicio: z.string().min(1),
+  productoServicio: z.string().min(1).optional().default('Consulta comercial'),
   inventarioId: z.string().min(1).optional().nullable(),
+  conversacionId: z.string().min(1).optional().nullable(),
   monto: z.number().optional(),
   vendedor: z.string().min(1),
   urgencia: urgenciaEmbudoEnum.optional(),
@@ -206,12 +207,14 @@ export const embudoNegocioCreateSchema = z.object({
 export const embudoNegocioPatchSchema = z.object({
   nombre: z.string().min(1).optional(),
   cliente: z.string().min(1).optional(),
+  clienteId: z.string().min(1).optional().nullable(),
   productoServicio: z.string().optional(),
   monto: z.number().optional(),
   vendedor: z.string().optional(),
   urgencia: urgenciaEmbudoEnum.optional(),
   notas: z.string().optional(),
   proximaAccionFecha: z.string().optional().nullable(),
+  presupuestoId: z.string().min(1).optional().nullable(),
 })
 
 /** PATCH /api/crm/embudo/seguimiento/[id] — editar registro (solo SUPERADMIN). */

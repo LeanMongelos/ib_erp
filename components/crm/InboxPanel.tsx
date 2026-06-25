@@ -5,8 +5,10 @@ import Link from 'next/link'
 import { toast } from 'sonner'
 import {
   Search, Send, UserPlus, Wrench, FileText, Tag, Phone, Mail,
-  MessageCircle, Camera, Globe, Zap, ChevronRight, Paperclip, ImageIcon,
+  MessageCircle, Camera, Globe, Zap, ChevronRight, Paperclip, ImageIcon, Kanban,
 } from 'lucide-react'
+import { useSession } from 'next-auth/react'
+import { inicialesVendedor } from '@/components/crm/embudo/EmbudoFormFields'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -48,6 +50,13 @@ interface Snippet {
 interface Detalle extends Conversacion {
   mensajes: Mensaje[]
   cliente?: { id: string; nombre: string; telefono?: string | null; email?: string | null; tipo?: string } | null
+  negocioEmbudo?: {
+    id: string
+    numero: number
+    etapa: string
+    presupuestoId?: string | null
+    presupuesto?: { numero: string } | null
+  } | null
 }
 
 const CANAL_META: Record<string, { icon: typeof MessageCircle; color: string; label: string }> = {
@@ -69,6 +78,8 @@ export function InboxPanel({
 }) {
   const puedeResponder = useCan('crm.reply')
   const puedeAsignar = useCan('crm.assign')
+  const { data: session } = useSession()
+  const [creandoNegocio, setCreandoNegocio] = useState(false)
   const [lista, setLista] = useState<Conversacion[]>([])
   const [selId, setSelId] = useState<string | null>(null)
   const [detalle, setDetalle] = useState<Detalle | null>(null)
@@ -244,9 +255,43 @@ export function InboxPanel({
   }
 
   function accionHref(base: string) {
-    if (!detalle?.cliente?.id) return base
-    const sep = base.includes('?') ? '&' : '?'
-    return `${base}${sep}clienteId=${encodeURIComponent(detalle.cliente.id)}`
+    const params = new URLSearchParams()
+    if (detalle?.cliente?.id) params.set('clienteId', detalle.cliente.id)
+    if (detalle?.negocioEmbudo?.id) params.set('negocioEmbudoId', detalle.negocioEmbudo.id)
+    const qs = params.toString()
+    return qs ? `${base}?${qs}` : base
+  }
+
+  async function crearNegocioEmbudo() {
+    if (!detalle || !puedeResponder) return
+    setCreandoNegocio(true)
+    try {
+      const vendedor = session?.user?.name ? inicialesVendedor(session.user.name) : 'OTRO'
+      const res = await fetch('/api/crm/embudo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nombre: detalle.contactoNombre || 'Consulta inbox',
+          cliente: detalle.cliente?.nombre ?? detalle.contactoNombre,
+          clienteId: detalle.cliente?.id ?? null,
+          productoServicio: `Consulta ${CANAL_META[detalle.canal?.tipo ?? '']?.label ?? 'canal'}`,
+          vendedor,
+          conversacionId: detalle.id,
+          notas: `Origen: inbox · ${detalle.contactoHandle}`,
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(mensajeErrorJson(data, 'No se pudo crear el negocio'))
+      toast.success(`Negocio #${data.numero} creado en el embudo`)
+      setDetalle((d) => d ? {
+        ...d,
+        negocioEmbudo: { id: data.id, numero: data.numero, etapa: data.etapa, presupuestoId: null },
+      } : d)
+    } catch (e) {
+      toast.error(mensajeErrorDesconocido(e, 'No se pudo crear el negocio'))
+    } finally {
+      setCreandoNegocio(false)
+    }
   }
 
   const prospectoPrefill = detalle
@@ -519,6 +564,23 @@ export function InboxPanel({
               <div>
                 <p className="text-[10.5px] font-bold text-[#8a909a] uppercase mb-2">Acciones rápidas</p>
                 <div className="grid grid-cols-2 gap-2">
+                  {detalle.negocioEmbudo ? (
+                    <Link href="/crm/embudo" className="col-span-2">
+                      <Button variant="outline" size="sm" className="w-full justify-start border-[#E8650A] text-[#C4540A]">
+                        <Kanban size={14} /> Negocio #{detalle.negocioEmbudo.numero} · {detalle.negocioEmbudo.etapa}
+                      </Button>
+                    </Link>
+                  ) : puedeResponder ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="col-span-2 justify-start"
+                      loading={creandoNegocio}
+                      onClick={crearNegocioEmbudo}
+                    >
+                      <Kanban size={14} /> Crear negocio embudo
+                    </Button>
+                  ) : null}
                   {detalle.cliente ? (
                     <>
                       <Link href={accionHref('/presupuestos/nuevo')}>

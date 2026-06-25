@@ -37,8 +37,11 @@ export async function POST(req: NextRequest) {
           urgencia: body.urgencia ?? 'NORMAL',
           etapa: body.etapa ?? 'ENTRADA',
           notas: body.notas,
-          etapaDesde: new Date(),
-          datos: body.inventarioId ? { inventarioId: body.inventarioId } : {},
+        etapaDesde: new Date(),
+        datos: {
+          ...(body.inventarioId ? { inventarioId: body.inventarioId } : {}),
+          ...(body.conversacionId ? { conversacionId: body.conversacionId } : {}),
+        },
         },
       })
       await tx.historialEmbudo.create({

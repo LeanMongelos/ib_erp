@@ -55,6 +55,7 @@ interface Props {
   emisores: { id: string; razonSocial: string; predeterminado?: boolean }[]
   clienteEventualId?: string
   clienteInicialId?: string
+  negocioEmbudoId?: string
   otPrefill?: {
     id: string
     numero: string
@@ -97,6 +98,7 @@ export function NuevoPresupuestoForm({
   emisores,
   clienteEventualId,
   clienteInicialId,
+  negocioEmbudoId,
   otPrefill,
   plantillaPresupuesto,
 }: Props) {
@@ -233,6 +235,13 @@ export function NuevoPresupuestoForm({
       })
       if (!res.ok) throw new Error(await mensajeErrorRespuesta(res, 'No se pudo guardar el presupuesto'))
       const data = await res.json()
+      if (negocioEmbudoId) {
+        await fetch(`/api/crm/embudo/${negocioEmbudoId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ presupuestoId: data.id }),
+        }).catch(() => null)
+      }
       toast.success('Presupuesto creado')
       router.push(`/presupuestos/${data.id}`)
     } catch (e) {
@@ -244,6 +253,14 @@ export function NuevoPresupuestoForm({
 
   return (
     <div className="max-w-4xl mx-auto flex flex-col gap-4">
+      {negocioEmbudoId && (
+        <div className="bg-[#FFF1E2] border border-[#FDBA74] rounded-[10px] px-4 py-3">
+          <p className="text-[13px] font-bold text-[#C2540A]">Vinculado al embudo de ventas</p>
+          <p className="text-[12px] text-[#9a3412] mt-0.5">
+            Al guardar, el presupuesto se asociará automáticamente al negocio del pipeline.
+          </p>
+        </div>
+      )}
       {otPrefill && (
         <div className="bg-[#EFF6FF] border border-[#93C5FD] rounded-[10px] px-4 py-3">
           <p className="text-[13px] font-bold text-[#1E40AF]">
