@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import Link from 'next/link'
-import { Calendar, CheckCircle2, Plus, Battery, Eye } from 'lucide-react'
+import { Calendar, CheckCircle2, Plus, Battery, Eye, ClipboardList } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -49,9 +49,11 @@ export function PreventivoManager({ equipos, tecnicos }: { equipos: Equipo[]; te
   const router = useRouter()
   const puedeAgendar = useCan('preventivo.schedule')
   const puedeCompletar = useCan('preventivo.complete')
+  const puedeAgendarOT = useCan('servicio.create')
   const [planes, setPlanes] = useState<Plan[]>([])
   const [alertasComponentes, setAlertasComponentes] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [agendandoOt, setAgendandoOt] = useState<string | null>(null)
   const [modal, setModal] = useState(false)
   const [fichaEquipoId, setFichaEquipoId] = useState<string | null>(null)
   const [fichaSubtitle, setFichaSubtitle] = useState<string | undefined>()
@@ -85,6 +87,26 @@ export function PreventivoManager({ equipos, tecnicos }: { equipos: Equipo[]; te
       cargar()
       router.refresh()
     } else toast.error('No se pudo completar')
+  }
+
+  async function agendarOT(planId: string) {
+    setAgendandoOt(planId)
+    try {
+      const res = await fetch(`/api/mantenimiento/${planId}/agendar-ot`, { method: 'POST' })
+      if (!res.ok) throw new Error(await mensajeErrorRespuesta(res, 'No se pudo agendar la OT'))
+      const data = await res.json()
+      if (data.created) {
+        toast.success(`OT ${data.ot.numero} creada`)
+      } else {
+        toast.info(`Ya existe OT abierta ${data.ot.numero}`)
+      }
+      cargar()
+      router.refresh()
+    } catch (e) {
+      toast.error(mensajeErrorDesconocido(e, 'No se pudo agendar la OT'))
+    } finally {
+      setAgendandoOt(null)
+    }
   }
 
   function abrirFicha(equipoId: string, nombre?: string, planDesc?: string) {
@@ -205,6 +227,15 @@ export function PreventivoManager({ equipos, tecnicos }: { equipos: Equipo[]; te
                           <Link href={`/servicio-tecnico/${p.otPreventiva.id}`} className="text-[#E8650A] font-semibold hover:underline">
                             OT {p.otPreventiva.numero}
                           </Link>
+                        ) : puedeAgendarOT && !['CANCELADO', 'COMPLETADO'].includes(p.estado) ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            loading={agendandoOt === p.id}
+                            onClick={() => agendarOT(p.id)}
+                          >
+                            <ClipboardList size={14} /> Agendar OT
+                          </Button>
                         ) : p.notas?.includes('factura') ? (
                           <span className="text-[11px] text-[#9aa1ab]">Venta · sin OT abierta</span>
                         ) : (

@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { Suspense } from 'react'
 import { Header } from '@/components/layout/Header'
 import { OTsTable } from '@/components/servicio-tecnico/OTsTable'
 import { prisma } from '@/lib/prisma'
@@ -8,27 +9,22 @@ import { ExportOtsAbiertasButton } from '@/components/servicio-tecnico/ExportOts
 import { Calendar, Map } from 'lucide-react'
 import { requirePagePermission } from '@/lib/page-guard'
 import { tienePermiso } from '@/lib/rbac'
+import { plain } from '@/lib/serialize'
 
-async function getOTs() {
+async function getResumenOTs() {
   await actualizarOTsVencidas()
-  return prisma.ordenTrabajo.findMany({
-    orderBy: { creadoEn: 'desc' },
-    select: {
-      id: true,
-      numero: true,
-      descripcion: true,
-      tipo: true,
-      estado: true,
-      prioridad: true,
-      slaHoras: true,
-      fechaApertura: true,
-      fechaCierre: true,
-      slaVence: true,
-      clienteId: true,
-      cliente: { select: { nombre: true } },
-      equipo: { select: { nombre: true } },
-      tecnico: { select: { id: true, nombre: true } },
-    },
+  const [abiertas, vencidas] = await Promise.all([
+    prisma.ordenTrabajo.count({ where: { estado: { in: ['ABIERTA', 'EN_PROCESO'] } } }),
+    prisma.ordenTrabajo.count({ where: { estado: 'VENCIDA' } }),
+  ])
+  return { abiertas, vencidas }
+}
+
+async function getTecnicos() {
+  return prisma.usuario.findMany({
+    where: { activo: true, rol: { in: ['TECNICO', 'ADMIN'] } },
+    select: { id: true, nombre: true },
+    orderBy: { nombre: 'asc' },
   })
 }
 
@@ -37,9 +33,11 @@ export default async function ServicioTecnicoPage() {
   const puedeExportarOts =
     tienePermiso(user.permissions, 'servicio.read') ||
     tienePermiso(user.permissions, 'reportes.read_operativo')
-  const ots = await getOTs()
-  const abiertas = ots.filter((o) => o.estado === 'ABIERTA' || o.estado === 'EN_PROCESO').length
-  const vencidas = ots.filter((o) => o.estado === 'VENCIDA').length
+
+  const [{ abiertas, vencidas }, tecnicos] = await Promise.all([
+    getResumenOTs(),
+    getTecnicos(),
+  ])
 
   return (
     <>
@@ -61,7 +59,9 @@ export default async function ServicioTecnicoPage() {
             </Button>
           </Link>
         </div>
-        <OTsTable ots={JSON.parse(JSON.stringify(ots))} />
+        <Suspense fallback={<p className="text-[12.5px] text-[#9aa1ab]">Cargando…</p>}>
+          <OTsTable tecnicos={JSON.parse(JSON.stringify(plain(tecnicos)))} />
+        </Suspense>
       </div>
     </>
   )

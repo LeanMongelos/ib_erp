@@ -1,15 +1,15 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Search, Plus } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { BadgeEstadoOT, BadgePrioridad, BadgeTipoOT } from '@/components/ui/badge'
 import { formatFecha, formatFechaHora } from '@/lib/utils'
-import type { OrdenTrabajo } from '@/types'
 import { cn } from '@/lib/utils'
+import { mensajeErrorRespuesta } from '@/lib/errores'
 
 const ESTADOS = [
   { value: 'TODOS',      label: 'Todos los estados' },
@@ -41,57 +41,105 @@ interface OTRow {
   clienteId: string
   cliente?: { nombre: string }
   equipo?:  { nombre: string }
-  tecnico?: { nombre: string }
+  tecnico?: { id?: string; nombre: string }
   tecnicoId?: string | null
 }
 
-export function OTsTable({ ots }: { ots: OTRow[] }) {
+interface TecnicoOption {
+  id: string
+  nombre: string
+}
+
+function paramOrDefault(value: string | null, fallback: string) {
+  return value && value.length > 0 ? value : fallback
+}
+
+export function OTsTable({ tecnicos = [] }: { tecnicos?: TecnicoOption[] }) {
   const router = useRouter()
-  const [search,  setSearch]  = useState('')
-  const [estado,  setEstado]  = useState('TODOS')
-  const [tecnico, setTecnico] = useState('TODOS')
-  const [sla,     setSla]     = useState<(typeof SLA_FILTROS)[number]['value']>('TODOS')
+  const searchParams = useSearchParams()
 
-  const tecnicosUnicos = useMemo(() => {
-    const names = new Set<string>()
-    for (const ot of ots) {
-      if (ot.tecnico?.nombre) names.add(ot.tecnico.nombre)
+  const [search, setSearch] = useState(() => searchParams.get('q') ?? '')
+  const [estado, setEstado] = useState(() => paramOrDefault(searchParams.get('estado'), 'TODOS'))
+  const [tecnicoId, setTecnicoId] = useState(() => paramOrDefault(searchParams.get('tecnicoId'), 'TODOS'))
+  const [sla, setSla] = useState<(typeof SLA_FILTROS)[number]['value']>(() =>
+    paramOrDefault(searchParams.get('sla'), 'TODOS') as (typeof SLA_FILTROS)[number]['value'],
+  )
+  const [ots, setOts] = useState<OTRow[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const syncUrl = useCallback((next: {
+    q?: string
+    estado?: string
+    tecnicoId?: string
+    sla?: string
+  }) => {
+    const params = new URLSearchParams()
+    const q = next.q ?? search
+    const est = next.estado ?? estado
+    const tec = next.tecnicoId ?? tecnicoId
+    const slaVal = next.sla ?? sla
+
+    if (q.trim()) params.set('q', q.trim())
+    if (est !== 'TODOS') params.set('estado', est)
+    if (tec !== 'TODOS') params.set('tecnicoId', tec)
+    if (slaVal !== 'TODOS') params.set('sla', slaVal)
+
+    const qs = params.toString()
+    router.replace(qs ? `/servicio-tecnico?${qs}` : '/servicio-tecnico', { scroll: false })
+  }, [router, search, estado, tecnicoId, sla])
+
+  const cargar = useCallback(async () => {
+    setLoading(true)
+    try {
+      const params = new URLSearchParams()
+      if (search.trim()) params.set('q', search.trim())
+      if (estado !== 'TODOS') params.set('estado', estado)
+      if (tecnicoId !== 'TODOS') params.set('tecnicoId', tecnicoId)
+      if (sla !== 'TODOS') params.set('sla', sla)
+
+      const res = await fetch(`/api/ots?${params}`, { credentials: 'include' })
+      if (!res.ok) throw new Error(await mensajeErrorRespuesta(res, 'Error al cargar órdenes de trabajo'))
+      setOts(await res.json())
+    } catch (e) {
+      console.error(e)
+      setOts([])
+    } finally {
+      setLoading(false)
     }
-    return [...names].sort((a, b) => a.localeCompare(b, 'es'))
-  }, [ots])
+  }, [search, estado, tecnicoId, sla])
 
-  function matchSla(ot: OTRow): boolean {
-    if (sla === 'TODOS') return true
-    const ahora = Date.now()
-    const vence = new Date(ot.slaVence).getTime()
-    const vencido = ot.estado === 'VENCIDA' || vence < ahora
-    const proximo = !vencido && vence - ahora <= 24 * 60 * 60 * 1000
-    if (sla === 'VENCIDO') return vencido
-    if (sla === 'PROXIMO') return proximo
-    return !vencido && !proximo
+  useEffect(() => {
+    cargar()
+  }, [cargar])
+
+  function onSearchChange(value: string) {
+    setSearch(value)
+    syncUrl({ q: value })
   }
 
-  const filtered = ots.filter((ot) => {
-    const q = search.toLowerCase()
-    const matchSearch =
-      !search ||
-      ot.numero.toLowerCase().includes(q) ||
-      (ot.cliente?.nombre ?? '').toLowerCase().includes(q) ||
-      (ot.equipo?.nombre  ?? '').toLowerCase().includes(q)
-    const matchEstado = estado === 'TODOS' || ot.estado === estado
-    const matchTecnico = tecnico === 'TODOS' || ot.tecnico?.nombre === tecnico
-    return matchSearch && matchEstado && matchTecnico && matchSla(ot)
-  })
+  function onEstadoChange(value: string) {
+    setEstado(value)
+    syncUrl({ estado: value })
+  }
+
+  function onTecnicoChange(value: string) {
+    setTecnicoId(value)
+    syncUrl({ tecnicoId: value })
+  }
+
+  function onSlaChange(value: typeof sla) {
+    setSla(value)
+    syncUrl({ sla: value })
+  }
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Filtros */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
         <div className="flex items-center gap-2 bg-white border border-[#e4e7eb] rounded-[9px] px-3 py-2 w-[260px]">
           <Search size={16} className="text-[#9aa1ab]" />
           <input
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Buscar OT, cliente, equipo…"
             className="flex-1 text-[12.5px] bg-transparent border-none outline-none text-[#1f242c] placeholder:text-[#9aa1ab]"
           />
@@ -100,23 +148,23 @@ export function OTsTable({ ots }: { ots: OTRow[] }) {
         <div className="bg-white border border-[#e4e7eb] rounded-[9px] px-3 py-2">
           <select
             value={estado}
-            onChange={(e) => setEstado(e.target.value)}
+            onChange={(e) => onEstadoChange(e.target.value)}
             className="text-[12.5px] text-[#3a4150] font-semibold bg-transparent border-none outline-none cursor-pointer"
           >
             {ESTADOS.map((e) => <option key={e.value} value={e.value}>{e.label}</option>)}
           </select>
         </div>
 
-        {tecnicosUnicos.length > 0 && (
+        {tecnicos.length > 0 && (
           <div className="bg-white border border-[#e4e7eb] rounded-[9px] px-3 py-2">
             <select
-              value={tecnico}
-              onChange={(e) => setTecnico(e.target.value)}
+              value={tecnicoId}
+              onChange={(e) => onTecnicoChange(e.target.value)}
               className="text-[12.5px] text-[#3a4150] font-semibold bg-transparent border-none outline-none cursor-pointer"
             >
               <option value="TODOS">Todos los técnicos</option>
-              {tecnicosUnicos.map((t) => (
-                <option key={t} value={t}>{t}</option>
+              {tecnicos.map((t) => (
+                <option key={t.id} value={t.id}>{t.nombre}</option>
               ))}
             </select>
           </div>
@@ -125,7 +173,7 @@ export function OTsTable({ ots }: { ots: OTRow[] }) {
         <div className="bg-white border border-[#e4e7eb] rounded-[9px] px-3 py-2">
           <select
             value={sla}
-            onChange={(e) => setSla(e.target.value as typeof sla)}
+            onChange={(e) => onSlaChange(e.target.value as typeof sla)}
             className="text-[12.5px] text-[#3a4150] font-semibold bg-transparent border-none outline-none cursor-pointer"
           >
             {SLA_FILTROS.map((s) => (
@@ -142,59 +190,62 @@ export function OTsTable({ ots }: { ots: OTRow[] }) {
         </Button>
       </div>
 
-      {/* Tabla */}
       <Card padding={false}>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr>
-                {['N° OT', 'Tipo', 'Cliente', 'Equipo', 'Técnico', 'Apertura', 'SLA vence', 'Estado'].map((h) => (
-                  <th key={h} className="px-5 py-3 text-left text-[10.5px] font-bold text-[#8a909a] tracking-[0.6px] uppercase border-b border-[#eef0f2]">
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((ot, i) => {
-                const vencido = ot.estado === 'VENCIDA' || new Date(ot.slaVence) < new Date()
-                return (
-                  <tr key={ot.id} className={i % 2 === 0 ? 'bg-white' : 'bg-[#fafbfc]'}>
-                    <td className="px-5 py-[13px] border-b border-[#f4f5f7]">
-                      <Link href={`/servicio-tecnico/${ot.id}`} className="text-[12.5px] font-bold text-[#E8650A] hover:underline">
-                        {ot.numero}
-                      </Link>
-                    </td>
-                    <td className="px-5 py-[13px] border-b border-[#f4f5f7]">
-                      <BadgeTipoOT tipo={ot.tipo} />
-                    </td>
-                    <td className="px-5 py-[13px] text-[12.5px] font-semibold text-[#3a4150] border-b border-[#f4f5f7]">
-                      {ot.cliente?.nombre ?? '—'}
-                    </td>
-                    <td className="px-5 py-[13px] text-[12.5px] text-[#6b7280] border-b border-[#f4f5f7]">
-                      {ot.equipo?.nombre ?? '—'}
-                    </td>
-                    <td className="px-5 py-[13px] text-[12.5px] text-[#3a4150] border-b border-[#f4f5f7]">
-                      {ot.tecnico?.nombre ?? 'Sin asignar'}
-                    </td>
-                    <td className="px-5 py-[13px] text-[12.5px] text-[#6b7280] border-b border-[#f4f5f7]">
-                      {formatFecha(ot.fechaApertura)}
-                    </td>
-                    <td className={cn('px-5 py-[13px] text-[12.5px] font-semibold border-b border-[#f4f5f7]', vencido ? 'text-[#C2261B]' : 'text-[#3a4150]')}>
-                      {formatFechaHora(ot.slaVence)}
-                    </td>
-                    <td className="px-5 py-[13px] border-b border-[#f4f5f7]">
-                      <BadgeEstadoOT estado={ot.estado as any} />
-                    </td>
-                  </tr>
-                )
-              })}
-              {filtered.length === 0 && (
-                <tr><td colSpan={8} className="px-5 py-10 text-center text-[12.5px] text-[#9aa1ab]">No se encontraron órdenes de trabajo</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        {loading ? (
+          <p className="p-6 text-[12.5px] text-[#9aa1ab]">Cargando…</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr>
+                  {['N° OT', 'Tipo', 'Cliente', 'Equipo', 'Técnico', 'Apertura', 'SLA vence', 'Estado'].map((h) => (
+                    <th key={h} className="px-5 py-3 text-left text-[10.5px] font-bold text-[#8a909a] tracking-[0.6px] uppercase border-b border-[#eef0f2]">
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {ots.map((ot, i) => {
+                  const vencido = ot.estado === 'VENCIDA' || new Date(ot.slaVence) < new Date()
+                  return (
+                    <tr key={ot.id} className={i % 2 === 0 ? 'bg-white' : 'bg-[#fafbfc]'}>
+                      <td className="px-5 py-[13px] border-b border-[#f4f5f7]">
+                        <Link href={`/servicio-tecnico/${ot.id}`} className="text-[12.5px] font-bold text-[#E8650A] hover:underline">
+                          {ot.numero}
+                        </Link>
+                      </td>
+                      <td className="px-5 py-[13px] border-b border-[#f4f5f7]">
+                        <BadgeTipoOT tipo={ot.tipo} />
+                      </td>
+                      <td className="px-5 py-[13px] text-[12.5px] font-semibold text-[#3a4150] border-b border-[#f4f5f7]">
+                        {ot.cliente?.nombre ?? '—'}
+                      </td>
+                      <td className="px-5 py-[13px] text-[12.5px] text-[#6b7280] border-b border-[#f4f5f7]">
+                        {ot.equipo?.nombre ?? '—'}
+                      </td>
+                      <td className="px-5 py-[13px] text-[12.5px] text-[#3a4150] border-b border-[#f4f5f7]">
+                        {ot.tecnico?.nombre ?? 'Sin asignar'}
+                      </td>
+                      <td className="px-5 py-[13px] text-[12.5px] text-[#6b7280] border-b border-[#f4f5f7]">
+                        {formatFecha(ot.fechaApertura)}
+                      </td>
+                      <td className={cn('px-5 py-[13px] text-[12.5px] font-semibold border-b border-[#f4f5f7]', vencido ? 'text-[#C2261B]' : 'text-[#3a4150]')}>
+                        {formatFechaHora(ot.slaVence)}
+                      </td>
+                      <td className="px-5 py-[13px] border-b border-[#f4f5f7]">
+                        <BadgeEstadoOT estado={ot.estado as any} />
+                      </td>
+                    </tr>
+                  )
+                })}
+                {ots.length === 0 && (
+                  <tr><td colSpan={8} className="px-5 py-10 text-center text-[12.5px] text-[#9aa1ab]">No se encontraron órdenes de trabajo</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </Card>
     </div>
   )

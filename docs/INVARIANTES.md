@@ -30,7 +30,8 @@ Documento de referencia para desarrollo, code review y agentes. Si un cambio vio
 | O3 | Repuestos con `inventarioId`: precio re-resuelto en API | `lib/ots/repuestos-ot.ts` | — |
 | O4 | SLA vencido: cron HTTP o script VPS ejecuta `actualizarOTsVencidas` (idempotente) | `app/api/cron/ots-vencidas` · `scripts/actualizar-ots-vencidas.ts` | — |
 | O5 | Transiciones OT validadas en UI y API | `lib/ots/transiciones-client.ts` | `test-ots-transiciones.ts` |
-| O6 | GET `/api/ots` acepta filtros de listado (`q`, `estado`, `tecnicoId`, `sla`, …) | `app/api/ots/route.ts` | — |
+| O6 | GET `/api/ots` acepta filtros de listado (`q`, `estado`, `tecnicoId`, `sla`, …) | `app/api/ots/route.ts` · `lib/ots/listar-ots.ts` | — |
+| O7 | Listado OT en UI usa GET `/api/ots` con filtros sincronizados en URL | `OTsTable.tsx` · `servicio-tecnico/page.tsx` | manual |
 
 ## Integraciones / n8n
 
@@ -64,6 +65,7 @@ Documento de referencia para desarrollo, code review y agentes. Si un cambio vio
 | I11 | Cola AFIP (Redis): jobs fallidos o PENDIENTE_CAE atascadas alertan en integridad | `lib/afip/health-cola.ts` · `integridad-prod.ts` | `integridad:prod` (warn) |
 | Inv1 | Transferencia entre depósitos (`TRANSFERENCIA`) no altera stock global | `lib/inventario.ts` · POST `.../transferir` | manual |
 | N1 | Email OT SLA / preventivo respeta `ReglaNotificacion` activa; dedup diaria | `lib/notificaciones/procesar-emails-operativos.ts` | cron manual |
+| Pv1 | Plan PROGRAMADO/PENDIENTE con `proximoServicio` pasado → VENCIDO (`actualizarPlanesMantenimientoVencidos`, idempotente) | `lib/mantenimiento/actualizar-vencidos.ts` · cron `POST /api/cron/notificaciones-operativas` | `test-preventivo-vencidos.ts` |
 
 ## Presupuestos
 
@@ -105,7 +107,7 @@ Documento de referencia para desarrollo, code review y agentes. Si un cambio vio
 
 | ID | Invariante | Dónde | Test |
 |----|------------|-------|------|
-| O1 | Filtros técnico/SLA en listado OT son solo UI (`OTsTable`); no alteran API `/api/servicio-tecnico` | `components/servicio-tecnico/OTsTable.tsx` | manual |
+| O1 | Listado OT: filtros vía GET `/api/ots` y URL (`OTsTable`), no solo cliente | `components/servicio-tecnico/OTsTable.tsx` | manual |
 | O2 | Badge stock bajo en nav Inventario y Compras usa `contarArticulosStockBajo()` | `app/(dashboard)/layout.tsx` · `Sidebar.tsx` | manual |
 | O3 | Import inventario CSV idempotente por SKU (actualiza existente) | `lib/inventario/import-csv.ts` | `npm run test:invariants` |
 

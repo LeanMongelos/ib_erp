@@ -12,6 +12,7 @@ const PERMISOS_CRITICOS: Record<string, string[]> = {
     'facturas.read',
     'facturas.emit_afip',
     'config.read',
+    'config.manage_integrations',
     'usuarios.read',
     'auditoria.read',
   ],
