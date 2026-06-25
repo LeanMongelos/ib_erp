@@ -6,6 +6,10 @@ import type { EtapaKey } from '@/lib/crm/embudo-constants'
 import { validarMovimientoEmbudoCliente } from '@/lib/crm/embudo-movimiento-client'
 import { ApiError } from '@/lib/api-auth'
 import { crearPresupuestoDesdePropuesta } from '@/lib/crm/embudo-presupuesto'
+import {
+  aprobarPresupuestoNegocioGanado,
+  vincularFacturaNegocioCierre,
+} from '@/lib/crm/embudo-sincronizar-presupuesto'
 
 export async function listarNegociosEmbudo() {
   return prisma.negocioEmbudo.findMany({
@@ -16,7 +20,7 @@ export async function listarNegociosEmbudo() {
 }
 
 export function calcularStatsDb(negocios: { etapa: EtapaEmbudo; monto: number; cerradoEn: Date | null }[]): EmbudoStats {
-  const activos = negocios.filter((n) => n.etapa !== 'CIERRE')
+  const activos = negocios.filter((n) => n.etapa !== 'CIERRE' && n.etapa !== 'PERDIDO')
   const pipelineArs = activos.reduce((s, n) => s + n.monto, 0)
   const ahora = new Date()
   const inicioMes = new Date(ahora.getFullYear(), ahora.getMonth(), 1)
@@ -81,9 +85,36 @@ export async function moverNegocioEmbudo(opts: {
   }
 
   const proxima = extractProximaAccionFecha(fields, datos)
-  const mergedDatos = { ...(negocio.datos as object), ...datos } as Prisma.InputJsonValue
+  let mergedDatos = { ...(negocio.datos as object), ...datos } as Prisma.InputJsonValue
 
-  const cerradoEn = hasta === 'CIERRE' ? new Date() : negocio.cerradoEn
+  if (desde === 'ANALISIS' && hasta === 'ENTREGA' && !opts.retroceso && presupuestoId) {
+    const montoFinal = Number(datos.montoFinal)
+    await aprobarPresupuestoNegocioGanado(
+      presupuestoId,
+      Number.isFinite(montoFinal) && montoFinal > 0 ? montoFinal : monto,
+    )
+  }
+
+  if (desde === 'ENTREGA' && hasta === 'CIERRE' && !opts.retroceso) {
+    const facturaId = typeof datos.facturaId === 'string' ? datos.facturaId : null
+    const numeroFactura = typeof datos.numeroFactura === 'string' ? datos.numeroFactura : null
+    if (facturaId || numeroFactura?.trim()) {
+      const vinculo = await vincularFacturaNegocioCierre({
+        presupuestoId,
+        clienteId,
+        facturaId,
+        numeroFactura,
+      })
+      mergedDatos = {
+        ...(mergedDatos as object),
+        facturaId: vinculo.facturaId,
+        numeroFactura: vinculo.numero,
+      } as Prisma.InputJsonValue
+      datos.numeroFactura = vinculo.numero
+    }
+  }
+
+  const cerradoEn = hasta === 'CIERRE' || hasta === 'PERDIDO' ? new Date() : negocio.cerradoEn
 
   const [actualizado] = await prisma.$transaction([
     prisma.negocioEmbudo.update({
@@ -102,12 +133,46 @@ export async function moverNegocioEmbudo(opts: {
     prisma.historialEmbudo.create({
       data: {
         negocioId: opts.id,
+        tipo: 'MOVIMIENTO',
         etapaDesde: desde,
         etapaHasta: hasta,
         retroceso: !!opts.retroceso,
         datos: datos as Prisma.InputJsonValue,
         notas: typeof datos.descripcionRetroceso === 'string' ? datos.descripcionRetroceso : null,
         usuarioId: opts.usuarioId,
+      },
+    }),
+  ])
+
+  return actualizado
+}
+
+export async function reactivarNegocioEmbudo(id: string, usuarioId: string) {
+  const negocio = await prisma.negocioEmbudo.findUnique({ where: { id } })
+  if (!negocio) throw new ApiError(404, 'Negocio no encontrado')
+  if (negocio.activo) throw new ApiError(400, 'El negocio ya está activo en el pipeline')
+
+  const etapaRestaurada: EtapaEmbudo =
+    negocio.etapa === 'CIERRE' || negocio.etapa === 'PERDIDO' ? 'SEGUIMIENTO' : negocio.etapa
+
+  const [actualizado] = await prisma.$transaction([
+    prisma.negocioEmbudo.update({
+      where: { id },
+      data: {
+        activo: true,
+        etapa: etapaRestaurada,
+        etapaDesde: new Date(),
+        cerradoEn: null,
+      },
+    }),
+    prisma.historialEmbudo.create({
+      data: {
+        negocioId: id,
+        tipo: 'REACTIVACION',
+        etapaDesde: negocio.etapa,
+        etapaHasta: etapaRestaurada,
+        datos: { etapaAnterior: negocio.etapa },
+        usuarioId,
       },
     }),
   ])

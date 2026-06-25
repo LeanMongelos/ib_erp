@@ -7,12 +7,15 @@ export type EtapaKey =
   | 'ANALISIS'
   | 'ENTREGA'
   | 'CIERRE'
+  | 'PERDIDO'
 
 export interface EtapaDef {
   key: EtapaKey
   label: string
   color: string
   order: number
+  /** No forma parte del pipeline activo (cerrado / perdido) */
+  terminal?: boolean
 }
 
 export const ETAPAS: EtapaDef[] = [
@@ -23,7 +26,8 @@ export const ETAPAS: EtapaDef[] = [
   { key: 'SEGUIMIENTO',   label: 'Seguimiento',    color: '#ffc107', order: 4 },
   { key: 'ANALISIS',      label: 'Análisis',       color: '#20c997', order: 5 },
   { key: 'ENTREGA',       label: 'Entrega',        color: '#0dcaf0', order: 6 },
-  { key: 'CIERRE',        label: 'Cierre',         color: '#198754', order: 7 },
+  { key: 'CIERRE',        label: 'Cierre',         color: '#198754', order: 7, terminal: true },
+  { key: 'PERDIDO',       label: 'Perdido',        color: '#dc3545', order: 8, terminal: true },
 ]
 
 export const ETAPA_MAP = Object.fromEntries(ETAPAS.map((e) => [e.key, e])) as Record<EtapaKey, EtapaDef>

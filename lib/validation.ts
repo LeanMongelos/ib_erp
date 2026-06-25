@@ -184,7 +184,7 @@ export const leadN8nCreateSchema = z.object({
 // ============ CRM EMBUDO ============
 
 export const etapaEmbudoEnum = z.enum([
-  'ENTRADA', 'CONTACTO', 'DOCUMENTACION', 'PROPUESTA', 'SEGUIMIENTO', 'ANALISIS', 'ENTREGA', 'CIERRE',
+  'ENTRADA', 'CONTACTO', 'DOCUMENTACION', 'PROPUESTA', 'SEGUIMIENTO', 'ANALISIS', 'ENTREGA', 'CIERRE', 'PERDIDO',
 ])
 
 export const urgenciaEmbudoEnum = z.enum(['NORMAL', 'URGENTE'])
@@ -199,9 +199,8 @@ export const embudoNegocioCreateSchema = z.object({
   monto: z.number().optional(),
   vendedor: z.string().min(1),
   urgencia: urgenciaEmbudoEnum.optional(),
-  etapa: etapaEmbudoEnum.optional(),
   notas: z.string().optional(),
-})
+}).transform((d) => ({ ...d, etapa: 'ENTRADA' as const }))
 
 /** PATCH /api/crm/embudo/[id] — actualizar negocio. */
 export const embudoNegocioPatchSchema = z.object({
@@ -213,6 +212,14 @@ export const embudoNegocioPatchSchema = z.object({
   urgencia: urgenciaEmbudoEnum.optional(),
   notas: z.string().optional(),
   proximaAccionFecha: z.string().optional().nullable(),
+})
+
+/** PATCH /api/crm/embudo/seguimiento/[id] — editar registro (solo SUPERADMIN). */
+export const embudoSeguimientoPatchSchema = z.object({
+  notas: z.string().max(2000).optional().nullable(),
+  datos: z.record(z.string(), z.unknown()).optional(),
+}).refine((d) => d.notas !== undefined || d.datos !== undefined, {
+  message: 'Indicá al menos un campo para actualizar',
 })
 
 /** POST /api/crm/embudo/[id]/mover — transición de etapa. */

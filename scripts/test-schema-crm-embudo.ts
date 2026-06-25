@@ -32,12 +32,11 @@ function main() {
     monto: 150000,
     vendedor: 'GA',
     urgencia: 'URGENTE',
-    etapa: 'ENTRADA',
     notas: 'Demo',
   })
 
   if (create.urgencia !== 'URGENTE' || create.etapa !== 'ENTRADA') {
-    fail('embudoNegocioCreateSchema no parseó urgencia/etapa')
+    fail('embudoNegocioCreateSchema debe forzar etapa ENTRADA')
   } else {
     pass('embudoNegocioCreateSchema acepta payload completo')
   }
@@ -91,10 +90,10 @@ function main() {
   }
 
   const etapas = etapaEmbudoEnum.options
-  if (etapas.length !== 8 || !etapas.includes('CIERRE')) {
-    fail(`etapaEmbudoEnum debería tener 8 etapas, tiene ${etapas.length}`)
+  if (etapas.length !== 9 || !etapas.includes('CIERRE') || !etapas.includes('PERDIDO')) {
+    fail(`etapaEmbudoEnum debería tener 9 etapas, tiene ${etapas.length}`)
   } else {
-    pass('etapaEmbudoEnum tiene 8 etapas incluyendo CIERRE')
+    pass('etapaEmbudoEnum tiene 9 etapas incluyendo CIERRE y PERDIDO')
   }
 
   if (urgenciaEmbudoEnum.options.join(',') !== 'NORMAL,URGENTE') {

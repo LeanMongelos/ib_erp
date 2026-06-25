@@ -14,6 +14,7 @@ export type FormFieldType =
   | 'usuario'
   | 'radio'
   | 'checkbox-group'
+  | 'factura'
 
 export interface FormFieldOption {
   value: string
@@ -397,7 +398,12 @@ export const TRANSITION_FORMS: Record<string, TransitionFormDef> = {
         ],
       },
       { name: 'montoCobrado', label: 'Monto cobrado hasta ahora', type: 'number' },
-      { name: 'numeroFactura', label: 'Número de factura emitida', type: 'text' },
+      {
+        name: 'facturaId',
+        label: 'Factura emitida (ERP)',
+        type: 'factura',
+      },
+      { name: 'numeroFactura', label: 'Número de factura (si no está en la lista)', type: 'text' },
       { name: 'fechaCobroEsperada', label: 'Fecha de cobro esperada (si hay saldo)', type: 'date' },
       {
         name: 'satisfaccionCliente',
@@ -425,6 +431,37 @@ export const TRANSITION_FORMS: Record<string, TransitionFormDef> = {
       },
     ],
   },
+}
+
+export const PERDIDO_FORM: TransitionFormDef = {
+  title: 'Marcar negocio como perdido',
+  fields: [
+    {
+      name: 'motivoPerdida',
+      label: 'Motivo principal',
+      type: 'select',
+      required: true,
+      options: [
+        { value: 'PRECIO', label: 'Precio / presupuesto' },
+        { value: 'COMPETIDOR', label: 'Competidor' },
+        { value: 'SIN_PRESUPUESTO', label: 'Sin presupuesto del cliente' },
+        { value: 'LICITACION', label: 'Licitación caída' },
+        { value: 'SIN_RESPUESTA', label: 'Cliente sin respuesta' },
+        { value: 'OTRO', label: 'Otro' },
+      ],
+    },
+    { name: 'detallePerdida', label: 'Detalle', type: 'textarea', required: true },
+    {
+      name: 'recuperableFuturo',
+      label: '¿Recuperable a futuro?',
+      type: 'radio',
+      options: [
+        { value: 'SI', label: 'Sí' },
+        { value: 'NO', label: 'No' },
+        { value: 'TAL_VEZ', label: 'Tal vez' },
+      ],
+    },
+  ],
 }
 
 export const RETROCESO_FORM: TransitionFormDef = {
@@ -477,26 +514,12 @@ export const NUEVO_NEGOCIO_FIELDS: FormField[] = [
       { value: 'URGENTE', label: 'Urgente' },
     ],
   },
-  {
-    name: 'etapa',
-    label: 'Etapa inicial',
-    type: 'select',
-    options: [
-      { value: 'ENTRADA', label: 'Entrada' },
-      { value: 'CONTACTO', label: 'Contacto' },
-      { value: 'DOCUMENTACION', label: 'Documentación' },
-      { value: 'PROPUESTA', label: 'Propuesta' },
-      { value: 'SEGUIMIENTO', label: 'Seguimiento' },
-      { value: 'ANALISIS', label: 'Análisis' },
-      { value: 'ENTREGA', label: 'Entrega' },
-      { value: 'CIERRE', label: 'Cierre' },
-    ],
-  },
   { name: 'notas', label: 'Notas iniciales', type: 'textarea' },
 ]
 
 export function getTransitionForm(desde: EtapaKey, hasta: EtapaKey, retroceso: boolean): TransitionFormDef | null {
   if (retroceso) return RETROCESO_FORM
+  if (hasta === 'PERDIDO') return PERDIDO_FORM
   return TRANSITION_FORMS[transitionKey(desde, hasta)] ?? null
 }
 

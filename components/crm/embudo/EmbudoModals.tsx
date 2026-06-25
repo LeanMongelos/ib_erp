@@ -28,6 +28,7 @@ interface TransitionFormModalProps {
   etapaHasta: EtapaKey
   fields: FormField[]
   catalogos?: EmbudoCatalogos
+  negocioContext?: import('@/components/crm/embudo/EmbudoFormFields').EmbudoNegocioContext
   loading?: boolean
   onConfirm: (datos: Record<string, unknown>) => void
   onCancel: () => void
@@ -63,6 +64,7 @@ export function TransitionFormModal({
   etapaHasta,
   fields,
   catalogos,
+  negocioContext,
   loading,
   onConfirm,
   onCancel,
@@ -92,7 +94,7 @@ export function TransitionFormModal({
   }
 
   function renderField(f: FormField) {
-    return renderEmbudoField(f, values, setField, catalogos, inventarioPrecios)
+    return renderEmbudoField(f, values, setField, catalogos, inventarioPrecios, negocioContext)
   }
 
   return (

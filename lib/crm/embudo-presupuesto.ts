@@ -5,6 +5,7 @@
 import type { NegocioEmbudo } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { calcularTotalesPresupuesto } from '@/lib/presupuestos/calcular-total-presupuesto'
+import { aplicarPreciosResueltosItems } from '@/lib/precios/aplicar-precios-documento'
 import { siguienteNumeroPresupuesto, crearConNumeroUnico } from '@/lib/sequences'
 import { ApiError } from '@/lib/api-auth'
 import { resolverPlantillaIdEmision } from '@/lib/plantillas/resolver-plantilla'
@@ -31,6 +32,13 @@ function diasEntre(desde: Date, hasta: Date): number {
   return Math.max(1, Math.ceil(ms / (1000 * 60 * 60 * 24)))
 }
 
+function inventarioIdNegocio(negocio: NegocioEmbudo, datos: Record<string, unknown>): string | null {
+  const fromDatos = datos.inventarioId
+  if (typeof fromDatos === 'string' && fromDatos.trim()) return fromDatos.trim()
+  const stored = negocio.datos as { inventarioId?: string } | null
+  return stored?.inventarioId?.trim() || null
+}
+
 async function resolverClienteId(negocio: NegocioEmbudo, datos: Record<string, unknown>): Promise<string> {
   if (negocio.clienteId) return negocio.clienteId
 
@@ -53,7 +61,7 @@ async function resolverClienteId(negocio: NegocioEmbudo, datos: Record<string, u
   return creado.id
 }
 
-function armarObservaciones(datos: Record<string, unknown>): string | null {
+function armarObservaciones(datos: Record<string, unknown>, negocioNumero: number): string | null {
   const partes: string[] = []
   if (typeof datos.tipoVenta === 'string') partes.push(`Tipo venta: ${datos.tipoVenta}`)
   if (typeof datos.numeroLicitacion === 'string' && datos.numeroLicitacion.trim()) {
@@ -62,11 +70,52 @@ function armarObservaciones(datos: Record<string, unknown>): string | null {
   if (typeof datos.observacionesPropuesta === 'string' && datos.observacionesPropuesta.trim()) {
     partes.push(datos.observacionesPropuesta.trim())
   }
-  partes.push(`Origen: embudo CRM negocio #${String(datos._negocioNumero ?? '')}`)
+  partes.push(`Origen: embudo CRM negocio #${negocioNumero}`)
   return partes.filter(Boolean).join('\n') || null
 }
 
-/** Crea presupuesto en el ERP y devuelve { id, numero }. */
+async function armarItemsLinea(
+  negocio: NegocioEmbudo,
+  datos: Record<string, unknown>,
+  clienteId: string,
+  montoTotal: number,
+) {
+  const inventarioId = inventarioIdNegocio(negocio, datos)
+  const descripcionFallback = negocio.productoServicio?.trim() || negocio.nombre
+  const alicuotaIvaPct = 21
+
+  if (inventarioId) {
+    const inv = await prisma.inventario.findUnique({
+      where: { id: inventarioId },
+      select: { id: true, nombre: true, sku: true, precioUnit: true },
+    })
+    if (!inv) throw new ApiError(400, 'Producto del inventario no encontrado')
+
+    let precioUnit = inv.precioUnit ?? 0
+    if (precioUnit <= 0 && montoTotal > 0) {
+      precioUnit = Math.round((montoTotal / (1 + alicuotaIvaPct / 100)) * 100) / 100
+    }
+
+    const itemsBase = [{
+      descripcion: inv.nombre,
+      codigo: inv.sku ?? undefined,
+      cantidad: 1,
+      precioUnit,
+      inventarioId: inv.id,
+    }]
+
+    const itemsConPrecio = await aplicarPreciosResueltosItems(itemsBase, { clienteId, moneda: 'ARS' })
+    return { items: itemsConPrecio, alicuotaIvaPct }
+  }
+
+  const precioNeto = Math.round((montoTotal / (1 + alicuotaIvaPct / 100)) * 100) / 100
+  return {
+    items: [{ descripcion: descripcionFallback, cantidad: 1, precioUnit: precioNeto }],
+    alicuotaIvaPct,
+  }
+}
+
+/** Crea presupuesto ENVIADO en el ERP y devuelve { id, numero }. */
 export async function crearPresupuestoDesdePropuesta(
   negocio: NegocioEmbudo,
   datos: Record<string, unknown>,
@@ -81,10 +130,6 @@ export async function crearPresupuestoDesdePropuesta(
     ...(negocio.datos as object),
     ...datos,
   })
-
-  const alicuotaIvaPct = 21
-  const precioNeto = Math.round((montoTotal / (1 + alicuotaIvaPct / 100)) * 100) / 100
-  const descripcion = negocio.productoServicio?.trim() || negocio.nombre
 
   const fechaEnvio = datos.fechaEnvio ? new Date(String(datos.fechaEnvio)) : new Date()
   const fechaVenc = datos.fechaVencimiento ? new Date(String(datos.fechaVencimiento)) : new Date()
@@ -107,8 +152,10 @@ export async function crearPresupuestoDesdePropuesta(
   const emisor = await prisma.emisor.findFirst({ where: { predeterminado: true, activo: true } })
   const plantillaId = await resolverPlantillaIdEmision('PRESUPUESTO', null)
 
+  const { items, alicuotaIvaPct } = await armarItemsLinea(negocio, datos, clienteId, montoTotal)
+
   const { itemsCalculados, subtotal, iva, total, alicuotaIvaPct: alic } = calcularTotalesPresupuesto({
-    items: [{ descripcion, cantidad: 1, precioUnit: precioNeto }],
+    items,
     alicuotaIvaPct,
     condicionPago,
   })
@@ -122,13 +169,14 @@ export async function crearPresupuestoDesdePropuesta(
       prisma.presupuesto.create({
         data: {
           numero,
+          estado: 'ENVIADO',
           clienteId,
           emisorId: emisor?.id ?? null,
           plantillaId,
           vendedorId: usuarioId ?? null,
           condicionPago,
           vigenciaDias,
-          observaciones: armarObservaciones({ ...datos, _negocioNumero: negocio.numero }),
+          observaciones: armarObservaciones(datos, negocio.numero),
           plazoEntrega,
           garantia,
           bonificacionPct: 0,
@@ -136,19 +184,26 @@ export async function crearPresupuestoDesdePropuesta(
           subtotal,
           iva,
           total,
+          fechaEmision: fechaEnvio,
           fechaVencimiento: vence,
           items: {
             create: itemsCalculados.map((i) => ({
               descripcion: i.descripcion,
+              codigo: i.codigo ?? null,
               cantidad: i.cantidad,
               precioUnit: i.precioUnit,
               bonificacionPct: 0,
               alicuotaIvaPct: i.alicuotaIvaPct,
               subtotal: i.subtotal,
+              inventarioId: i.inventarioId ?? null,
             })),
           },
         },
       }),
+  )
+
+  void import('@/lib/presupuestos/notify-cliente-enviado').then(({ notifyClientePresupuestoEnviado }) =>
+    notifyClientePresupuestoEnviado(presupuesto.id).catch(() => null),
   )
 
   return { id: presupuesto.id, numero: presupuesto.numero, clienteId }

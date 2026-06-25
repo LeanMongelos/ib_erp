@@ -152,6 +152,15 @@ export function EmbudoKanbanApp() {
 
   async function confirmMove(datos: Record<string, unknown>) {
     if (!pendingMove) return
+    if (
+      pendingMove.etapaDesde === 'ENTREGA'
+      && pendingMove.etapaHasta === 'CIERRE'
+      && !datos.facturaId
+      && !String(datos.numeroFactura ?? '').trim()
+    ) {
+      toast.error('Seleccioná una factura del cliente o indicá el número')
+      return
+    }
     setSaving(true)
     try {
       const res = await fetch(`/api/crm/embudo/${pendingMove.negocioId}/mover`, {
@@ -181,6 +190,8 @@ export function EmbudoKanbanApp() {
             ? `Presupuesto ${num} creado y vinculado al negocio`
             : 'Propuesta registrada y presupuesto vinculado',
         )
+      } else if (pendingMove.etapaHasta === 'PERDIDO') {
+        toast.warning('Negocio marcado como perdido')
       } else if (pendingMove.retroceso) {
         toast.warning('Etapa retrocedida')
       } else {
@@ -211,7 +222,6 @@ export function EmbudoKanbanApp() {
           monto: datos.monto ? Number(datos.monto) : 0,
           vendedor: datos.vendedor,
           urgencia: datos.urgencia ?? 'NORMAL',
-          etapa: datos.etapa ?? 'ENTRADA',
           notas: datos.notas,
         }),
       })
@@ -242,6 +252,14 @@ export function EmbudoKanbanApp() {
     } finally {
       setHistorialLoading(false)
     }
+  }
+
+  function marcarPerdido(negocioId: string) {
+    const negocio = negocios.find((n) => n.id === negocioId)
+    if (!negocio) return
+    const etapaDesde = (optimisticEtapa[negocioId] ?? negocio.etapa) as EtapaKey
+    setOptimisticEtapa((prev) => ({ ...prev, [negocioId]: 'PERDIDO' }))
+    setPendingMove({ negocioId, etapaDesde, etapaHasta: 'PERDIDO', retroceso: false })
   }
 
   async function eliminarNegocio(id: string) {
@@ -377,6 +395,7 @@ export function EmbudoKanbanApp() {
                       onDragEnd={() => setDraggingId(null)}
                       onVerHistorial={verHistorial}
                       onEliminar={eliminarNegocio}
+                      onMarcarPerdido={marcarPerdido}
                     />
                   ))
                 )}
@@ -404,6 +423,10 @@ export function EmbudoKanbanApp() {
           etapaHasta={pendingMove.etapaHasta}
           fields={transitionForm.fields}
           catalogos={catalogos}
+          negocioContext={{
+            clienteId: negocioPending.clienteId,
+            presupuestoId: negocioPending.presupuestoId,
+          }}
           loading={saving}
           onConfirm={confirmMove}
           onCancel={cancelMove}

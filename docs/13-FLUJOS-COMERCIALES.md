@@ -120,3 +120,32 @@ graph LR
 |------|-------|
 | `/crm/nuevo` | Alta cliente con sucursales obligatorias |
 | `/facturacion/nueva` | Selector + carga rápida por ítem EQUIPO |
+
+## 8. Embudo CRM → presupuesto → factura
+
+Ruta: `/crm/embudo` · API: `/api/crm/embudo/*`
+
+```mermaid
+flowchart LR
+  D[Documentación] -->|mover| P[Propuesta]
+  P -->|auto| PR[Presupuesto ENVIADO]
+  PR --> S[Seguimiento]
+  S --> A[Análisis]
+  A -->|monto final| E[Entrega]
+  E -->|APROBADO| PR2[Presupuesto APROBADO]
+  E --> C[Cierre]
+  C -->|vincula| FA[Factura ERP]
+```
+
+| Paso embudo | Efecto ERP |
+|-------------|------------|
+| Doc → Propuesta | Crea `Presupuesto` **ENVIADO** con ítems de inventario (si hay `inventarioId`) + email cliente |
+| Análisis → Entrega | Marca presupuesto **APROBADO**; ajusta total si `montoFinal` difiere |
+| Entrega → Cierre | Vincula `Factura` por selector o número; presupuesto → **CONVERTIDO** |
+| Cualquier etapa → Perdido | Columna terminal; sale del pipeline |
+
+Acciones rápidas en tarjeta: ver/crear presupuesto, crear OT (`/servicio-tecnico/nueva?clienteId=`), marcar perdido.
+
+**Seguimiento** (`/crm/embudo/seguimiento`): historial global de eventos por negocio (creación, movimientos, ganado, perdido, edición, eliminación, reactivación). Lectura para usuarios con `crm.read`. Solo **SUPERADMIN** puede editar o borrar registros y reactivar negocios eliminados.
+
+Reglas: nuevos negocios solo en **Entrada**; avance adyacente; retroceso con motivo. Invariantes E1–E3, E7.

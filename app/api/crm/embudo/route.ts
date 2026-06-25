@@ -20,25 +20,41 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    await requirePermission('crm.reply')
+    const user = await requirePermission('crm.reply')
     const body = embudoNegocioCreateSchema.parse(await req.json())
     const numero = await nextNumeroNegocio(prisma)
 
-    const negocio = await prisma.negocioEmbudo.create({
-      data: {
-        numero,
-        nombre: body.nombre,
-        cliente: body.cliente,
-        clienteId: body.clienteId ?? null,
-        productoServicio: body.productoServicio,
-        monto: body.monto ?? 0,
-        vendedor: body.vendedor,
-        urgencia: body.urgencia ?? 'NORMAL',
-        etapa: body.etapa ?? 'ENTRADA',
-        notas: body.notas,
-        etapaDesde: new Date(),
-        datos: body.inventarioId ? { inventarioId: body.inventarioId } : {},
-      },
+    const negocio = await prisma.$transaction(async (tx) => {
+      const creado = await tx.negocioEmbudo.create({
+        data: {
+          numero,
+          nombre: body.nombre,
+          cliente: body.cliente,
+          clienteId: body.clienteId ?? null,
+          productoServicio: body.productoServicio,
+          monto: body.monto ?? 0,
+          vendedor: body.vendedor,
+          urgencia: body.urgencia ?? 'NORMAL',
+          etapa: body.etapa ?? 'ENTRADA',
+          notas: body.notas,
+          etapaDesde: new Date(),
+          datos: body.inventarioId ? { inventarioId: body.inventarioId } : {},
+        },
+      })
+      await tx.historialEmbudo.create({
+        data: {
+          negocioId: creado.id,
+          tipo: 'CREACION',
+          etapaHasta: creado.etapa,
+          datos: {
+            numero: creado.numero,
+            vendedor: creado.vendedor,
+            inventarioId: body.inventarioId ?? null,
+          },
+          usuarioId: user.id,
+        },
+      })
+      return creado
     })
 
     return NextResponse.json(plain(negocio), { status: 201 })

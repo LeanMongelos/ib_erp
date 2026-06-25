@@ -11,6 +11,17 @@ export function validarMovimientoEmbudoCliente(
 ): string | null {
   if (desde === hasta) return 'El negocio ya está en esa etapa'
 
+  if (hasta === 'PERDIDO') {
+    if (desde === 'PERDIDO') return 'El negocio ya está marcado como perdido'
+    if (desde === 'CIERRE') return 'Un negocio cerrado no puede marcarse como perdido'
+    return null
+  }
+
+  if (desde === 'PERDIDO') {
+    if (!retroceso) return 'Un negocio perdido solo puede reactivarse con retroceso explícito'
+    return null
+  }
+
   const forward = isForwardMove(desde, hasta)
   if (forward && !isAdjacentForward(desde, hasta)) {
     return 'Solo se puede avanzar una etapa a la vez'

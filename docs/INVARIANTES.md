@@ -22,6 +22,8 @@ Documento de referencia para desarrollo, code review y agentes. Si un cambio vio
 | E3 | POST/PATCH/mover embudo usan schemas de `lib/validation.ts` | `embudoNegocioCreateSchema`, `embudoNegocioPatchSchema`, `embudoMoverSchema` | `npm run test:invariants` |
 | E4 | GET conversaciones acepta `asignadoId` y `sinAsignar=true` | `app/api/crm/conversaciones/route.ts` | `test-crm-backlog.ts` |
 | E5 | Mensaje CRM: texto o `adjuntoUrl` (schema compartido) | `crmMensajeContenidoSchema` | `test-crm-backlog.ts` |
+| E6 | Doc→Propuesta crea presupuesto ENVIADO; ganar aprueba; cierre vincula factura; PERDIDO excluido de KPIs | `embudo-presupuesto.ts` · `embudo-sincronizar-presupuesto.ts` | `test-embudo-presupuesto-flow.ts` |
+| E7 | Seguimiento embudo: CREACION/EDICION/ELIMINACION/MOVIMIENTO/REACTIVACION en `HistorialEmbudo`; lectura `crm.read`; admin SUPERADMIN edita/borra/reactiva | `embudo-historial.ts` · `/api/crm/embudo/seguimiento` | `test-embudo-seguimiento.ts` |
 
 ## Servicio técnico (OT)
 

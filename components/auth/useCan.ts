@@ -20,3 +20,9 @@ export function usePermisos(): string[] {
   const { data } = useSession()
   return data?.user?.permissions ?? []
 }
+
+/** Solo el administrador del sistema (SUPERADMIN). */
+export function useIsSuperAdmin(): boolean {
+  const { data } = useSession()
+  return (data?.user?.roles ?? []).includes('SUPERADMIN')
+}

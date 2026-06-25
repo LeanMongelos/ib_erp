@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Flag, MoreHorizontal } from 'lucide-react'
+import Link from 'next/link'
+import { ExternalLink, Flag, MoreHorizontal, Wrench, FileText, XCircle } from 'lucide-react'
 import type { NegocioEmbudoDTO } from '@/lib/crm/embudo-utils'
 import { alertaTarjeta, diasEnEtapa, formatEmbudoMonto } from '@/lib/crm/embudo-utils'
 import { VENDEDOR_COLORS } from '@/lib/crm/embudo-constants'
@@ -16,6 +17,7 @@ interface DealCardProps {
   onDragEnd: () => void
   onVerHistorial: (id: string) => void
   onEliminar: (id: string) => void
+  onMarcarPerdido?: (id: string) => void
 }
 
 export function DealCard({
@@ -27,6 +29,7 @@ export function DealCard({
   onDragEnd,
   onVerHistorial,
   onEliminar,
+  onMarcarPerdido,
 }: DealCardProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -43,6 +46,7 @@ export function DealCard({
   const alerta = alertaTarjeta(negocio.etapaDesde, negocio.proximaAccionFecha)
   const vendedorColor = VENDEDOR_COLORS[negocio.vendedor] ?? VENDEDOR_COLORS.OTRO
   const tienePresupuesto = Boolean(negocio.presupuestoId)
+  const clienteQ = negocio.clienteId ? `?clienteId=${negocio.clienteId}` : ''
 
   const alertClass =
     alerta === 'rojo' ? styles.cardAlertRojo
@@ -74,6 +78,24 @@ export function DealCard({
           </button>
           {menuOpen && (
             <div className={styles.menuDropdown}>
+              {tienePresupuesto && negocio.presupuestoId && (
+                <Link href={`/presupuestos/${negocio.presupuestoId}`} className={styles.menuItem} onClick={() => setMenuOpen(false)}>
+                  <FileText size={12} /> Ver presupuesto
+                </Link>
+              )}
+              {!tienePresupuesto && (
+                <Link href={`/presupuestos/nuevo${clienteQ}`} className={styles.menuItem} onClick={() => setMenuOpen(false)}>
+                  <FileText size={12} /> Crear presupuesto
+                </Link>
+              )}
+              <Link href={`/servicio-tecnico/nueva${clienteQ}`} className={styles.menuItem} onClick={() => setMenuOpen(false)}>
+                <Wrench size={12} /> Crear OT
+              </Link>
+              {negocio.etapa !== 'PERDIDO' && negocio.etapa !== 'CIERRE' && onMarcarPerdido && (
+                <button type="button" className={`${styles.menuItem} ${styles.menuItemDanger}`} onClick={() => { setMenuOpen(false); onMarcarPerdido(negocio.id) }}>
+                  <XCircle size={12} /> Marcar perdido
+                </button>
+              )}
               <button type="button" className={styles.menuItem} onClick={() => { setMenuOpen(false); onVerHistorial(negocio.id) }}>
                 Ver historial
               </button>
@@ -101,19 +123,20 @@ export function DealCard({
               {dias}d
             </span>
           </div>
-          <span
-            title={
-              tienePresupuesto
-                ? `Presupuesto ${negocio.presupuestoNumero ?? 'vinculado'}`
-                : 'Sin presupuesto asignado'
-            }
-          >
-            <Flag
-              size={14}
-              className={tienePresupuesto ? styles.presupuestoFlagCon : styles.presupuestoFlagSin}
-              fill={tienePresupuesto ? 'currentColor' : 'none'}
-            />
-          </span>
+          {tienePresupuesto && negocio.presupuestoId ? (
+            <Link
+              href={`/presupuestos/${negocio.presupuestoId}`}
+              title={`Presupuesto ${negocio.presupuestoNumero ?? ''}`}
+              className={styles.presupuestoFlagLink}
+            >
+              <Flag size={14} className={styles.presupuestoFlagCon} fill="currentColor" />
+              <ExternalLink size={10} />
+            </Link>
+          ) : (
+            <span title="Sin presupuesto asignado">
+              <Flag size={14} className={styles.presupuestoFlagSin} fill="none" />
+            </span>
+          )}
         </div>
       )}
     </div>

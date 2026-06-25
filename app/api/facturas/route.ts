@@ -14,11 +14,16 @@ import { datosItemsFacturaNestedCreate } from '@/lib/facturas/datos-items-factur
 import { aplicarPreciosResueltosItems } from '@/lib/precios/aplicar-precios-documento'
 import { resolverPlantillaIdEmision } from '@/lib/plantillas/resolver-plantilla'
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     await requirePermissionAny('facturas.read', 'cobranzas.read')
+    const { searchParams } = new URL(req.url)
+    const clienteId = searchParams.get('clienteId')
+
     const facturas = await prisma.factura.findMany({
+      where: clienteId ? { clienteId } : undefined,
       orderBy: { creadoEn: 'desc' },
+      take: clienteId ? 50 : undefined,
       include: {
         cliente: { select: { nombre: true } },
         emisor: { select: { razonSocial: true, cuit: true } },

@@ -50,6 +50,7 @@ export interface NegocioEmbudoDTO {
   numero: number
   nombre: string
   cliente: string
+  clienteId?: string | null
   monto: number
   vendedor: string
   urgencia: 'NORMAL' | 'URGENTE'
@@ -70,7 +71,7 @@ export interface EmbudoStats {
 }
 
 export function calcularStats(negocios: NegocioEmbudoDTO[]): EmbudoStats {
-  const activos = negocios.filter((n) => n.etapa !== 'CIERRE')
+  const activos = negocios.filter((n) => n.etapa !== 'CIERRE' && n.etapa !== 'PERDIDO')
   const pipelineArs = activos.reduce((s, n) => s + (n.monto ?? 0), 0)
   const ahora = new Date()
   const cerradosMes = negocios.filter((n) => {

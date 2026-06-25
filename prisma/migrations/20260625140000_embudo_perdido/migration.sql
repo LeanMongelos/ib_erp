@@ -1,0 +1,2 @@
+-- Etapa PERDIDO en embudo CRM
+ALTER TYPE "EtapaEmbudo" ADD VALUE IF NOT EXISTS 'PERDIDO';

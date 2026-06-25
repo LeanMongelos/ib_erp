@@ -41,12 +41,18 @@ function mapInventario(data: unknown): ComboboxOption[] {
   }))
 }
 
+export interface EmbudoNegocioContext {
+  clienteId?: string | null
+  presupuestoId?: string | null
+}
+
 export function renderEmbudoField(
   f: FormField,
   values: Record<string, unknown>,
   setField: (name: string, value: unknown) => void,
   catalogos?: EmbudoCatalogos,
   inventarioPrecios?: React.MutableRefObject<Map<string, number>>,
+  negocioContext?: EmbudoNegocioContext,
 ) {
   if (!fieldVisible(f, values)) return null
   const cls = `${styles.formField} ${f.type === 'textarea' || f.type === 'checkbox-group' || f.type === 'radio' || f.type === 'cliente' || f.type === 'inventario' || f.type === 'usuario' ? styles.formFieldFull : ''}`
@@ -199,6 +205,41 @@ export function renderEmbudoField(
           options={f.options?.map((o) => ({ value: o.value, label: o.label })) ?? []}
           placeholder={f.placeholder ?? 'Seleccionar o escribir…'}
           allowCustom={f.allowCustom ?? true}
+        />
+      </div>
+    )
+  }
+
+  if (f.type === 'factura') {
+    const clienteId = negocioContext?.clienteId
+    const fetchUrl = clienteId ? `/api/facturas?clienteId=${encodeURIComponent(clienteId)}` : '/api/facturas'
+
+    return (
+      <div key={f.name} className={`${cls} ${styles.formFieldFull}`}>
+        <Combobox
+          label={`${f.label}${f.required ? ' *' : ''}`}
+          value={String(values[f.name] ?? '')}
+          onChange={(v, opt) => {
+            if (opt) {
+              setField(f.name, opt.value)
+              setField('numeroFactura', opt.label)
+            } else {
+              setField(f.name, v)
+            }
+          }}
+          options={[]}
+          fetchUrl={fetchUrl}
+          mapResponse={(data) => {
+            if (!Array.isArray(data)) return []
+            return data.map((fac: { id: string; numero: string; total?: number; estado?: string }) => ({
+              value: fac.id,
+              label: fac.numero,
+              hint: [fac.estado, fac.total != null ? formatMontoMoneda(fac.total, 'ARS') : null].filter(Boolean).join(' · ') || undefined,
+            }))
+          }}
+          placeholder="Buscar factura del cliente…"
+          allowCustom={false}
+          minSearchLength={0}
         />
       </div>
     )

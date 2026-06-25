@@ -1416,11 +1416,20 @@ enum EtapaEmbudo {
   ANALISIS
   ENTREGA
   CIERRE
+  PERDIDO
 }
 
 enum UrgenciaEmbudo {
   NORMAL
   URGENTE
+}
+
+enum TipoEventoEmbudo {
+  MOVIMIENTO
+  CREACION
+  EDICION
+  ELIMINACION
+  REACTIVACION
 }
 
 model NegocioEmbudo {
@@ -1454,20 +1463,23 @@ model NegocioEmbudo {
 }
 
 model HistorialEmbudo {
-  id         String      @id @default(cuid())
+  id         String           @id @default(cuid())
   negocioId  String
-  etapaDesde EtapaEmbudo
-  etapaHasta EtapaEmbudo
-  retroceso  Boolean     @default(false)
-  datos      Json        @default("{}")
+  tipo       TipoEventoEmbudo @default(MOVIMIENTO)
+  etapaDesde EtapaEmbudo?
+  etapaHasta EtapaEmbudo?
+  retroceso  Boolean          @default(false)
+  datos      Json             @default("{}")
   notas      String?
   usuarioId  String?
-  creadoEn   DateTime    @default(now())
+  creadoEn   DateTime         @default(now())
 
   negocio NegocioEmbudo @relation(fields: [negocioId], references: [id], onDelete: Cascade)
   usuario Usuario?      @relation(fields: [usuarioId], references: [id])
 
   @@index([negocioId])
+  @@index([tipo])
+  @@index([creadoEn])
   @@map("historial_embudo")
 }
 

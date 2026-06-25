@@ -2,8 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requirePermission, handleApiError, ApiError } from '@/lib/api-auth'
 import { plain } from '@/lib/serialize'
-import { etapaLabel } from '@/lib/crm/embudo-constants'
-import type { EtapaKey } from '@/lib/crm/embudo-constants'
+import { mapEventoEmbudoDTO } from '@/lib/crm/embudo-historial'
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -18,21 +17,21 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
       orderBy: { creadoEn: 'desc' },
       include: {
         usuario: { select: { id: true, nombre: true } },
+        negocio: {
+          select: {
+            id: true,
+            numero: true,
+            nombre: true,
+            cliente: true,
+            vendedor: true,
+            etapa: true,
+            activo: true,
+          },
+        },
       },
     })
 
-    const items = historial.map((h) => ({
-      id: h.id,
-      fecha: h.creadoEn,
-      movimiento: h.retroceso
-        ? `${etapaLabel(h.etapaDesde as EtapaKey)} → ${etapaLabel(h.etapaHasta as EtapaKey)} (retroceso)`
-        : `${etapaLabel(h.etapaDesde as EtapaKey)} → ${etapaLabel(h.etapaHasta as EtapaKey)}`,
-      usuario: h.usuario?.nombre ?? 'Sistema',
-      notas: h.notas,
-      datos: h.datos,
-      retroceso: h.retroceso,
-    }))
-
+    const items = historial.map((h) => mapEventoEmbudoDTO(h))
     return NextResponse.json(plain(items))
   } catch (error) {
     return handleApiError(error)
