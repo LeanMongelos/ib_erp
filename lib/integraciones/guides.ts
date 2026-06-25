@@ -44,7 +44,7 @@ export const GUIAS_INTEGRACION: Record<string, GuiaCanal> = {
       {
         titulo: '4. Token permanente',
         descripcion: 'Generá un System User en Business Manager con permiso whatsapp_business_messaging y creá un token permanente (no uses el token temporal de 24 h).',
-        campos: ['phoneNumberId', 'businessAccountId', 'accessToken'],
+        campos: ['phoneNumberId', 'businessAccountId', 'accessToken', 'appSecret'],
       },
       {
         titulo: '5. Configurar webhook',

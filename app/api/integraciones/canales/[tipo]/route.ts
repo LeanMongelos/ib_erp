@@ -112,9 +112,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ ti
 
 function camposRequeridos(tipo: string): string[] {
   switch (tipo) {
-    case 'WHATSAPP': return ['phoneNumberId', 'accessToken', 'verifyToken']
+    case 'WHATSAPP': return ['phoneNumberId', 'accessToken', 'verifyToken', 'appSecret']
     case 'INSTAGRAM':
-    case 'FACEBOOK': return ['pageId', 'pageAccessToken', 'verifyToken']
+    case 'FACEBOOK': return ['pageId', 'pageAccessToken', 'verifyToken', 'appSecret']
     case 'EMAIL_IMAP': return ['imapHost', 'imapUser', 'imapPassword', 'smtpHost', 'smtpUser']
     case 'EMAIL_GRAPH': return ['tenantId', 'clientId', 'clientSecret', 'mailboxEmail']
     case 'N8N': return ['webhookUrlN8n', 'apiKey']

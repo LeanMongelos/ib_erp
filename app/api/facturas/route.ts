@@ -13,6 +13,7 @@ import { validarSucursalesInstalacionEquipo } from '@/lib/facturas/validar-sucur
 import { datosItemsFacturaNestedCreate } from '@/lib/facturas/datos-items-factura'
 import { aplicarPreciosResueltosItems } from '@/lib/precios/aplicar-precios-documento'
 import { resolverPlantillaIdEmision } from '@/lib/plantillas/resolver-plantilla'
+import { sincronizarEmbudoAlFacturarPresupuesto } from '@/lib/crm/embudo-sincronizar-presupuesto'
 
 export async function GET(req: NextRequest) {
   try {
@@ -169,6 +170,12 @@ export async function POST(req: NextRequest) {
         where: { id: data.presupuestoId },
         data: { estado: 'CONVERTIDO' },
       })
+      await sincronizarEmbudoAlFacturarPresupuesto(
+        data.presupuestoId,
+        factura.id,
+        factura.numero,
+        actor.id,
+      ).catch(() => null)
     }
 
     const facturaCompleta = await prisma.factura.findUnique({

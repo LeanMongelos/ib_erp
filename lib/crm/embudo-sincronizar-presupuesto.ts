@@ -112,3 +112,72 @@ export async function vincularFacturaNegocioCierre(opts: {
 
   return { facturaId: factura.id, numero: factura.numero }
 }
+
+/** Marca presupuesto RECHAZADO cuando el negocio se pierde. */
+export async function rechazarPresupuestoNegocioPerdido(presupuestoId: string | null): Promise<void> {
+  if (!presupuestoId) return
+  const pres = await prisma.presupuesto.findUnique({
+    where: { id: presupuestoId },
+    select: { estado: true, factura: true },
+  })
+  if (!pres || pres.factura) return
+  if (pres.estado === 'ENVIADO' || pres.estado === 'APROBADO' || pres.estado === 'BORRADOR') {
+    await prisma.presupuesto.update({
+      where: { id: presupuestoId },
+      data: { estado: 'RECHAZADO' },
+    })
+  }
+}
+
+/**
+ * Si se factura un presupuesto desde el ERP (fuera del embudo), sincroniza el negocio vinculado.
+ */
+export async function sincronizarEmbudoAlFacturarPresupuesto(
+  presupuestoId: string,
+  facturaId: string,
+  numeroFactura: string,
+  usuarioId?: string,
+): Promise<void> {
+  const negocio = await prisma.negocioEmbudo.findFirst({
+    where: { presupuestoId, activo: true },
+  })
+  if (!negocio || negocio.etapa === 'PERDIDO') return
+
+  const datos = {
+    ...(negocio.datos as object),
+    facturaId,
+    numeroFactura,
+    sincronizadoDesdeFacturacion: true,
+  }
+
+  if (negocio.etapa === 'CIERRE') {
+    await prisma.negocioEmbudo.update({
+      where: { id: negocio.id },
+      data: { datos },
+    })
+    return
+  }
+
+  await prisma.$transaction([
+    prisma.negocioEmbudo.update({
+      where: { id: negocio.id },
+      data: {
+        etapa: 'CIERRE',
+        etapaDesde: new Date(),
+        cerradoEn: new Date(),
+        datos,
+      },
+    }),
+    prisma.historialEmbudo.create({
+      data: {
+        negocioId: negocio.id,
+        tipo: 'MOVIMIENTO',
+        etapaDesde: negocio.etapa,
+        etapaHasta: 'CIERRE',
+        datos: { facturaId, numeroFactura, sincronizadoDesdeFacturacion: true },
+        notas: 'Cierre automático al facturar presupuesto en ERP',
+        usuarioId: usuarioId ?? null,
+      },
+    }),
+  ])
+}

@@ -8,6 +8,7 @@ import { ApiError } from '@/lib/api-auth'
 import { crearPresupuestoDesdePropuesta } from '@/lib/crm/embudo-presupuesto'
 import {
   aprobarPresupuestoNegocioGanado,
+  rechazarPresupuestoNegocioPerdido,
   vincularFacturaNegocioCierre,
 } from '@/lib/crm/embudo-sincronizar-presupuesto'
 
@@ -98,6 +99,9 @@ export async function moverNegocioEmbudo(opts: {
   if (desde === 'ENTREGA' && hasta === 'CIERRE' && !opts.retroceso) {
     const facturaId = typeof datos.facturaId === 'string' ? datos.facturaId : null
     const numeroFactura = typeof datos.numeroFactura === 'string' ? datos.numeroFactura : null
+    if (presupuestoId && !facturaId && !numeroFactura?.trim()) {
+      throw new ApiError(400, 'Este negocio tiene presupuesto vinculado: seleccioná la factura emitida para cerrar')
+    }
     if (facturaId || numeroFactura?.trim()) {
       const vinculo = await vincularFacturaNegocioCierre({
         presupuestoId,
@@ -112,6 +116,10 @@ export async function moverNegocioEmbudo(opts: {
       } as Prisma.InputJsonValue
       datos.numeroFactura = vinculo.numero
     }
+  }
+
+  if (hasta === 'PERDIDO' && !opts.retroceso && presupuestoId) {
+    await rechazarPresupuestoNegocioPerdido(presupuestoId)
   }
 
   const cerradoEn = hasta === 'CIERRE' || hasta === 'PERDIDO' ? new Date() : negocio.cerradoEn
