@@ -39,3 +39,28 @@ export function puedeAccederReportes(permisos: string[] | undefined): boolean {
   if (permisos.includes('*')) return true
   return REPORTES_NAV_PERMISSIONS.some((p) => permisos.includes(p))
 }
+
+/** Permiso mínimo por ruta del menú lateral (OR dentro del array). */
+export const NAV_ITEM_PERMISSIONS: Record<string, readonly string[]> = {
+  '/dashboard': DASHBOARD_ACCESS_PERMISSIONS,
+  '/crm': ['clientes.read', 'crm.read'],
+  '/reportes': REPORTES_NAV_PERMISSIONS,
+  '/servicio-tecnico': ['servicio.read'],
+  '/servicio-tecnico/preventivo': ['preventivo.read'],
+  '/inventario': ['inventario.read'],
+  '/presupuestos': ['presupuestos.read'],
+  '/facturacion': ['facturas.read'],
+  '/cobranzas': ['cobranzas.read'],
+  '/compras': ['compras.read'],
+  '/proveedores': ['proveedores.read'],
+  '/automatizaciones': ['config.manage_integrations'],
+  '/configuracion': ['config.read'],
+}
+
+export function puedeVerNavItem(href: string, permisos: string[] | undefined): boolean {
+  if (!permisos?.length) return false
+  if (permisos.includes('*')) return true
+  const required = NAV_ITEM_PERMISSIONS[href]
+  if (!required?.length) return true
+  return required.some((p) => permisos.includes(p))
+}

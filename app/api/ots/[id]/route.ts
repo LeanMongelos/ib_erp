@@ -50,7 +50,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   try {
     const { id } = await params
     const body = await req.json()
-    const { estado, nota, diagnostico, checklistSolucion, tecnicoId, repuestos } = otUpdateSchema.parse(body)
+    const { estado, nota, diagnostico, checklistSolucion, tecnicoId, repuestos, crearPlanPreventivo } = otUpdateSchema.parse(body)
 
     const otActual = await prisma.ordenTrabajo.findUnique({
       where: { id },
@@ -207,7 +207,24 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       )
     }
 
-    return NextResponse.json(plain(ot))
+    let planPreventivo: { creado: boolean; planId?: string; motivo?: string } | undefined
+    if (
+      cerrando &&
+      ot.equipoId &&
+      crearPlanPreventivo !== false &&
+      ['CORRECTIVO', 'GARANTIA', 'CALIBRACION'].includes(otActual.tipo)
+    ) {
+      const { crearPlanPreventivoPostCierre } = await import('@/lib/ots/plan-preventivo-post-cierre')
+      planPreventivo = await crearPlanPreventivoPostCierre({
+        otId: id,
+        otNumero: otActual.numero,
+        tipo: otActual.tipo,
+        equipoId: ot.equipoId,
+        tecnicoId: ot.tecnicoId ?? tecnicoId ?? otActual.tecnicoId,
+      })
+    }
+
+    return NextResponse.json(plain({ ...ot, planPreventivo }))
   } catch (error) {
     return handleApiError(error)
   }

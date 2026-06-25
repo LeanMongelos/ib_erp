@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { useEmbudoSidebar } from '@/components/layout/SidebarContext'
 import { usePermisos } from '@/components/auth/useCan'
-import { puedeAccederReportes } from '@/lib/page-permissions'
+import { puedeVerNavItem } from '@/lib/page-permissions'
 import {
   LayoutDashboard,
   Users,
@@ -27,7 +27,7 @@ import {
 const navItems = [
   { label: 'Dashboard',         href: '/dashboard',                   icon: LayoutDashboard },
   { label: 'CRM',               href: '/crm',                         icon: Users           },
-  { label: 'Reportes',          href: '/reportes',                    icon: BarChart3, reportes: true },
+  { label: 'Reportes',          href: '/reportes',                    icon: BarChart3 },
   { label: 'Servicio Técnico',  href: '/servicio-tecnico',            icon: Wrench          },
   { label: 'Preventivo',        href: '/servicio-tecnico/preventivo', icon: Calendar        },
   { label: 'ERP / Inventario',  href: '/inventario',                  icon: Package         },
@@ -44,13 +44,12 @@ export function Sidebar({ stockBajoCount = null }: { stockBajoCount?: number | n
   const pathname = usePathname()
   const { sidebarHidden } = useEmbudoSidebar()
   const permisos = usePermisos()
-  const verReportes = puedeAccederReportes(permisos)
 
   function isActive(href: string) {
     return pathname === href || pathname.startsWith(href + '/')
   }
 
-  const itemsVisibles = navItems.filter((item) => !('reportes' in item && item.reportes) || verReportes)
+  const itemsVisibles = navItems.filter((item) => puedeVerNavItem(item.href, permisos))
 
   return (
     <aside

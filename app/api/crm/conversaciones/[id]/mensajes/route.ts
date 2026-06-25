@@ -9,7 +9,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   try {
     const actor = await requirePermission('crm.reply')
     const { id } = await params
-    const { contenido } = crmMensajeContenidoSchema.parse(await req.json())
+    const { contenido, adjuntoUrl } = crmMensajeContenidoSchema.parse(await req.json())
 
     const conv = await prisma.conversacionCRM.findUnique({
       where: { id },
@@ -17,12 +17,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     })
     if (!conv) throw new ApiError(404, 'Conversación no encontrada')
 
+    const texto = contenido?.trim() ?? ''
+    const preview = adjuntoUrl
+      ? (texto || '[Adjunto]')
+      : texto
+
     const mensaje = await prisma.$transaction(async (tx) => {
       const m = await tx.mensajeCRM.create({
         data: {
           conversacionId: id,
           direccion: 'SALIENTE',
-          contenido,
+          contenido: texto || '[Adjunto]',
+          adjuntoUrl: adjuntoUrl ?? null,
+          tipo: adjuntoUrl ? 'ADJUNTO' : 'TEXTO',
           usuarioId: actor.id,
         },
         include: { usuario: { select: { nombre: true } } },
@@ -30,7 +37,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       await tx.conversacionCRM.update({
         where: { id },
         data: {
-          preview: contenido.slice(0, 120),
+          preview: preview.slice(0, 120),
           ultimoMensajeEn: new Date(),
         },
       })

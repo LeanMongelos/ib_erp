@@ -9,11 +9,14 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const canal = searchParams.get('canal')
     const estado = searchParams.get('estado')
+    const asignadoId = searchParams.get('asignadoId')
+    const sinAsignar = searchParams.get('sinAsignar') === 'true'
 
     const conversaciones = await prisma.conversacionCRM.findMany({
       where: {
         ...(estado && estado !== 'TODOS' && { estado: estado as 'ABIERTA' | 'PENDIENTE' | 'CERRADA' }),
         ...(canal && canal !== 'TODOS' && { canal: { tipo: canal as any } }),
+        ...(sinAsignar ? { asignadoId: null } : asignadoId ? { asignadoId } : {}),
       },
       orderBy: { ultimoMensajeEn: 'desc' },
       include: {

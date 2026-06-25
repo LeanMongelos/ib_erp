@@ -130,13 +130,39 @@ export const otN8nCreateSchema = otCreateSchema.extend({
 // ============ CRM / n8n ============
 
 /** Contenido de mensaje saliente — misma regla UI y webhooks n8n. */
-export const crmMensajeContenidoSchema = z.object({
-  contenido: z.string().trim().min(1).max(4000),
+export const crmMensajeContenidoSchema = z
+  .object({
+    contenido: z.string().trim().max(4000).optional(),
+    adjuntoUrl: z
+      .string()
+      .trim()
+      .optional()
+      .refine(
+        (v) => !v || v.startsWith('/api/crm/media/') || /^https?:\/\//i.test(v),
+        { message: 'URL de adjunto inválida' },
+      ),
+  })
+  .refine(
+    (d) => (d.contenido && d.contenido.length >= 1) || d.adjuntoUrl,
+    { message: 'Debés escribir un mensaje o adjuntar un archivo' },
+  )
+
+export const crmSnippetCreateSchema = z.object({
+  titulo: z.string().trim().min(2).max(80),
+  cuerpo: z.string().trim().min(1).max(4000),
+  activo: z.boolean().optional(),
+  orden: z.number().int().nonnegative().optional(),
 })
 
-/** Webhook n8n responder — POST /api/n8n/responder. */
-export const mensajeN8nResponderSchema = crmMensajeContenidoSchema.extend({
+export const crmSnippetUpdateSchema = crmSnippetCreateSchema.partial().refine(
+  (d) => Object.keys(d).length > 0,
+  { message: 'Debés enviar al menos un campo' },
+)
+
+/** Webhook n8n responder — POST /api/n8n/responder (solo texto). */
+export const mensajeN8nResponderSchema = z.object({
   conversacionId: z.string().min(1),
+  contenido: z.string().trim().min(1).max(4000),
 })
 
 /** Webhook n8n etiquetar — POST /api/n8n/etiquetar. */
@@ -206,6 +232,7 @@ export const otUpdateSchema = z
       completado: z.boolean(),
     })).optional(),
     tecnicoId:   z.string().min(1).optional().nullable(),
+    crearPlanPreventivo: z.boolean().optional(),
     repuestos: z.array(z.object({
       descripcion: z.string().trim().min(1, 'La descripción del repuesto es obligatoria'),
       cantidad:    z.number().int().positive(),

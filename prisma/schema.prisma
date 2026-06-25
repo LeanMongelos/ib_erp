@@ -1392,6 +1392,19 @@ model MensajeCRM {
   @@map("mensajes_crm")
 }
 
+model CrmSnippet {
+  id            String   @id @default(cuid())
+  titulo        String
+  cuerpo        String
+  activo        Boolean  @default(true)
+  orden         Int      @default(0)
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+
+  @@index([activo, orden])
+  @@map("crm_snippets")
+}
+
 // ============ CRM EMBUDO DE VENTAS ============
 
 enum EtapaEmbudo {

@@ -19,6 +19,9 @@ dar soporte desde un solo lugar, con **n8n conectable**.
 
 ### Bandeja (`InboxPanel`)
 - Lista conversaciones por canal; panel lateral con cliente vinculado.
+- Filtros servidor: **canal**, **estado**, **asignado** (`asignadoId`, `sinAsignar=true` en GET `/api/crm/conversaciones`).
+- **Adjuntos** en mensajes: upload vía `POST /api/crm/adjuntos`, visualización en hilo.
+- **Respuestas rápidas** (snippets): `GET /api/crm/snippets` + picker en caja de respuesta; CRUD con `crm.manage_channels`.
 - **Historial del cliente** (`ClienteHistorialInbox`): últimas OTs y productos facturados.
 - Clic en OT → `HistorialOTDetalleModal` (`GET /api/ots/[id]`).
 - Clic en producto → `HistorialProductoDetalleModal` (`GET /api/facturas/items/[id]/detalle`).

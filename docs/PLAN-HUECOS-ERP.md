@@ -51,7 +51,7 @@ Auditoría post-cartera de cheques (jun 2026). Objetivo: cerrar gaps donde el **
 | ID | Hueco | Acción | Estado |
 |----|-------|--------|--------|
 | M1 | `inventario.transfer` sin feature | POST `/api/inventario/[id]/transferir` + UI modal | ✅ Implementado |
-| M2 | Plantillas REMITO/NC sin emisión | NC vía anulación AFIP; remito sin flujo de negocio | ⏸ Diferido (ver `docs/12-PLANTILLAS-PDF.md`) |
+| M2 | Plantillas REMITO/NC sin emisión | NC vía anulación AFIP; remito emisión mínima PDF | ✅ Parcial — ver `docs/12-PLANTILLAS-PDF.md` §10 |
 | M3 | TARJETA/OTRO sin reglas | Cupón obligatorio en TARJETA; referencia/acreditación en OTRO | ✅ Implementado |
 | M4 | Reglas inbox sin email | Cron `notificaciones-operativas` + emails en `ots-vencidas` (SLA) | ✅ Implementado |
 | M8 | Filtros OT solo en UI | Query params en GET `/api/ots` (`q`, `estado`, `tecnicoId`, `sla`, …) | ✅ Implementado |

@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { toast } from 'sonner'
 import {
   Search, Send, UserPlus, Wrench, FileText, Tag, Phone, Mail,
-  MessageCircle, Camera, Globe, Zap, ChevronRight,
+  MessageCircle, Camera, Globe, Zap, ChevronRight, Paperclip, ImageIcon,
 } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -34,8 +34,15 @@ interface Mensaje {
   id: string
   direccion: string
   contenido: string
+  adjuntoUrl?: string | null
   fecha: string
   usuario?: { nombre: string } | null
+}
+
+interface Snippet {
+  id: string
+  titulo: string
+  cuerpo: string
 }
 
 interface Detalle extends Conversacion {
@@ -53,7 +60,13 @@ const CANAL_META: Record<string, { icon: typeof MessageCircle; color: string; la
 
 const ETIQUETAS = ['venta', 'soporte', 'reclamo', 'presupuesto', 'urgente']
 
-export function InboxPanel({ usuarios }: { usuarios: { id: string; nombre: string }[] }) {
+export function InboxPanel({
+  usuarios,
+  currentUserId,
+}: {
+  usuarios: { id: string; nombre: string }[]
+  currentUserId?: string | null
+}) {
   const puedeResponder = useCan('crm.reply')
   const puedeAsignar = useCan('crm.assign')
   const [lista, setLista] = useState<Conversacion[]>([])
@@ -61,6 +74,12 @@ export function InboxPanel({ usuarios }: { usuarios: { id: string; nombre: strin
   const [detalle, setDetalle] = useState<Detalle | null>(null)
   const [filtroCanal, setFiltroCanal] = useState('TODOS')
   const [filtroEstado, setFiltroEstado] = useState('TODOS')
+  const [filtroAsignado, setFiltroAsignado] = useState('TODOS')
+  const [snippets, setSnippets] = useState<Snippet[]>([])
+  const [adjuntoUrl, setAdjuntoUrl] = useState<string | null>(null)
+  const [adjuntoNombre, setAdjuntoNombre] = useState<string | null>(null)
+  const [subiendoAdjunto, setSubiendoAdjunto] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const [busqueda, setBusqueda] = useState('')
   const [texto, setTexto] = useState('')
   const [loading, setLoading] = useState(true)
@@ -68,13 +87,20 @@ export function InboxPanel({ usuarios }: { usuarios: { id: string; nombre: strin
   const [modalCliente, setModalCliente] = useState(false)
   const hiloRef = useRef<HTMLDivElement>(null)
 
+  function queryParams() {
+    const q = new URLSearchParams()
+    if (filtroCanal !== 'TODOS') q.set('canal', filtroCanal)
+    if (filtroEstado !== 'TODOS') q.set('estado', filtroEstado)
+    if (filtroAsignado === 'SIN_ASIGNAR') q.set('sinAsignar', 'true')
+    else if (filtroAsignado === 'MIAS' && currentUserId) q.set('asignadoId', currentUserId)
+    else if (filtroAsignado !== 'TODOS') q.set('asignadoId', filtroAsignado)
+    return q
+  }
+
   async function cargarLista(silent = false) {
     if (!silent) setLoading(true)
     try {
-      const q = new URLSearchParams()
-      if (filtroCanal !== 'TODOS') q.set('canal', filtroCanal)
-      if (filtroEstado !== 'TODOS') q.set('estado', filtroEstado)
-      const data = await fetch(`/api/crm/conversaciones?${q}`).then((r) => r.json())
+      const data = await fetch(`/api/crm/conversaciones?${queryParams()}`).then((r) => r.json())
       setLista(data)
     } catch {
       if (!silent) toast.error('Error al cargar bandeja')
@@ -86,10 +112,7 @@ export function InboxPanel({ usuarios }: { usuarios: { id: string; nombre: strin
   async function refrescarBandeja() {
     if (document.visibilityState !== 'visible') return
     try {
-      const q = new URLSearchParams()
-      if (filtroCanal !== 'TODOS') q.set('canal', filtroCanal)
-      if (filtroEstado !== 'TODOS') q.set('estado', filtroEstado)
-      const data = await fetch(`/api/crm/conversaciones?${q}`).then((r) => r.json())
+      const data = await fetch(`/api/crm/conversaciones?${queryParams()}`).then((r) => r.json())
       setLista(data)
       if (selId) {
         const det = await fetch(`/api/crm/conversaciones/${selId}`).then((r) => r.json())
@@ -111,29 +134,42 @@ export function InboxPanel({ usuarios }: { usuarios: { id: string; nombre: strin
     }
   }
 
-  useEffect(() => { cargarLista() }, [filtroCanal, filtroEstado])
+  useEffect(() => { cargarLista() }, [filtroCanal, filtroEstado, filtroAsignado])
 
   useEffect(() => {
     const timer = setInterval(refrescarBandeja, 45_000)
     return () => clearInterval(timer)
-  }, [filtroCanal, filtroEstado, selId])
+  }, [filtroCanal, filtroEstado, filtroAsignado, selId])
+
+  useEffect(() => {
+    if (!puedeResponder) return
+    fetch('/api/crm/snippets')
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data) => setSnippets(Array.isArray(data) ? data : []))
+      .catch(() => {})
+  }, [puedeResponder])
 
   useEffect(() => {
     hiloRef.current?.scrollTo({ top: hiloRef.current.scrollHeight })
   }, [detalle?.mensajes])
 
   async function enviar() {
-    if (!selId || !texto.trim()) return
+    if (!selId || (!texto.trim() && !adjuntoUrl)) return
     setEnviando(true)
     try {
       const res = await fetch(`/api/crm/conversaciones/${selId}/mensajes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contenido: texto }),
+        body: JSON.stringify({
+          contenido: texto.trim() || undefined,
+          adjuntoUrl: adjuntoUrl ?? undefined,
+        }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(mensajeErrorJson(data, 'No se pudo enviar el mensaje'))
       setTexto('')
+      setAdjuntoUrl(null)
+      setAdjuntoNombre(null)
       await cargarDetalle(selId)
       cargarLista()
       if (data.pendienteEnvio) {
@@ -146,6 +182,30 @@ export function InboxPanel({ usuarios }: { usuarios: { id: string; nombre: strin
     } finally {
       setEnviando(false)
     }
+  }
+
+  async function subirAdjunto(file: File) {
+    if (!selId) return
+    setSubiendoAdjunto(true)
+    try {
+      const form = new FormData()
+      form.set('archivo', file)
+      form.set('conversacionId', selId)
+      const res = await fetch('/api/crm/adjuntos', { method: 'POST', body: form })
+      const data = await res.json()
+      if (!res.ok) throw new Error(mensajeErrorJson(data, 'No se pudo subir el archivo'))
+      setAdjuntoUrl(data.adjuntoUrl)
+      setAdjuntoNombre(data.nombre ?? file.name)
+      toast.success('Archivo listo para enviar')
+    } catch (e) {
+      toast.error(mensajeErrorDesconocido(e, 'No se pudo subir el archivo'))
+    } finally {
+      setSubiendoAdjunto(false)
+    }
+  }
+
+  function esImagenAdjunto(url: string) {
+    return /\.(png|jpe?g|webp|gif)(\?|$)/i.test(url) || url.includes('/api/crm/media/')
   }
 
   async function toggleEtiqueta(tag: string) {
@@ -230,6 +290,15 @@ export function InboxPanel({ usuarios }: { usuarios: { id: string; nombre: strin
           <option value="PENDIENTE">Pendientes</option>
           <option value="CERRADA">Cerradas</option>
         </select>
+        <select value={filtroAsignado} onChange={(e) => setFiltroAsignado(e.target.value)}
+          className="bg-white border border-[#e4e7eb] rounded-[9px] px-3 py-2 text-[12px]">
+          <option value="TODOS">Todos los asignados</option>
+          {currentUserId && <option value="MIAS">Mis conversaciones</option>}
+          <option value="SIN_ASIGNAR">Sin asignar</option>
+          {usuarios.map((u) => (
+            <option key={u.id} value={u.id}>{u.nombre}</option>
+          ))}
+        </select>
         <Link href="/configuracion/integraciones">
           <Button variant="outline" size="sm">Conectar canales</Button>
         </Link>
@@ -299,7 +368,33 @@ export function InboxPanel({ usuarios }: { usuarios: { id: string; nombre: strin
                         ? 'bg-[#E8650A] text-white rounded-br-sm'
                         : 'bg-white border border-[#e4e7eb] text-[#1f242c] rounded-bl-sm'
                     }`}>
-                      <p className="text-[13px] leading-relaxed whitespace-pre-wrap">{m.contenido}</p>
+                      <p className="text-[13px] leading-relaxed whitespace-pre-wrap">
+                        {m.contenido !== '[Adjunto]' ? m.contenido : null}
+                      </p>
+                      {m.adjuntoUrl && (
+                        <div className="mt-2">
+                          {esImagenAdjunto(m.adjuntoUrl) ? (
+                            <a href={m.adjuntoUrl} target="_blank" rel="noopener noreferrer">
+                              <img
+                                src={m.adjuntoUrl}
+                                alt="Adjunto"
+                                className="max-w-full rounded-md max-h-40 object-contain"
+                              />
+                            </a>
+                          ) : (
+                            <a
+                              href={m.adjuntoUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={`inline-flex items-center gap-1 text-[12px] font-semibold underline ${
+                                m.direccion === 'SALIENTE' ? 'text-orange-100' : 'text-[#E8650A]'
+                              }`}
+                            >
+                              <Paperclip size={12} /> Ver adjunto
+                            </a>
+                          )}
+                        </div>
+                      )}
                       <p className={`text-[10px] mt-1 ${m.direccion === 'SALIENTE' ? 'text-orange-100' : 'text-[#9aa1ab]'}`}>
                         {formatFecha(m.fecha)}
                         {m.usuario?.nombre && ` · ${m.usuario.nombre}`}
@@ -309,18 +404,64 @@ export function InboxPanel({ usuarios }: { usuarios: { id: string; nombre: strin
                 ))}
               </div>
               {puedeResponder && (
-                <div className="p-3 border-t border-[#f0f1f4] flex gap-2">
-                  <textarea
-                    value={texto}
-                    onChange={(e) => setTexto(e.target.value)}
-                    placeholder="Escribí tu respuesta…"
-                    rows={2}
-                    className="flex-1 border border-[#e4e7eb] rounded-[9px] px-3 py-2 text-[13px] resize-none focus:outline-none focus:ring-2 focus:ring-[#E8650A]/30"
-                    onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviar() } }}
-                  />
-                  <Button variant="primary" onClick={enviar} loading={enviando} disabled={!texto.trim()}>
-                    <Send size={16} />
-                  </Button>
+                <div className="p-3 border-t border-[#f0f1f4] space-y-2">
+                  {snippets.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {snippets.map((s) => (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => setTexto((t) => (t ? `${t}\n${s.cuerpo}` : s.cuerpo))}
+                          className="text-[11px] font-semibold px-2 py-1 rounded-full border border-[#e4e7eb] text-[#6b7280] hover:border-[#E8650A] hover:text-[#C4540A]"
+                          title={s.cuerpo}
+                        >
+                          {s.titulo}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {adjuntoUrl && (
+                    <div className="flex items-center gap-2 text-[12px] text-[#6b7280] bg-[#f8f9fb] rounded-[8px] px-2 py-1.5">
+                      <ImageIcon size={14} />
+                      <span className="truncate flex-1">{adjuntoNombre ?? 'Adjunto'}</span>
+                      <button type="button" className="text-[#9aa1ab] hover:text-[#E8650A]" onClick={() => { setAdjuntoUrl(null); setAdjuntoNombre(null) }}>
+                        Quitar
+                      </button>
+                    </div>
+                  )}
+                  <div className="flex gap-2">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,image/gif,application/pdf"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0]
+                        if (f) void subirAdjunto(f)
+                        e.target.value = ''
+                      }}
+                    />
+                    <textarea
+                      value={texto}
+                      onChange={(e) => setTexto(e.target.value)}
+                      placeholder="Escribí tu respuesta…"
+                      rows={2}
+                      className="flex-1 border border-[#e4e7eb] rounded-[9px] px-3 py-2 text-[13px] resize-none focus:outline-none focus:ring-2 focus:ring-[#E8650A]/30"
+                      onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviar() } }}
+                    />
+                    <Button
+                      variant="outline"
+                      onClick={() => fileInputRef.current?.click()}
+                      loading={subiendoAdjunto}
+                      disabled={!selId}
+                      title="Adjuntar archivo"
+                    >
+                      <Paperclip size={16} />
+                    </Button>
+                    <Button variant="primary" onClick={enviar} loading={enviando} disabled={!texto.trim() && !adjuntoUrl}>
+                      <Send size={16} />
+                    </Button>
+                  </div>
                 </div>
               )}
             </>

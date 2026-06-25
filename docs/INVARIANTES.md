@@ -20,6 +20,8 @@ Documento de referencia para desarrollo, code review y agentes. Si un cambio vio
 | E1 | Movimiento entre etapas: misma regla UI (drag) y API | `lib/crm/embudo-movimiento-client.ts` | `npm run test:validaciones` |
 | E2 | Formularios de transición validados en UI y API | `validateForm` en `embudo-forms.ts` | `test:validaciones` |
 | E3 | POST/PATCH/mover embudo usan schemas de `lib/validation.ts` | `embudoNegocioCreateSchema`, `embudoNegocioPatchSchema`, `embudoMoverSchema` | `npm run test:invariants` |
+| E4 | GET conversaciones acepta `asignadoId` y `sinAsignar=true` | `app/api/crm/conversaciones/route.ts` | `test-crm-backlog.ts` |
+| E5 | Mensaje CRM: texto o `adjuntoUrl` (schema compartido) | `crmMensajeContenidoSchema` | `test-crm-backlog.ts` |
 
 ## Servicio técnico (OT)
 
@@ -33,6 +35,8 @@ Documento de referencia para desarrollo, code review y agentes. Si un cambio vio
 | O6 | GET `/api/ots` acepta filtros de listado (`q`, `estado`, `tecnicoId`, `sla`, …) | `app/api/ots/route.ts` · `lib/ots/listar-ots.ts` | — |
 | O7 | Listado OT en UI usa GET `/api/ots` con filtros sincronizados en URL | `OTsTable.tsx` · `servicio-tecnico/page.tsx` | manual |
 | O8 | Informe OT PDF vía `GET /api/ots/[id]/pdf` (`servicio.read`) | `lib/ots/render-informe-pdf.tsx` | `test-checklist-solucion.ts` |
+| O9 | Cierre OT correctiva/garantía/calibración con equipo crea plan preventivo si no hay activo (idempotente) | `lib/ots/plan-preventivo-post-cierre.ts` | manual · `crearPlanPreventivo: false` en PATCH |
+| O10 | Remito mínimo PDF desde OT o factura (`servicio.read` / `facturas.read`) | `lib/remitos/emitir.ts` | `test-remito-minimo.ts` |
 
 ## Integraciones / n8n
 

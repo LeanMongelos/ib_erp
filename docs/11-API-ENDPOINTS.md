@@ -98,6 +98,7 @@ Usado por `SucursalUbicacionFields` y `SucursalRapidaModal` al validar direcció
 | POST | `/api/facturas/[id]/emitir` | `facturas.emit_afip` | Solicitar CAE |
 | POST | `/api/facturas/[id]/provisionar-equipos` | `facturas.create` | Provisión manual de equipos desde factura |
 | GET | `/api/facturas/[id]/pdf` | `facturas.read` | PDF fiscal |
+| GET/POST | `/api/facturas/[id]/remito` | `facturas.read` | Remito PDF desde ítems de factura |
 | GET | `/api/facturas/items/[id]/detalle` | `crm.read` **o** `clientes.read` | Detalle ítem (equipo, kit, sucursal) para historial CRM |
 
 ## Cobranzas
@@ -128,6 +129,7 @@ Usado por `SucursalUbicacionFields` y `SucursalRapidaModal` al validar direcció
 | GET/POST | `/api/ots` | 🔐 / `servicio.create` | Listar (filtros: `q`, `estado`, `tecnicoId`, `clienteId`, `sla`, `prioridad`, `tipo`) / crear OT |
 | GET/PATCH | `/api/ots/[id]` | 🔐 / `servicio.update` | Detalle JSON (`plain()`) con historial y repuestos |
 | GET | `/api/ots/[id]/pdf` | `servicio.read` | Informe post-servicio PDF |
+| GET/POST | `/api/ots/[id]/remito` | `servicio.read` | Remito PDF (POST emite número; GET `?preview=true` sin correlativo) |
 | GET/PATCH | `/api/equipos/[id]` | 🔐 / `servicio.update` | Equipo |
 | * | `/api/equipos/[id]/notas` | `servicio.update` | Notas |
 | * | `/api/equipos/[id]/accesorios` | `servicio.update` | Accesorios |
@@ -153,9 +155,12 @@ Usado por `SucursalUbicacionFields` y `SucursalRapidaModal` al validar direcció
 
 | Método | Ruta | Permiso | Descripción |
 |--------|------|---------|-------------|
-| GET | `/api/crm/conversaciones` | `crm.read` | Inbox |
+| GET | `/api/crm/conversaciones` | `crm.read` | Inbox; query: `canal`, `estado`, `asignadoId`, `sinAsignar=true` |
 | GET/PATCH | `/api/crm/conversaciones/[id]` | `crm.read` / `crm.assign` o `crm.reply` | Thread; PATCH: `estado`, `asignadoId`, `clienteId`, `etiquetas` |
-| POST | `/api/crm/conversaciones/[id]/mensajes` | `crm.reply` | Responder |
+| POST | `/api/crm/conversaciones/[id]/mensajes` | `crm.reply` | Responder; body: `contenido`, `adjuntoUrl` (opcional) |
+| POST | `/api/crm/adjuntos` | `crm.reply` | Subir adjunto (multipart: `archivo`, `conversacionId`) |
+| GET | `/api/crm/media/[...path]` | `crm.read` | Descargar adjunto CRM |
+| GET/POST/PATCH/DELETE | `/api/crm/snippets` | `crm.reply` / `crm.manage_channels` | Respuestas rápidas |
 
 ### CRM — Embudo de ventas
 
