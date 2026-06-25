@@ -39,6 +39,41 @@ run_optional_step() {
   fi
 }
 
+# Swap temporal si el VPS no tiene — evita SIGKILL (OOM) en next build.
+ensure_build_swap() {
+  if swapon --show 2>/dev/null | grep -q .; then
+    echo "    Swap ya activo"
+    return 0
+  fi
+  local swapfile="/swapfile-ibiomedica-build"
+  echo "    Creando swap temporal 2G para build..."
+  if fallocate -l 2G "$swapfile" 2>/dev/null || dd if=/dev/zero of="$swapfile" bs=1M count=2048 status=none; then
+    chmod 600 "$swapfile"
+    mkswap "$swapfile" >/dev/null
+    swapon "$swapfile"
+    BUILD_SWAP_CREATED=1
+  else
+    echo "WARN: no se pudo crear swap temporal"
+  fi
+}
+
+teardown_build_swap() {
+  if [[ "${BUILD_SWAP_CREATED:-0}" == "1" ]]; then
+    swapoff /swapfile-ibiomedica-build 2>/dev/null || true
+    rm -f /swapfile-ibiomedica-build
+  fi
+}
+
+pause_nonessential_for_build() {
+  echo "    Pausando PM2 y contenedores no esenciales (libera RAM)..."
+  pm2 stop all 2>/dev/null || true
+  docker stop ibiomedica_minio ibiomedica_redis ibiomedica_n8n 2>/dev/null || true
+}
+
+resume_after_build() {
+  docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d minio redis n8n 2>/dev/null || true
+}
+
 cd "$APP_DIR"
 
 if [[ ! -d .git ]]; then
@@ -94,22 +129,23 @@ FORCE_PROD=1 npm run validar:env-prod || {
 }
 
 echo "==> Build..."
-# Liberar RAM: el build compite con la app Node, workers PM2 y contenedores Docker.
-echo "    Pausando PM2 durante build (libera RAM en VPS pequeño)..."
-pm2 stop ibiomedica 2>/dev/null || true
-for worker in worker-afip worker-cobranzas worker-crm-email worker-crm-graph; do
-  pm2 stop "$worker" 2>/dev/null || true
-done
+ensure_build_swap
+pause_nonessential_for_build
+trap 'teardown_build_swap; resume_after_build; on_deploy_error' ERR
 
 bash scripts/vps-install-puppeteer-deps.sh
 npx prisma generate
 npx prisma migrate deploy
 
-export NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=2048}"
+export NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=1536}"
 export NEXT_TELEMETRY_DISABLED=1
 export NEXT_BUILD_CPUS="${NEXT_BUILD_CPUS:-1}"
 echo "    NODE_OPTIONS=$NODE_OPTIONS NEXT_BUILD_CPUS=$NEXT_BUILD_CPUS"
 npm run build
+
+teardown_build_swap
+resume_after_build
+trap on_deploy_error ERR
 
 echo "==> Test invariantes (sin DB)..."
 npm run test:invariants
