@@ -27,8 +27,9 @@
 | `/crm` | `GET /api/clientes` | — | `clientes.read` |
 | `/crm/nuevo` | `POST /api/clientes` | `lib/clientes/crear-cliente.ts` | `clientes.create` |
 | `/crm/[id]` | `GET/PATCH /api/clientes/[id]` | — | read/update |
-| `/crm/inbox` | `/api/crm/conversaciones*` | `lib/crm/` | `crm.read`, `crm.reply` |
+| `/crm/inbox` | `/api/crm/conversaciones*` | `lib/crm/` · polling 45 s en bandeja | `crm.read`, `crm.reply`, `crm.assign` |
 | `/crm/embudo` | `/api/crm/embudo*` | — | `crm.read`, `crm.reply` |
+| `/automatizaciones` | — (n8n externo) | `lib/integraciones/guides.ts` | acceso dashboard |
 | Sucursales panel | `/api/clientes/[id]/sucursales*` | `lib/geocoding.ts` | `clientes.update` |
 | Historial inbox | `GET .../historial` | — | `crm.read` o `clientes.read` |
 | Geocoding mapa | `GET /api/geocoding` | `lib/geocoding.ts` | 🔐 |
@@ -66,9 +67,12 @@ Componentes clave: `SucursalesEditor`, `ClienteHistorialInbox`, `InboxPanel`, `N
 | UI | API | lib | Permiso |
 |----|-----|-----|---------|
 | `/servicio-tecnico` | `/api/ots*` | `lib/ots.ts` | `servicio.*` |
+| `/servicio-tecnico/nueva` | `POST /api/ots` | `lib/ots.ts` | `servicio.create` |
+| `/servicio-tecnico/[id]` | `GET/PATCH /api/ots/[id]` | checklist en `diagnostico` | `servicio.read` / `update` |
+| Informe OT PDF | `GET /api/ots/[id]/pdf` | `lib/ots/render-informe-pdf.tsx` | `servicio.read` |
+| `/servicio-tecnico/equipos/[id]` | `/api/equipos/[id]*` | historia clínica | `servicio.read` |
 | `/servicio-tecnico/mapa` | `/api/tracking/mapa` | `lib/tracking-automation.ts` | `tracking.read` |
-| `/servicio-tecnico/preventivo` | `/api/mantenimiento*` | — | `preventivo.*` |
-| Equipo detalle | `/api/equipos/[id]*` | historia clínica | `servicio.*` |
+| `/servicio-tecnico/preventivo` | `/api/mantenimiento*` | `PlanMantenimiento` | `preventivo.*` |
 
 ---
 
@@ -94,14 +98,15 @@ Componentes clave: `SucursalesEditor`, `ClienteHistorialInbox`, `InboxPanel`, `N
 | Origen | Entrada | Auth |
 |--------|---------|------|
 | n8n | `/api/n8n/*` | `N8N_API_KEY` |
-| Meta WhatsApp | `/api/webhooks/whatsapp` | verify token + HMAC |
+| Meta WhatsApp / IG / FB | `/api/webhooks/meta` | verify token + HMAC (`lib/crm/adapters/`) |
+| Meta WhatsApp (legacy) | `/api/webhooks/whatsapp` | verify token + HMAC |
 | Microsoft Graph | OAuth + `worker:crm-graph` | OAuth tokens en BD |
 | Cron cobranzas | `/api/cron/cobranzas-vencimientos` | `CRON_SECRET` |
 | Cron OT SLA | `/api/cron/ots-vencidas` | `CRON_SECRET` (marca VENCIDA + email SLA próximo) |
 | Cron presupuestos | `/api/cron/presupuestos-vencidos` | `CRON_SECRET` |
 | Cron stock mínimo | `/api/cron/stock-minimo` | `CRON_SECRET` · diario 07:00 · `lib/inventario/alerta-stock-minimo.ts` |
 | Cron resumen semanal | `/api/cron/resumen-semanal` | `CRON_SECRET` · dom 08:00 · `lib/admin/resumen-semanal.ts` |
-| Cron notif. operativas | `/api/cron/notificaciones-operativas` | `CRON_SECRET` · preventivo próximo (email) |
+| Cron notif. operativas | `/api/cron/notificaciones-operativas` | `CRON_SECRET` · preventivo próximo (email) · CRM `cliente.sin_respuesta_2h` (n8n) |
 
 ---
 

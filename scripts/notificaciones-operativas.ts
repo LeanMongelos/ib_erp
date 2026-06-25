@@ -4,11 +4,13 @@
  */
 import { actualizarPlanesMantenimientoVencidos } from '../lib/mantenimiento/actualizar-vencidos'
 import { procesarEmailsOperativosInbox } from '../lib/notificaciones/procesar-emails-operativos'
+import { procesarConversacionesSinRespuesta2h } from '../lib/crm/sin-respuesta-2h'
 
 async function main() {
   const planesVencidos = await actualizarPlanesMantenimientoVencidos()
   const r = await procesarEmailsOperativosInbox()
-  console.log('✅ notificaciones operativas', { planesVencidos, ...r })
+  const crmSinRespuesta = await procesarConversacionesSinRespuesta2h()
+  console.log('✅ notificaciones operativas', { planesVencidos, crmSinRespuesta, ...r })
 }
 
 main()

@@ -120,6 +120,7 @@ Sincronizado con `lib/rbac.ts` (jun 2026).
 | preventivo.schedule | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ |
 | tracking.* | ✅ | ✅ | 👁️ | ✅ | ❌ | ❌ | ✅ |
 | crm.reply | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ |
+| crm.assign | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | config.manage_integrations | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | reportes.read_financiero / fiscal | ✅ | ✅ | ✅ | ❌ | ✅ | ✅ | ❌ |
 | emisores.create | ✅ | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ |

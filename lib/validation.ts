@@ -201,6 +201,10 @@ export const otUpdateSchema = z
     estado:      estadoOTEnum.optional(),
     nota:        z.string().trim().max(500).optional(),
     diagnostico: z.string().trim().max(2000).optional(),
+    checklistSolucion: z.array(z.object({
+      tarea: z.string().trim().min(1).max(200),
+      completado: z.boolean(),
+    })).optional(),
     tecnicoId:   z.string().min(1).optional().nullable(),
     repuestos: z.array(z.object({
       descripcion: z.string().trim().min(1, 'La descripción del repuesto es obligatoria'),

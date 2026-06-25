@@ -10,6 +10,10 @@ import { validarRepuestosOTCliente } from '@/lib/ots/repuestos-ot-client'
 import { aplicarPreciosRepuestosOT, validarStockRepuestosOT } from '@/lib/ots/repuestos-ot'
 import { registrarMovimientoStock } from '@/lib/inventario'
 import { validarTransicionOT } from '@/lib/ots/transiciones'
+import {
+  mergeChecklistIntoDiagnostico,
+  parseChecklistFromDiagnostico,
+} from '@/lib/ots/checklist-solucion'
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -46,11 +50,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   try {
     const { id } = await params
     const body = await req.json()
-    const { estado, nota, diagnostico, tecnicoId, repuestos } = otUpdateSchema.parse(body)
+    const { estado, nota, diagnostico, checklistSolucion, tecnicoId, repuestos } = otUpdateSchema.parse(body)
 
     const otActual = await prisma.ordenTrabajo.findUnique({
       where: { id },
-      select: { estado: true, numero: true, tipo: true, equipoId: true, clienteId: true, tecnicoId: true },
+      select: { estado: true, numero: true, tipo: true, equipoId: true, clienteId: true, tecnicoId: true, diagnostico: true },
     })
     if (!otActual) throw new ApiError(404, 'Orden de trabajo no encontrada')
 
@@ -97,7 +101,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
 
     const updateData: Prisma.OrdenTrabajoUpdateInput = {}
-    if (diagnostico !== undefined) updateData.diagnostico = diagnostico
+    if (checklistSolucion !== undefined) {
+      const { texto } = parseChecklistFromDiagnostico(otActual.diagnostico)
+      const textoBase = diagnostico !== undefined ? diagnostico : texto
+      updateData.diagnostico = mergeChecklistIntoDiagnostico(textoBase, checklistSolucion)
+    } else if (diagnostico !== undefined) {
+      const { checklist } = parseChecklistFromDiagnostico(otActual.diagnostico)
+      updateData.diagnostico = mergeChecklistIntoDiagnostico(diagnostico, checklist)
+    }
     if (tecnicoId !== undefined) {
       updateData.tecnico = tecnicoId ? { connect: { id: tecnicoId } } : { disconnect: true }
     }

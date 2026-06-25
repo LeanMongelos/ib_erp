@@ -68,8 +68,8 @@ export function InboxPanel({ usuarios }: { usuarios: { id: string; nombre: strin
   const [modalCliente, setModalCliente] = useState(false)
   const hiloRef = useRef<HTMLDivElement>(null)
 
-  async function cargarLista() {
-    setLoading(true)
+  async function cargarLista(silent = false) {
+    if (!silent) setLoading(true)
     try {
       const q = new URLSearchParams()
       if (filtroCanal !== 'TODOS') q.set('canal', filtroCanal)
@@ -77,9 +77,26 @@ export function InboxPanel({ usuarios }: { usuarios: { id: string; nombre: strin
       const data = await fetch(`/api/crm/conversaciones?${q}`).then((r) => r.json())
       setLista(data)
     } catch {
-      toast.error('Error al cargar bandeja')
+      if (!silent) toast.error('Error al cargar bandeja')
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
+    }
+  }
+
+  async function refrescarBandeja() {
+    if (document.visibilityState !== 'visible') return
+    try {
+      const q = new URLSearchParams()
+      if (filtroCanal !== 'TODOS') q.set('canal', filtroCanal)
+      if (filtroEstado !== 'TODOS') q.set('estado', filtroEstado)
+      const data = await fetch(`/api/crm/conversaciones?${q}`).then((r) => r.json())
+      setLista(data)
+      if (selId) {
+        const det = await fetch(`/api/crm/conversaciones/${selId}`).then((r) => r.json())
+        if (det?.id) setDetalle(det)
+      }
+    } catch {
+      /* polling silencioso */
     }
   }
 
@@ -95,6 +112,12 @@ export function InboxPanel({ usuarios }: { usuarios: { id: string; nombre: strin
   }
 
   useEffect(() => { cargarLista() }, [filtroCanal, filtroEstado])
+
+  useEffect(() => {
+    const timer = setInterval(refrescarBandeja, 45_000)
+    return () => clearInterval(timer)
+  }, [filtroCanal, filtroEstado, selId])
+
   useEffect(() => {
     hiloRef.current?.scrollTo({ top: hiloRef.current.scrollHeight })
   }, [detalle?.mensajes])

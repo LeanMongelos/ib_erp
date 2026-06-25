@@ -5,6 +5,7 @@ import { requireAuth, requirePermission, handleApiError, ApiError } from '@/lib/
 import { plain } from '@/lib/serialize'
 import { registrarAuditoria, getIp } from '@/lib/audit'
 import { tienePermiso } from '@/lib/rbac'
+import { emitN8nEvento } from '@/lib/crm/n8n'
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -86,6 +87,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       entidadId: id,
       despues: data,
       ip: getIp(req),
+    })
+
+    void emitN8nEvento('conversacion.actualizada', {
+      conversacionId: id,
+      cambios: data,
+      canal: conversacion.canal.tipo,
+      contactoNombre: conversacion.contactoNombre,
+      contactoHandle: conversacion.contactoHandle,
+      clienteId: conversacion.clienteId,
+      asignadoId: conversacion.asignadoId,
     })
 
     return NextResponse.json(plain(conversacion))

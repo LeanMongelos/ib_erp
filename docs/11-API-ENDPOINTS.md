@@ -127,6 +127,7 @@ Usado por `SucursalUbicacionFields` y `SucursalRapidaModal` al validar direcció
 |--------|------|---------|-------------|
 | GET/POST | `/api/ots` | 🔐 / `servicio.create` | Listar (filtros: `q`, `estado`, `tecnicoId`, `clienteId`, `sla`, `prioridad`, `tipo`) / crear OT |
 | GET/PATCH | `/api/ots/[id]` | 🔐 / `servicio.update` | Detalle JSON (`plain()`) con historial y repuestos |
+| GET | `/api/ots/[id]/pdf` | `servicio.read` | Informe post-servicio PDF |
 | GET/PATCH | `/api/equipos/[id]` | 🔐 / `servicio.update` | Equipo |
 | * | `/api/equipos/[id]/notas` | `servicio.update` | Notas |
 | * | `/api/equipos/[id]/accesorios` | `servicio.update` | Accesorios |

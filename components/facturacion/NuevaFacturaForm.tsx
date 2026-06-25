@@ -212,6 +212,18 @@ export function NuevaFacturaForm({
     recargarSucursales(clienteId)
   }, [clienteId, recargarSucursales])
 
+  useEffect(() => {
+    if (sucursalesCliente.length !== 1) return
+    const unicaId = sucursalesCliente[0].id
+    setItems((prev) =>
+      prev.map((item) =>
+        item.tipoArticulo === 'EQUIPO' && !item.sucursalInstalacionId
+          ? { ...item, sucursalInstalacionId: unicaId }
+          : item,
+      ),
+    )
+  }, [sucursalesCliente])
+
   const totales = useMemo(
     () =>
       calcularTotales(
@@ -325,6 +337,11 @@ export function NuevaFacturaForm({
         toast.success(emitData.simulado ? 'CAE simulado (sin certificado)' : 'Factura emitida en AFIP')
       } else {
         toast.success('Borrador guardado')
+        if (items.some((i) => i.tipoArticulo === 'EQUIPO' && i.descripcion)) {
+          toast.warning(
+            'Los ítems EQUIPO del borrador no provisionan equipos ni aparecen en el mapa hasta emitir la factura en AFIP.',
+          )
+        }
       }
       router.push('/facturacion')
     } catch (e: unknown) {
@@ -481,6 +498,8 @@ export function NuevaFacturaForm({
                 const esEquipo = item.tipoArticulo === 'EQUIPO'
                 const d = new Date()
                 if (esEquipo && item.intervaloPreventivoDias) d.setDate(d.getDate() + item.intervaloPreventivoDias)
+                const sucursalUnica =
+                  esEquipo && sucursalesCliente.length === 1 ? sucursalesCliente[0].id : undefined
                 setItems([
                   ...items,
                   {
@@ -495,6 +514,7 @@ export function NuevaFacturaForm({
                     tipoArticulo: item.tipoArticulo,
                     esSerializado: item.esSerializado,
                     proximoPreventivo: esEquipo ? d.toISOString().slice(0, 10) : undefined,
+                    sucursalInstalacionId: sucursalUnica,
                   },
                 ])
               }}

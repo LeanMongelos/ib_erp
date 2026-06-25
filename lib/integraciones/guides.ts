@@ -198,7 +198,7 @@ export const GUIAS_INTEGRACION: Record<string, GuiaCanal> = {
       },
       {
         titulo: '3. Webhooks salientes (ERP → n8n)',
-        descripcion: 'Pegá la URL del webhook de n8n. El ERP emitirá: mensaje.nuevo, conversacion.creada, cliente.sin_respuesta_2h.',
+        descripcion: 'Pegá la URL del webhook de n8n. El ERP emitirá: mensaje.nuevo, conversacion.creada, conversacion.actualizada, cliente.sin_respuesta_2h.',
         campos: ['webhookUrlN8n'],
       },
       {

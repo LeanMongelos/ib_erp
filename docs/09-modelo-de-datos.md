@@ -72,7 +72,7 @@ erDiagram
     Cliente ||--o{ Presupuesto : recibe
     Cliente ||--o{ Factura : recibe
     Cliente ||--o{ Pago : realiza
-    Cliente ||--o{ Conversacion : participa
+    Cliente ||--o{ ConversacionCRM : participa
     Cliente ||--o{ Equipo : posee
 
     Presupuesto ||--o{ DocumentoItem : tiene
@@ -89,13 +89,12 @@ erDiagram
     Recepcion ||--o{ MovimientoStock : produce
     Producto ||--o{ MovimientoStock : afecta
 
-    Equipo ||--o{ OrdenServicio : recibe
-    Equipo ||--o{ PlanPreventivo : tiene
+    Equipo ||--o{ OrdenTrabajo : recibe
+    Equipo ||--o{ PlanMantenimiento : tiene
     Equipo ||--o{ EventoTracking : registra
-    PlanPreventivo ||--o{ VisitaPreventiva : agenda
 
-    Canal ||--o{ Conversacion : agrupa
-    Conversacion ||--o{ Mensaje : contiene
+    CanalIntegracion ||--o{ ConversacionCRM : agrupa
+    ConversacionCRM ||--o{ MensajeCRM : contiene
 ```
 
 ---
@@ -389,24 +388,20 @@ model OrdenServicio {
   creadoEn    DateTime @default(now())
 }
 
-model PlanPreventivo {
-  id            String   @id @default(cuid())
-  equipoId      String
-  frecuenciaDias Int
-  proximaFecha  DateTime
-  tareas        Json
-  activo        Boolean  @default(true)
-  visitas       VisitaPreventiva[]
+model PlanMantenimiento {
+  id              String   @id @default(cuid())
+  equipoId        String
+  descripcion     String
+  intervaloDias   Int      @default(180)
+  ultimoServicio  DateTime?
+  proximoServicio DateTime?
+  estado          EstadoMantenimiento @default(PENDIENTE)
+  tecnicoId       String?
+  notas           String?
+  creadoEn        DateTime @default(now())
 }
 
-model VisitaPreventiva {
-  id            String   @id @default(cuid())
-  planId        String
-  fecha         DateTime
-  estado        String   // PROGRAMADO/CONFIRMADO/EN_CURSO/COMPLETADO/REPROGRAMADO
-  tecnicoId     String?
-  ordenServicioId String?
-}
+// Ver schema.prisma: OrdenTrabajo (no OrdenServicio), ConversacionCRM + MensajeCRM (no Canal/Conversacion legacy).
 
 model EventoTracking {
   id         String   @id @default(cuid())

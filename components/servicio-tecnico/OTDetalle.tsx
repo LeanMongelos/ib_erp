@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Plus, Trash2, ChevronDown } from 'lucide-react'
+import { Plus, Trash2, ChevronDown, FileText } from 'lucide-react'
 import { Card, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { BadgeEstadoOT, BadgePrioridad } from '@/components/ui/badge'
@@ -17,6 +17,10 @@ import { InventarioPicker, type InventarioOption } from '@/components/inventario
 import { validarRepuestosOTCliente } from '@/lib/ots/repuestos-ot-client'
 import { transicionesOTPermitidas, validarTransicionOT } from '@/lib/ots/transiciones-client'
 import type { EstadoOT } from '@/types'
+import {
+  parseChecklistFromDiagnostico,
+  type ChecklistItemSolucion,
+} from '@/lib/ots/checklist-solucion'
 
 const ESTADO_LABEL: Record<EstadoOT, string> = {
   ABIERTA: 'Abierta',
@@ -28,7 +32,9 @@ const ESTADO_LABEL: Record<EstadoOT, string> = {
 
 export function OTDetalle({ ot }: { ot: any }) {
   const router = useRouter()
-  const [diagnostico, setDiagnostico] = useState(ot.diagnostico ?? '')
+  const parsedDiag = parseChecklistFromDiagnostico(ot.diagnostico)
+  const [diagnostico, setDiagnostico] = useState(parsedDiag.texto)
+  const [checklist, setChecklist] = useState<ChecklistItemSolucion[]>(parsedDiag.checklist)
   const [repuestos, setRepuestos] = useState<any[]>(ot.repuestos ?? [])
   const [loading, setLoading] = useState(false)
   const [estadoMenu, setEstadoMenu] = useState(false)
@@ -65,12 +71,29 @@ export function OTDetalle({ ot }: { ot: any }) {
       const res = await fetch(`/api/ots/${ot.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ diagnostico }),
+        body: JSON.stringify({ diagnostico, checklistSolucion: checklist }),
       })
       if (!res.ok) throw new Error(await mensajeErrorRespuesta(res, 'No se pudo guardar el diagnóstico'))
       toast.success('Diagnóstico guardado')
     } catch (e) {
       toast.error(mensajeErrorDesconocido(e, 'No se pudo guardar el diagnóstico'))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function guardarChecklist(nuevaLista: ChecklistItemSolucion[]) {
+    setChecklist(nuevaLista)
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/ots/${ot.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ checklistSolucion: nuevaLista, diagnostico }),
+      })
+      if (!res.ok) throw new Error(await mensajeErrorRespuesta(res, 'No se pudo guardar el checklist'))
+    } catch (e) {
+      toast.error(mensajeErrorDesconocido(e, 'No se pudo guardar el checklist'))
     } finally {
       setLoading(false)
     }
@@ -163,6 +186,15 @@ export function OTDetalle({ ot }: { ot: any }) {
           </div>
 
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => window.open(`/api/ots/${ot.id}/pdf`, '_blank')}
+            >
+              <FileText size={14} />
+              Informe PDF
+            </Button>
             {/* Dropdown cambiar estado */}
             <div className="relative">
               <Button variant="secondary" size="sm" onClick={() => setEstadoMenu(!estadoMenu)}>
@@ -226,6 +258,28 @@ export function OTDetalle({ ot }: { ot: any }) {
               />
             </Card>
           </div>
+
+          <Card>
+            <p className="text-[11px] font-bold text-[#8a909a] tracking-[0.6px] uppercase mb-3">Checklist de cierre</p>
+            <div className="flex flex-col gap-2">
+              {checklist.map((item, idx) => (
+                <label key={idx} className="flex items-start gap-2 text-[12.5px] text-[#3a4150] cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={item.completado}
+                    onChange={(e) => {
+                      const next = checklist.map((c, i) =>
+                        i === idx ? { ...c, completado: e.target.checked } : c,
+                      )
+                      guardarChecklist(next)
+                    }}
+                    className="mt-0.5"
+                  />
+                  <span className={item.completado ? 'line-through text-[#9aa1ab]' : ''}>{item.tarea}</span>
+                </label>
+              ))}
+            </div>
+          </Card>
 
           {/* Repuestos */}
           <Card padding={false} className="overflow-hidden">

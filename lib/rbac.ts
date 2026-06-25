@@ -172,7 +172,7 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     'servicio.read',
     'preventivo.read', 'preventivo.schedule',
     'tracking.read',
-    'crm.read', 'crm.reply',
+    'crm.read', 'crm.reply', 'crm.assign',
     'reportes.read_comercial', 'reportes.read_financiero', 'reportes.read_fiscal',
     'emisores.read',
   ],
@@ -189,7 +189,7 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     'servicio.read', 'servicio.create', 'servicio.update', 'servicio.assign',
     'preventivo.read', 'preventivo.schedule',
     'tracking.read', 'tracking.create',
-    'crm.read', 'crm.reply',
+    'crm.read', 'crm.reply', 'crm.assign',
     'reportes.read_comercial',
   ],
 

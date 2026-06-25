@@ -32,6 +32,7 @@ Documento de referencia para desarrollo, code review y agentes. Si un cambio vio
 | O5 | Transiciones OT validadas en UI y API | `lib/ots/transiciones-client.ts` | `test-ots-transiciones.ts` |
 | O6 | GET `/api/ots` acepta filtros de listado (`q`, `estado`, `tecnicoId`, `sla`, …) | `app/api/ots/route.ts` · `lib/ots/listar-ots.ts` | — |
 | O7 | Listado OT en UI usa GET `/api/ots` con filtros sincronizados en URL | `OTsTable.tsx` · `servicio-tecnico/page.tsx` | manual |
+| O8 | Informe OT PDF vía `GET /api/ots/[id]/pdf` (`servicio.read`) | `lib/ots/render-informe-pdf.tsx` | `test-checklist-solucion.ts` |
 
 ## Integraciones / n8n
 
@@ -42,6 +43,7 @@ Documento de referencia para desarrollo, code review y agentes. Si un cambio vio
 | N3 | POST n8n etiquetar usa `conversacionEtiquetasN8nSchema` | `lib/validation.ts` | `npm run test:validaciones` |
 | N4 | POST n8n crear lead usa `leadN8nCreateSchema` | `lib/validation.ts` | `npm run test:validaciones` |
 | N5 | **Todas** las rutas `/api/n8n/*` validan `verifyN8nApiKey` (Bearer `N8N_API_KEY`) | `lib/crm/n8n.ts` · `validateN8nBearerToken` | `npm run test:invariants` (`test-n8n-api-security.ts`) |
+| N6 | Cron `notificaciones-operativas` emite `cliente.sin_respuesta_2h` (dedup SystemLog por mensaje entrante) | `lib/crm/sin-respuesta-2h.ts` | cron manual |
 
 ## Operaciones / deploy
 

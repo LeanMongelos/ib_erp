@@ -31,7 +31,7 @@ export function ClientesTable({ clientes }: { clientes: ClienteRow[] }) {
   const router = useRouter()
   const fileRef = useRef<HTMLInputElement>(null)
   const puedeCrear = useCan('clientes.create')
-  const puedeLeer = useCan('clientes.read')
+  const puedeExportar = useCan('clientes.export')
   const [search, setSearch] = useState('')
   const [tipo, setTipo] = useState('TODOS')
   const [importando, setImportando] = useState(false)
@@ -141,7 +141,7 @@ export function ClientesTable({ clientes }: { clientes: ClienteRow[] }) {
 
         <div className="flex-1" />
 
-        {puedeLeer && (
+        {puedeExportar && (
           <Button variant="outline" size="md" className="gap-2" loading={exportando} onClick={exportarCsv}>
             <Download size={16} strokeWidth={2.4} />
             Exportar CSV
