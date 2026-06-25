@@ -83,7 +83,8 @@ for i in $(seq 1 20); do
 done
 
 echo "==> Dependencias..."
-export NODE_OPTIONS=--max-old-space-size=3072
+# Heap moderado: en VPS chico un límite alto + Docker + PM2 provoca SIGKILL (OOM) en next build.
+export NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=2048}"
 npm ci
 
 echo "==> Validación entorno producción..."
@@ -93,9 +94,21 @@ FORCE_PROD=1 npm run validar:env-prod || {
 }
 
 echo "==> Build..."
+# Liberar RAM: el build compite con la app Node, workers PM2 y contenedores Docker.
+echo "    Pausando PM2 durante build (libera RAM en VPS pequeño)..."
+pm2 stop ibiomedica 2>/dev/null || true
+for worker in worker-afip worker-cobranzas worker-crm-email worker-crm-graph; do
+  pm2 stop "$worker" 2>/dev/null || true
+done
+
 bash scripts/vps-install-puppeteer-deps.sh
 npx prisma generate
 npx prisma migrate deploy
+
+export NODE_OPTIONS="${NODE_OPTIONS:---max-old-space-size=2048}"
+export NEXT_TELEMETRY_DISABLED=1
+export NEXT_BUILD_CPUS="${NEXT_BUILD_CPUS:-1}"
+echo "    NODE_OPTIONS=$NODE_OPTIONS NEXT_BUILD_CPUS=$NEXT_BUILD_CPUS"
 npm run build
 
 echo "==> Test invariantes (sin DB)..."

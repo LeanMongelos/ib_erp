@@ -7,6 +7,10 @@ const nextConfig = {
 
   // Prisma + pg deben resolver desde node_modules (evita clientes duplicados/obsoletos en webpack)
   experimental: {
+    // VPS deploy: NEXT_BUILD_CPUS=1 evita OOM (SIGKILL) en next build con poca RAM.
+    ...(process.env.NEXT_BUILD_CPUS
+      ? { cpus: Math.max(1, Number(process.env.NEXT_BUILD_CPUS) || 1) }
+      : {}),
     serverComponentsExternalPackages: [
       '@prisma/client',
       '@prisma/adapter-pg',
