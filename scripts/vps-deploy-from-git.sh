@@ -147,10 +147,7 @@ teardown_build_swap
 resume_after_build
 trap on_deploy_error ERR
 
-echo "==> Test invariantes (sin DB)..."
-npm run test:invariants
-
-echo "==> PM2..."
+echo "==> PM2 (reinicio antes de tests — evita caída si falla test:invariants)..."
 pm2 restart ibiomedica 2>/dev/null || pm2 start npm --name ibiomedica -- start
 for worker in worker-afip worker-cobranzas worker-crm-email worker-crm-graph; do
   if pm2 describe "$worker" >/dev/null 2>&1; then
@@ -162,6 +159,17 @@ for worker in worker-afip worker-cobranzas worker-crm-email worker-crm-graph; do
 done
 pm2 save
 
+echo "==> Test invariantes (sin DB)..."
+npm run test:invariants
+
+echo "==> PM2 (confirmación post-tests)..."
+pm2 restart ibiomedica 2>/dev/null || true
+for worker in worker-afip worker-cobranzas worker-crm-email worker-crm-graph; do
+  pm2 describe "$worker" >/dev/null 2>&1 && pm2 restart "$worker" --update-env 2>/dev/null || true
+done
+pm2 save
+
+echo "==> Post-deploy scripts..."
 run_optional_step "Migración emails @ib.com + cierre de sesiones (idempotente)" \
   npx tsx --env-file=.env scripts/migrate-emails-ib-com.ts --execute
 
