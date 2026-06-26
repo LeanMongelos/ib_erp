@@ -183,6 +183,15 @@ run_optional_step "Tracking backfill mapa ST (idempotente)" \
 run_optional_step "Listas de precios MIN-ARS / MAY-ARS (idempotente)" \
   npx tsx --env-file=.env scripts/sync-listas-precios.ts
 
+AFIP_CERT_DIR="$APP_DIR/storage/afip/20244408274"
+if [[ -f "$AFIP_CERT_DIR/certificado.crt" && -f "$AFIP_CERT_DIR/clave.key" ]]; then
+  run_optional_step "Certificado AFIP en storage → emisor BD" \
+    npx tsx --env-file=.env scripts/instalar-certificado-afip-local.ts "20-24440827-4" --desde-storage --alias "IB - LM DIGITAL SOLUTION"
+fi
+
+run_optional_step "Eliminar emisor CUIT duplicado 30-70902717-0 (idempotente)" \
+  npx tsx --env-file=.env scripts/eliminar-emisor-cuit.ts "30-70902717-0"
+
 run_optional_step "Integridad post-deploy (reporte; no bloquea deploy)" \
   npm run integridad:prod
 
