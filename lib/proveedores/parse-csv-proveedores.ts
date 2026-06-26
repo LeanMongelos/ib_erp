@@ -94,7 +94,7 @@ export function parsearCsvProveedores(contenido: string): FilaCsvProveedor[] {
 export function generarPlantillaCsvProveedores(): string {
   return [
     'razonSocial,cuit,email',
-    'Distribuidora Médica SA,30-70902717-0,ventas@distmed.com.ar',
+    'Distribuidora Médica SA,33-70999888-9,ventas@distmed.com.ar',
     'Importadora Equipos,20-24440827-4,',
   ].join('\n')
 }

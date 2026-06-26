@@ -43,9 +43,57 @@ interface ItemRow {
   fotoUrl?: string
   tipoArticulo?: string
   esSerializado?: boolean
+  modoTrazabilidad?: string
   numeroSerie?: string
+  inventarioUnidadId?: string
   proximoPreventivo?: string
   sucursalInstalacionId?: string
+}
+
+function SelectorUnidadInventario({
+  inventarioId,
+  value,
+  onChange,
+}: {
+  inventarioId: string
+  value?: string
+  onChange: (unidadId: string | undefined, numeroSerie?: string | null) => void
+}) {
+  const [unidades, setUnidades] = useState<Array<{ id: string; numeroSerie: string | null; lote: string | null }>>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    setLoading(true)
+    fetch(`/api/inventario/${inventarioId}/unidades?estado=EN_STOCK`, { credentials: 'include' })
+      .then((r) => r.json())
+      .then((rows) => setUnidades(Array.isArray(rows) ? rows : []))
+      .catch(() => setUnidades([]))
+      .finally(() => setLoading(false))
+  }, [inventarioId])
+
+  if (loading) return <span className="text-[10px] text-[#9aa1ab]">Cargando unidades…</span>
+  if (unidades.length === 0) {
+    return <span className="text-[10px] text-red-500">Sin unidades en stock</span>
+  }
+
+  return (
+    <select
+      value={value ?? ''}
+      onChange={(e) => {
+        const id = e.target.value || undefined
+        const u = unidades.find((x) => x.id === id)
+        onChange(id, u?.numeroSerie ?? null)
+      }}
+      className="text-[11px] border border-[#e4e7eb] rounded px-1.5 py-0.5 w-full max-w-[160px]"
+    >
+      <option value="">Unidad en stock…</option>
+      {unidades.map((u) => (
+        <option key={u.id} value={u.id}>
+          {[u.numeroSerie && `SN ${u.numeroSerie}`, u.lote && `Lote ${u.lote}`].filter(Boolean).join(' · ') || u.id.slice(-6)}
+        </option>
+      ))}
+    </select>
+  )
 }
 
 interface ClienteOption {
@@ -323,6 +371,7 @@ export function NuevaFacturaForm({
             numeroSerie: i.numeroSerie?.trim() || null,
             proximoPreventivo: i.proximoPreventivo || null,
             sucursalInstalacionId: i.sucursalInstalacionId || null,
+            inventarioUnidadId: i.inventarioUnidadId || null,
           })),
           ...(plazosActivos.length > 0 ? { plazosCobranza: plazosActivos } : {}),
         }),
@@ -513,6 +562,7 @@ export function NuevaFacturaForm({
                     fotoUrl: item.fotoUrl ?? undefined,
                     tipoArticulo: item.tipoArticulo,
                     esSerializado: item.esSerializado,
+                    modoTrazabilidad: item.modoTrazabilidad,
                     proximoPreventivo: esEquipo ? d.toISOString().slice(0, 10) : undefined,
                     sucursalInstalacionId: sucursalUnica,
                   },
@@ -619,13 +669,33 @@ export function NuevaFacturaForm({
                 <td className="px-5 py-3 border-b border-[#f4f5f7] text-right align-top">
                   {item.tipoArticulo === 'EQUIPO' ? (
                     <div className="flex flex-col gap-1 items-end">
-                      {item.esSerializado && (
-                        <input
-                          value={item.numeroSerie ?? ''}
-                          onChange={(e) => updateItem(i, 'numeroSerie', e.target.value)}
-                          placeholder="N° serie *"
-                          className="text-[11px] border border-[#e4e7eb] rounded px-1.5 py-0.5 w-28 text-right"
+                      {item.modoTrazabilidad && item.modoTrazabilidad !== 'NINGUNA' && item.inventarioId ? (
+                        <SelectorUnidadInventario
+                          inventarioId={item.inventarioId}
+                          value={item.inventarioUnidadId}
+                          onChange={(unidadId, serie) => {
+                            setItems((prev) =>
+                              prev.map((row, idx) =>
+                                idx === i
+                                  ? {
+                                      ...row,
+                                      inventarioUnidadId: unidadId,
+                                      numeroSerie: serie ?? row.numeroSerie,
+                                    }
+                                  : row,
+                              ),
+                            )
+                          }}
                         />
+                      ) : (
+                        item.esSerializado && (
+                          <input
+                            value={item.numeroSerie ?? ''}
+                            onChange={(e) => updateItem(i, 'numeroSerie', e.target.value)}
+                            placeholder="N° serie *"
+                            className="text-[11px] border border-[#e4e7eb] rounded px-1.5 py-0.5 w-28 text-right"
+                          />
+                        )
                       )}
                       <input
                         type="date"

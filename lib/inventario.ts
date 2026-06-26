@@ -16,6 +16,8 @@ export async function registrarMovimientoStock(
     referencia?: string
     depositoId?: string
     usuarioId?: string
+    /** false = solo auditoría (p. ej. stock ya reconciliado vía StockDeposito) */
+    actualizarStock?: boolean
   },
   db?: Prisma.TransactionClient,
 ) {
@@ -30,7 +32,8 @@ export async function registrarMovimientoStock(
           ? 0
           : opts.cantidad
     const stockAntes = item.stock
-    const stockDespues = stockAntes + delta
+    const stockDespues =
+      opts.actualizarStock === false ? stockAntes : stockAntes + delta
 
     const mov = await client.movimientoStock.create({
       data: {
@@ -45,10 +48,12 @@ export async function registrarMovimientoStock(
         usuarioId: opts.usuarioId ?? null,
       },
     })
-    await client.inventario.update({
-      where: { id: opts.inventarioId },
-      data: { stock: stockDespues },
-    })
+    if (opts.actualizarStock !== false) {
+      await client.inventario.update({
+        where: { id: opts.inventarioId },
+        data: { stock: stockDespues },
+      })
+    }
     return mov
   }
 

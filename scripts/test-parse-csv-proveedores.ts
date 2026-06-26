@@ -19,8 +19,8 @@ function main() {
 
   const csv = [
     'razonSocial,cuit,email',
-    'Proveedor SA,30-70902717-0,ventas@prov.com',
-    'Duplicado,30-70902717-0,',
+    'Proveedor SA,33-70999888-9,ventas@prov.com',
+    'Duplicado,33-70999888-9,',
     'Sin CUIT,,',
   ].join('\n')
 

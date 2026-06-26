@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requireAuth, requirePermission, handleApiError } from '@/lib/api-auth'
+import { requireAuth, requirePermission, handleApiError, ApiError } from '@/lib/api-auth'
 import { inventarioCreateSchema } from '@/lib/validation'
 import { plain } from '@/lib/serialize'
 import { registrarMovimientoStock } from '@/lib/inventario'
 import { sincronizarKitInventario } from '@/lib/inventario-kit'
+import { trazabilidadActiva } from '@/lib/inventario/unidades'
 
 export async function GET(req: NextRequest) {
   try {
@@ -59,6 +60,9 @@ export async function POST(req: NextRequest) {
         esSerializado: esEquipo ? (resto.esSerializado ?? true) : (resto.esSerializado ?? false),
         requierePreventivo: esEquipo ? (resto.requierePreventivo ?? true) : (resto.requierePreventivo ?? false),
         intervaloPreventivoDias: resto.intervaloPreventivoDias ?? (esEquipo ? 180 : null),
+        modoTrazabilidad:
+          resto.modoTrazabilidad ??
+          (esEquipo && (resto.esSerializado ?? true) ? 'SERIE' : 'NINGUNA'),
         stock: 0,
         stockMinimo: resto.stockMinimo,
         stockMaximo: resto.stockMaximo ?? null,
@@ -75,6 +79,15 @@ export async function POST(req: NextRequest) {
     }
 
     if (stockInicial > 0) {
+      const modo =
+        resto.modoTrazabilidad ??
+        (esEquipo && (resto.esSerializado ?? true) ? 'SERIE' : 'NINGUNA')
+      if (trazabilidadActiva(modo)) {
+        throw new ApiError(
+          400,
+          'Con trazabilidad por unidad activa, el stock inicial debe cargarse agregando unidades (no stock global). Creá el producto con stock 0 y registrá cada unidad en la pestaña Unidades.',
+        )
+      }
       await registrarMovimientoStock({
         inventarioId: item.id,
         tipo: 'ENTRADA',

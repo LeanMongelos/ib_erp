@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
       const depositos = await prisma.deposito.findMany({
         where: { activo: true },
         orderBy: { nombre: 'asc' },
-        select: { id: true, nombre: true, direccion: true },
+        select: { id: true, nombre: true, direccion: true, tipo: true },
       })
       return NextResponse.json(plain(depositos))
     }
@@ -70,8 +70,13 @@ export async function POST(req: NextRequest) {
     if (tipo === 'deposito') {
       const nombre = String(data.nombre ?? '').trim()
       if (!nombre) throw new ApiError(400, 'Nombre requerido')
+      const tipoDeposito = String(data.tipo ?? 'DEPOSITO').trim() as 'DEPOSITO' | 'SHOWROOM' | 'CAJA' | 'OTRO'
       const created = await prisma.deposito.create({
-        data: { nombre, direccion: (data.direccion as string) || null },
+        data: {
+          nombre,
+          direccion: (data.direccion as string) || null,
+          tipo: tipoDeposito,
+        },
       })
       await registrarAuditoria({ usuarioId: actor.id, accion: 'config.catalogos.update', entidad: 'Deposito', entidadId: created.id, despues: created, ip: getIp(req) })
       return NextResponse.json(plain(created), { status: 201 })

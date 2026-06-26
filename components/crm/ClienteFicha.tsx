@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import {
   MapPin, Phone, Mail, Wrench, Pencil, X, TrendingUp, Clock, AlertTriangle, CircleDollarSign,
-  ClipboardList, FileText,
+  ClipboardList, FileText, Plus, MessageSquarePlus,
 } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -29,6 +29,21 @@ import {
 import type { Cliente, Equipo, Factura, ContactoCliente } from '@/types'
 import { ClienteSucursalesPanel } from '@/components/crm/ClienteSucursalesPanel'
 import { ClientePreciosPanel } from '@/components/crm/ClientePreciosPanel'
+import { labelOrigenEquipo } from '@/lib/inventario-constants'
+
+function BadgeOrigenEquipo({ origen }: { origen?: string | null }) {
+  const label = labelOrigenEquipo(origen)
+  const styles: Record<string, string> = {
+    VENTA: 'bg-blue-50 text-blue-700',
+    EXTERNO: 'bg-purple-50 text-purple-700',
+    MANUAL_ST: 'bg-amber-50 text-amber-700',
+  }
+  return (
+    <span className={`inline-flex text-[10px] font-bold px-2 py-0.5 rounded-full ${styles[origen ?? ''] ?? 'bg-gray-100 text-gray-600'}`}>
+      {label}
+    </span>
+  )
+}
 
 function BadgeEquipo({ estado }: { estado: string }) {
   const map: Record<string, { bg: string; text: string; label: string }> = {
@@ -100,6 +115,7 @@ export function ClienteFicha({
   const puedeEditar = useCan('clientes.update')
   const [tab, setTab] = useState<Tab>('Comportamiento')
   const [editando, setEditando] = useState(false)
+  const [modalEquipo, setModalEquipo] = useState(false)
 
   const initials = cliente.nombre.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase()
   const segStyle = SEGMENTO_STYLE[metricas.segmento]
@@ -429,36 +445,12 @@ export function ClienteFicha({
             )}
 
             {tab === 'Equipos' && (
-              <table className="w-full">
-                <thead>
-                  <tr>
-                    {['Equipo', 'Modelo', 'N° Serie', 'Garantía', 'Estado', 'Historia'].map((h) => (
-                      <th key={h} className="px-5 py-[11px] text-left text-[10.5px] font-bold text-[#8a909a] tracking-[0.6px] uppercase border-b border-[#f0f1f4]">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {cliente.equipos.map((e, i) => (
-                    <tr key={e.id} className={i % 2 === 0 ? 'bg-white' : 'bg-[#fafbfc]'}>
-                      <td className="px-5 py-3 text-[12.5px] font-bold text-[#1f242c] border-b border-[#f4f5f7]">{e.nombre}</td>
-                      <td className="px-5 py-3 text-[12.5px] text-[#6b7280] border-b border-[#f4f5f7]">{e.modelo ?? '—'}</td>
-                      <td className="px-5 py-3 text-[12px] text-[#6b7280] font-mono border-b border-[#f4f5f7]">{e.numeroSerie ?? '—'}</td>
-                      <td className={`px-5 py-3 text-[12.5px] font-semibold border-b border-[#f4f5f7] ${e.garantiaHasta && new Date(e.garantiaHasta) > new Date() ? 'text-green-600' : 'text-[#9aa1ab]'}`}>
-                        {e.garantiaHasta ? formatFecha(e.garantiaHasta) : 'Sin garantía'}
-                      </td>
-                      <td className="px-5 py-3 border-b border-[#f4f5f7]"><BadgeEquipo estado={e.estado} /></td>
-                      <td className="px-5 py-3 border-b border-[#f4f5f7]">
-                        <Link href={`/servicio-tecnico/equipos/${e.id}`} className="text-[12px] text-[#E8650A] font-semibold hover:underline">
-                          Ver ficha
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                  {cliente.equipos.length === 0 && (
-                    <tr><td colSpan={6} className="px-5 py-8 text-center text-[12.5px] text-[#9aa1ab]">Sin equipos registrados</td></tr>
-                  )}
-                </tbody>
-              </table>
+              <EquiposClientePanel
+                equipos={cliente.equipos}
+                puedeEditar={puedeEditar}
+                onNuevoEquipo={() => setModalEquipo(true)}
+                onRefresh={() => router.refresh()}
+              />
             )}
 
             {tab === 'Historial OTs' && (
@@ -597,6 +589,14 @@ export function ClienteFicha({
           onSaved={() => { setEditando(false); router.refresh() }}
         />
       )}
+
+      {modalEquipo && (
+        <EquipoClienteModal
+          clienteId={cliente.id}
+          onClose={() => setModalEquipo(false)}
+          onSaved={() => { setModalEquipo(false); router.refresh() }}
+        />
+      )}
     </div>
   )
 }
@@ -621,6 +621,273 @@ function Dato({ label, value, valueClass }: { label: string; value: string; valu
     <div>
       <p className="text-[10.5px] font-bold text-[#8a909a] uppercase tracking-wide mb-1">{label}</p>
       <p className={`text-[#1f242c] ${valueClass ?? ''}`}>{value}</p>
+    </div>
+  )
+}
+
+function EquiposClientePanel({
+  equipos,
+  puedeEditar,
+  onNuevoEquipo,
+  onRefresh,
+}: {
+  equipos: Equipo[]
+  puedeEditar: boolean
+  onNuevoEquipo: () => void
+  onRefresh: () => void
+}) {
+  const [editandoNotasId, setEditandoNotasId] = useState<string | null>(null)
+  const [notasDraft, setNotasDraft] = useState('')
+  const [notaHistoriaEquipoId, setNotaHistoriaEquipoId] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  async function guardarNotas(equipoId: string) {
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/equipos/${equipoId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notasTecnicas: notasDraft.trim() || null }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(mensajeErrorJson(data, 'No se pudieron guardar las notas'))
+      toast.success('Notas técnicas actualizadas')
+      setEditandoNotasId(null)
+      onRefresh()
+    } catch (e: unknown) {
+      toast.error(mensajeErrorDesconocido(e, 'No se pudieron guardar las notas'))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div>
+      {puedeEditar && (
+        <div className="px-5 pt-4 flex justify-end">
+          <Button variant="secondary" size="sm" onClick={onNuevoEquipo}>
+            <Plus size={14} /> Equipo del cliente
+          </Button>
+        </div>
+      )}
+      <table className="w-full">
+        <thead>
+          <tr>
+            {['Equipo', 'Origen', 'Modelo', 'N° Serie', 'Notas técnicas', 'Estado', ''].map((h) => (
+              <th key={h} className="px-5 py-[11px] text-left text-[10.5px] font-bold text-[#8a909a] tracking-[0.6px] uppercase border-b border-[#f0f1f4]">{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {equipos.map((e, i) => (
+            <tr key={e.id} className={i % 2 === 0 ? 'bg-white' : 'bg-[#fafbfc]'}>
+              <td className="px-5 py-3 text-[12.5px] font-bold text-[#1f242c] border-b border-[#f4f5f7]">{e.nombre}</td>
+              <td className="px-5 py-3 border-b border-[#f4f5f7]"><BadgeOrigenEquipo origen={e.origen} /></td>
+              <td className="px-5 py-3 text-[12.5px] text-[#6b7280] border-b border-[#f4f5f7]">{e.modelo ?? '—'}</td>
+              <td className="px-5 py-3 text-[12px] text-[#6b7280] font-mono border-b border-[#f4f5f7]">{e.numeroSerie ?? '—'}</td>
+              <td className="px-5 py-3 border-b border-[#f4f5f7] max-w-[200px]">
+                {editandoNotasId === e.id ? (
+                  <div className="flex flex-col gap-1.5">
+                    <textarea
+                      value={notasDraft}
+                      onChange={(ev) => setNotasDraft(ev.target.value)}
+                      rows={2}
+                      className="w-full text-[12px] border border-[#e4e7eb] rounded-[7px] px-2 py-1.5"
+                    />
+                    <div className="flex gap-1">
+                      <Button variant="primary" size="sm" loading={loading} onClick={() => guardarNotas(e.id)}>Guardar</Button>
+                      <Button variant="secondary" size="sm" onClick={() => setEditandoNotasId(null)}>Cancelar</Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-start gap-1.5">
+                    <span className="text-[12px] text-[#6b7280] truncate">{e.notasTecnicas ?? '—'}</span>
+                    {puedeEditar && (
+                      <button
+                        type="button"
+                        onClick={() => { setEditandoNotasId(e.id); setNotasDraft(e.notasTecnicas ?? '') }}
+                        className="text-[#E8650A] hover:underline flex-shrink-0"
+                      >
+                        <Pencil size={12} />
+                      </button>
+                    )}
+                  </div>
+                )}
+              </td>
+              <td className="px-5 py-3 border-b border-[#f4f5f7]"><BadgeEquipo estado={e.estado} /></td>
+              <td className="px-5 py-3 border-b border-[#f4f5f7] whitespace-nowrap">
+                <Link href={`/servicio-tecnico/equipos/${e.id}`} className="text-[12px] text-[#E8650A] font-semibold hover:underline mr-2">
+                  Ficha
+                </Link>
+                {puedeEditar && (
+                  <button
+                    type="button"
+                    onClick={() => setNotaHistoriaEquipoId(e.id)}
+                    className="text-[12px] text-[#6b7280] font-semibold hover:text-[#E8650A] inline-flex items-center gap-0.5"
+                  >
+                    <MessageSquarePlus size={13} /> Nota
+                  </button>
+                )}
+              </td>
+            </tr>
+          ))}
+          {equipos.length === 0 && (
+            <tr><td colSpan={7} className="px-5 py-8 text-center text-[12.5px] text-[#9aa1ab]">Sin equipos registrados</td></tr>
+          )}
+        </tbody>
+      </table>
+
+      {notaHistoriaEquipoId && (
+        <NotaHistoriaEquipoModal
+          equipoId={notaHistoriaEquipoId}
+          onClose={() => setNotaHistoriaEquipoId(null)}
+          onSaved={() => { setNotaHistoriaEquipoId(null); onRefresh() }}
+        />
+      )}
+    </div>
+  )
+}
+
+function EquipoClienteModal({
+  clienteId,
+  onClose,
+  onSaved,
+}: {
+  clienteId: string
+  onClose: () => void
+  onSaved: () => void
+}) {
+  const [form, setForm] = useState({ nombre: '', marca: '', modelo: '', numeroSerie: '', notasTecnicas: '' })
+  const [loading, setLoading] = useState(false)
+  const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }))
+
+  async function guardar(e: React.FormEvent) {
+    e.preventDefault()
+    if (form.nombre.trim().length < 2) {
+      toast.error('Indicá el nombre del equipo (mínimo 2 caracteres)')
+      return
+    }
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/clientes/${clienteId}/equipos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nombre: form.nombre.trim(),
+          marca: form.marca.trim() || null,
+          modelo: form.modelo.trim() || null,
+          numeroSerie: form.numeroSerie.trim() || null,
+          notasTecnicas: form.notasTecnicas.trim() || null,
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(mensajeErrorJson(data, 'No se pudo registrar el equipo'))
+      toast.success('Equipo registrado en la ficha del cliente')
+      onSaved()
+    } catch (err: unknown) {
+      toast.error(mensajeErrorDesconocido(err, 'No se pudo registrar el equipo'))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+      <form className="bg-white rounded-[14px] w-full max-w-lg shadow-xl" onClick={(e) => e.stopPropagation()} onSubmit={guardar}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#eef0f2]">
+          <h3 className="text-[14px] font-bold text-[#16181d]">Equipo del cliente</h3>
+          <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+        </div>
+        <div className="p-5 grid grid-cols-2 gap-3.5">
+          <p className="col-span-2 text-[11px] text-[#6b7280]">
+            Equipo externo o no vendido por la empresa. No descuenta stock de inventario (origen: Externo).
+          </p>
+          <div className="col-span-2">
+            <Input label="Nombre *" value={form.nombre} onChange={(e) => set('nombre', e.target.value)} />
+          </div>
+          <Input label="Marca" value={form.marca} onChange={(e) => set('marca', e.target.value)} />
+          <Input label="Modelo" value={form.modelo} onChange={(e) => set('modelo', e.target.value)} />
+          <Input label="N° serie" value={form.numeroSerie} onChange={(e) => set('numeroSerie', e.target.value)} />
+          <div className="col-span-2 flex flex-col gap-1.5">
+            <label className="text-[11.5px] font-semibold text-[#5b626d] uppercase">Notas técnicas</label>
+            <textarea
+              value={form.notasTecnicas}
+              onChange={(e) => set('notasTecnicas', e.target.value)}
+              rows={3}
+              className="w-full bg-white border border-[#e4e7eb] rounded-[9px] px-3 py-2.5 text-[13.5px]"
+            />
+          </div>
+        </div>
+        <div className="px-5 py-4 border-t flex justify-end gap-2">
+          <Button type="button" variant="secondary" onClick={onClose} disabled={loading}>Cancelar</Button>
+          <Button type="submit" variant="primary" loading={loading}>Registrar equipo</Button>
+        </div>
+      </form>
+    </div>
+  )
+}
+
+function NotaHistoriaEquipoModal({
+  equipoId,
+  onClose,
+  onSaved,
+}: {
+  equipoId: string
+  onClose: () => void
+  onSaved: () => void
+}) {
+  const [titulo, setTitulo] = useState('')
+  const [contenido, setContenido] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  async function guardar(e: React.FormEvent) {
+    e.preventDefault()
+    if (!titulo.trim()) {
+      toast.error('Indicá un título para la nota')
+      return
+    }
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/equipos/${equipoId}/notas`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ titulo: titulo.trim(), contenido: contenido.trim() || undefined }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(mensajeErrorJson(data, 'No se pudo agregar la nota'))
+      toast.success('Nota agregada a la historia clínica')
+      onSaved()
+    } catch (err: unknown) {
+      toast.error(mensajeErrorDesconocido(err, 'No se pudo agregar la nota'))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+      <form className="bg-white rounded-[14px] w-full max-w-md shadow-xl" onClick={(e) => e.stopPropagation()} onSubmit={guardar}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#eef0f2]">
+          <h3 className="text-[14px] font-bold text-[#16181d]">Agregar nota a historia clínica</h3>
+          <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600"><X size={18} /></button>
+        </div>
+        <div className="p-5 flex flex-col gap-3">
+          <Input label="Título *" value={titulo} onChange={(e) => setTitulo(e.target.value)} />
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[11.5px] font-semibold text-[#5b626d] uppercase">Contenido</label>
+            <textarea
+              value={contenido}
+              onChange={(e) => setContenido(e.target.value)}
+              rows={4}
+              className="w-full bg-white border border-[#e4e7eb] rounded-[9px] px-3 py-2.5 text-[13.5px]"
+            />
+          </div>
+        </div>
+        <div className="px-5 py-4 border-t flex justify-end gap-2">
+          <Button type="button" variant="secondary" onClick={onClose} disabled={loading}>Cancelar</Button>
+          <Button type="submit" variant="primary" loading={loading}>Agregar nota</Button>
+        </div>
+      </form>
     </div>
   )
 }

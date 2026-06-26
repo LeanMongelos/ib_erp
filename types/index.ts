@@ -146,6 +146,8 @@ export interface Equipo {
   numeroSerie?: string | null
   garantiaHasta?: string | null
   estado: EstadoEquipo
+  origen?: string | null
+  notasTecnicas?: string | null
   clienteId: string
   cliente?: Cliente
   creadoEn: string

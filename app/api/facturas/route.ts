@@ -10,6 +10,7 @@ import { parsePlazosCobranza, formatCondicionPago } from '@/lib/cobranzas/plazos
 import { sincronizarVencimientosCobranza } from '@/lib/cobranzas/vencimientos'
 import { resolverCotizacionUsdDocumento, CotizacionUsdFaltanteError } from '@/lib/moneda'
 import { validarSucursalesInstalacionEquipo } from '@/lib/facturas/validar-sucursal-equipo'
+import { validarUnidadesInventarioFactura } from '@/lib/facturas/validar-unidades-inventario'
 import { datosItemsFacturaNestedCreate } from '@/lib/facturas/datos-items-factura'
 import { aplicarPreciosResueltosItems } from '@/lib/precios/aplicar-precios-documento'
 import { resolverPlantillaIdEmision } from '@/lib/plantillas/resolver-plantilla'
@@ -43,6 +44,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const data = facturaCreateSchema.parse(body)
     await validarSucursalesInstalacionEquipo(data.clienteId, data.items)
+    await validarUnidadesInventarioFactura(data.items)
 
     let otId = data.otId ?? null
 
@@ -146,6 +148,7 @@ export async function POST(req: NextRequest) {
                   numeroSerie: i.numeroSerie,
                   proximoPreventivo: i.proximoPreventivo,
                   sucursalInstalacionId: i.sucursalInstalacionId,
+                  inventarioUnidadId: i.inventarioUnidadId,
                 })),
               ),
             },

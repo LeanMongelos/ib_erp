@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { addHours } from 'date-fns'
 import { prisma } from '@/lib/prisma'
 import { handleApiError, ApiError } from '@/lib/api-auth'
 import { verifyN8nApiKey } from '@/lib/crm/n8n'
 import { otN8nCreateSchema } from '@/lib/validation'
-import { siguienteNumeroOT, crearConNumeroUnico } from '@/lib/sequences'
+import { crearOrdenTrabajo } from '@/lib/ots/crear-ot'
 import { plain } from '@/lib/serialize'
 
 export async function POST(req: NextRequest) {
@@ -18,29 +17,7 @@ export async function POST(req: NextRequest) {
     const cliente = await prisma.cliente.findUnique({ where: { id: data.clienteId } })
     if (!cliente) throw new ApiError(404, 'Cliente no encontrado')
 
-    const slaVence = addHours(new Date(), data.slaHoras)
-
-    const ot = await crearConNumeroUnico(
-      siguienteNumeroOT,
-      (numero) =>
-        prisma.ordenTrabajo.create({
-          data: {
-            numero,
-            tipo: data.tipo,
-            descripcion: data.descripcion,
-            clienteId: data.clienteId,
-            equipoId: data.equipoId ?? null,
-            prioridad: data.prioridad,
-            slaHoras: data.slaHoras,
-            slaVence,
-            estado: 'ABIERTA',
-            historial: {
-              create: { estado: 'ABIERTA', nota: 'OT creada vía n8n' },
-            },
-          },
-          include: { cliente: true },
-        }),
-    )
+    const ot = await crearOrdenTrabajo(data, { notaHistorial: 'OT creada vía n8n' })
 
     if (data.conversacionId) {
       await prisma.conversacionCRM.update({

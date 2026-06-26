@@ -19,6 +19,7 @@ export interface InventarioOption {
   esSerializado: boolean
   requierePreventivo: boolean
   intervaloPreventivoDias: number | null
+  modoTrazabilidad?: string
   marca: string | null
   modelo: string | null
   alicuotaIva?: { porcentaje: number } | null

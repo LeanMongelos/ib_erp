@@ -1,10 +1,11 @@
 /**
- * Transferencia auditiva entre depósitos (stock global sin cambio).
- * El inventario aún no modela stock por ubicación; el movimiento queda trazado.
+ * Transferencia entre depósitos — bulk (StockDeposito) o serializado (InventarioUnidad).
  */
 
 import { prisma } from '@/lib/prisma'
 import { registrarMovimientoStock } from '@/lib/inventario'
+import { trazabilidadActiva, transferirUnidadesSerializadas } from '@/lib/inventario/unidades'
+import { transferirStockDepositoBulk } from '@/lib/inventario/stock-deposito'
 
 export async function transferirStockEntreDepositos(opts: {
   inventarioId: string
@@ -13,6 +14,7 @@ export async function transferirStockEntreDepositos(opts: {
   cantidad: number
   motivo?: string
   usuarioId?: string
+  ubicacionDetalleDestino?: string | null
 }) {
   if (opts.depositoOrigenId === opts.depositoDestinoId) {
     throw new Error('El depósito de origen y destino deben ser distintos')
@@ -33,6 +35,34 @@ export async function transferirStockEntreDepositos(opts: {
   const motivo =
     opts.motivo?.trim() ||
     `Transferencia ${origen.nombre} → ${destino.nombre}`
+
+  if (trazabilidadActiva(item.modoTrazabilidad)) {
+    await prisma.$transaction(async (tx) => {
+      await transferirUnidadesSerializadas(
+        {
+          inventarioId: opts.inventarioId,
+          depositoOrigenId: opts.depositoOrigenId,
+          depositoDestinoId: opts.depositoDestinoId,
+          cantidad: opts.cantidad,
+          ubicacionDetalleDestino: opts.ubicacionDetalleDestino,
+        },
+        tx,
+      )
+    })
+  } else {
+    await prisma.$transaction(async (tx) => {
+      await transferirStockDepositoBulk(
+        {
+          inventarioId: opts.inventarioId,
+          depositoOrigenId: opts.depositoOrigenId,
+          depositoDestinoId: opts.depositoDestinoId,
+          cantidad: opts.cantidad,
+          ubicacionDetalleDestino: opts.ubicacionDetalleDestino,
+        },
+        tx,
+      )
+    })
+  }
 
   return registrarMovimientoStock({
     inventarioId: opts.inventarioId,

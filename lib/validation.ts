@@ -112,15 +112,32 @@ export const clienteUpdateSchema = clienteFieldsSchema.partial().extend({
 
 export const tipoOTEnum = z.enum(['CORRECTIVO', 'PREVENTIVO', 'INSTALACION', 'CALIBRACION', 'GARANTIA'])
 
-export const otCreateSchema = z.object({
-  descripcion: z.string().trim().min(5, 'La descripción debe tener al menos 5 caracteres'),
-  clienteId:   z.string().min(1, 'El cliente es obligatorio'),
-  equipoId:    z.string().min(1).optional().nullable(),
-  tecnicoId:   z.string().min(1).optional().nullable(),
-  prioridad:   prioridadEnum.default('NORMAL'),
-  slaHoras:    z.number().int().positive().max(24 * 30).default(48),
-  tipo:        tipoOTEnum.default('CORRECTIVO'),
+export const equipoNuevoOtSchema = z.object({
+  nombre:        z.string().trim().min(2, 'El nombre del equipo debe tener al menos 2 caracteres'),
+  marca:         z.string().trim().max(80).optional().nullable(),
+  modelo:        z.string().trim().max(80).optional().nullable(),
+  numeroSerie:   z.string().trim().max(80).optional().nullable(),
+  notasTecnicas: z.string().trim().max(2000).optional().nullable(),
 })
+
+/** POST /api/clientes/[id]/equipos — alta externa en ficha del cliente (origen EXTERNO). */
+export const equipoClienteCreateSchema = equipoNuevoOtSchema
+
+export const otCreateSchema = z
+  .object({
+    descripcion: z.string().trim().min(5, 'La descripción debe tener al menos 5 caracteres'),
+    clienteId:   z.string().min(1, 'El cliente es obligatorio'),
+    equipoId:    z.string().min(1).optional().nullable(),
+    equipoNuevo: equipoNuevoOtSchema.optional().nullable(),
+    tecnicoId:   z.string().min(1).optional().nullable(),
+    prioridad:   prioridadEnum.default('NORMAL'),
+    slaHoras:    z.number().int().positive().max(24 * 30).default(48),
+    tipo:        tipoOTEnum.default('CORRECTIVO'),
+  })
+  .refine((d) => !(d.equipoId && d.equipoNuevo), {
+    message: 'Indicá un equipo existente o cargá uno nuevo, no ambos',
+    path: ['equipoId'],
+  })
 
 /** Webhook n8n — mismas reglas que POST /api/ots + conversacionId opcional. */
 export const otN8nCreateSchema = otCreateSchema.extend({
@@ -282,6 +299,7 @@ export const itemFacturaSchema = z.object({
   numeroSerie:      z.string().trim().max(80).optional().nullable(),
   proximoPreventivo: z.coerce.date().optional().nullable(),
   sucursalInstalacionId: z.string().min(1).optional().nullable(),
+  inventarioUnidadId: z.string().min(1).optional().nullable(),
 })
 
 /** Ítems de presupuesto: sin sucursal (se exige al facturar, invariante Pr1). */
@@ -437,6 +455,7 @@ export const inventarioCreateSchema = z.object({
   esSerializado: z.boolean().default(false),
   requierePreventivo: z.boolean().default(false),
   intervaloPreventivoDias: z.number().int().positive().optional().nullable(),
+  modoTrazabilidad: z.enum(['NINGUNA', 'SERIE', 'LOTE', 'SERIE_Y_LOTE']).default('NINGUNA'),
   stock:        z.number().int().nonnegative('El stock no puede ser negativo').default(0),
   stockMinimo:  z.number().int().nonnegative('El stock mínimo no puede ser negativo').default(5),
   stockMaximo:  z.number().int().positive().optional().nullable(),
@@ -452,6 +471,8 @@ export const inventarioAjusteSchema = z.object({
   cantidad: z.number().int().positive('La cantidad debe ser mayor a 0'),
   tipo:     z.enum(['ENTRADA', 'SALIDA', 'AJUSTE']),
   motivo:   z.string().trim().max(200).optional(),
+  depositoId: z.string().min(1).optional(),
+  ubicacionDetalle: z.string().trim().max(200).optional().nullable(),
 })
 
 export const inventarioTransferenciaSchema = z.object({
@@ -467,6 +488,19 @@ export const inventarioTransferenciaSchema = z.object({
 export const inventarioUpdateSchema = inventarioCreateSchema.partial().extend({
   activo: z.boolean().optional(),
   kitItems: z.array(inventarioKitItemSchema).optional(),
+})
+
+export const inventarioUnidadCreateSchema = z.object({
+  numeroSerie: z.string().trim().max(80).optional().nullable(),
+  lote:        z.string().trim().max(80).optional().nullable(),
+  notas:       z.string().trim().max(500).optional().nullable(),
+  fechaIngreso: z.coerce.date().optional(),
+  depositoId: z.string().min(1).optional().nullable(),
+  ubicacionDetalle: z.string().trim().max(200).optional().nullable(),
+})
+
+export const inventarioUnidadUpdateSchema = inventarioUnidadCreateSchema.partial().extend({
+  estado: z.enum(['EN_STOCK', 'RESERVADO', 'VENDIDO', 'BAJA']).optional(),
 })
 
 // ============ USUARIOS ============

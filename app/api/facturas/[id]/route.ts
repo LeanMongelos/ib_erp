@@ -4,6 +4,7 @@ import { requirePermission, handleApiError, ApiError } from '@/lib/api-auth'
 import { facturaUpdateSchema } from '@/lib/validation'
 import { calcularTotales } from '@/lib/documentos'
 import { validarSucursalesInstalacionEquipo } from '@/lib/facturas/validar-sucursal-equipo'
+import { validarUnidadesInventarioFactura } from '@/lib/facturas/validar-unidades-inventario'
 import { datosItemsFacturaCreate } from '@/lib/facturas/datos-items-factura'
 import { aplicarPreciosResueltosItems } from '@/lib/precios/aplicar-precios-documento'
 import { plain } from '@/lib/serialize'
@@ -56,6 +57,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     if (data.items) {
       await validarSucursalesInstalacionEquipo(actual.clienteId, data.items)
+      await validarUnidadesInventarioFactura(data.items)
 
       const bonif = data.bonificacionPct ?? Number(actual.bonificacionPct)
       const itemsConPrecio = await aplicarPreciosResueltosItems(data.items, {
@@ -77,6 +79,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
             numeroSerie: i.numeroSerie,
             proximoPreventivo: i.proximoPreventivo,
             sucursalInstalacionId: i.sucursalInstalacionId,
+            inventarioUnidadId: i.inventarioUnidadId,
           })),
         ),
       })

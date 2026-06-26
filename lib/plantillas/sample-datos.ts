@@ -16,7 +16,7 @@ export function datosEjemploPlantilla(tipo: 'FACTURA' | 'PRESUPUESTO' | 'REMITO'
   const cliente = {
     nombre: 'HOSPITAL DE ALTA COMPLEJIDAD PTE. J.D. PERON',
     direccion: 'AV. NESTOR KIRCHNER Y P. GOMEZ 0 - FORMOSA',
-    cuit: '30-70902717-0',
+    cuit: '30-70555444-2',
     condicionIva: 'Exento',
     condicionPago: 'TRANSFERENCIA',
     direccionEntrega: 'AV. NESTOR KIRCHNER Y P. GOMEZ 0',

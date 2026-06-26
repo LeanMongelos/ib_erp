@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { addHours } from 'date-fns'
-import { prisma } from '@/lib/prisma'
 import { requirePermission, handleApiError } from '@/lib/api-auth'
+import { crearOrdenTrabajo } from '@/lib/ots/crear-ot'
 import { otCreateSchema } from '@/lib/validation'
-import { siguienteNumeroOT, crearConNumeroUnico } from '@/lib/sequences'
 import { listarOTs } from '@/lib/ots/listar-ots'
 
 export async function GET(req: NextRequest) {
@@ -29,36 +27,11 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    await requirePermission('servicio.create')
-
+    const actor = await requirePermission('servicio.create')
     const body = await req.json()
-    const { descripcion, clienteId, equipoId, tecnicoId, prioridad, slaHoras, tipo } =
-      otCreateSchema.parse(body)
+    const data = otCreateSchema.parse(body)
 
-    const slaVence = addHours(new Date(), slaHoras)
-
-    const ot = await crearConNumeroUnico(
-      siguienteNumeroOT,
-      (numero) =>
-        prisma.ordenTrabajo.create({
-          data: {
-            numero,
-            tipo,
-            descripcion,
-            clienteId,
-            equipoId:  equipoId  ?? null,
-            tecnicoId: tecnicoId ?? null,
-            prioridad,
-            slaHoras,
-            slaVence,
-            estado: 'ABIERTA',
-            historial: {
-              create: { estado: 'ABIERTA', nota: 'OT creada' },
-            },
-          },
-          include: { cliente: true, equipo: true, tecnico: true },
-        }),
-    )
+    const ot = await crearOrdenTrabajo(data, { usuarioId: actor.id })
     return NextResponse.json(ot, { status: 201 })
   } catch (error) {
     return handleApiError(error)

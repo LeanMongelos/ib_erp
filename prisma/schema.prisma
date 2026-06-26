@@ -67,6 +67,33 @@ enum TipoItemKitEquipo {
   REPUESTO_INCLUIDO
 }
 
+enum OrigenEquipo {
+  VENTA
+  EXTERNO
+  MANUAL_ST
+}
+
+enum TipoDeposito {
+  DEPOSITO
+  SHOWROOM
+  CAJA
+  OTRO
+}
+
+enum ModoTrazabilidad {
+  NINGUNA
+  SERIE
+  LOTE
+  SERIE_Y_LOTE
+}
+
+enum EstadoInventarioUnidad {
+  EN_STOCK
+  RESERVADO
+  VENDIDO
+  BAJA
+}
+
 enum TipoOT {
   CORRECTIVO
   PREVENTIVO
@@ -444,9 +471,13 @@ model Equipo {
   referenciaCompra   String?
   instaladoPorUsuarioId String?
   sucursalId            String?
+  origen        OrigenEquipo @default(VENTA)
+  inventarioId  String?
   creadoEn      DateTime     @default(now())
 
   cliente  Cliente             @relation(fields: [clienteId], references: [id])
+  inventario Inventario?       @relation(fields: [inventarioId], references: [id])
+  unidadInventario InventarioUnidad? @relation("UnidadEquipo")
   sucursal ClienteSucursal?    @relation(fields: [sucursalId], references: [id])
   proveedorOrigen Proveedor?   @relation(fields: [proveedorOrigenId], references: [id])
   instaladoPor    Usuario?     @relation("EquipoInstaladoPor", fields: [instaladoPorUsuarioId], references: [id])
@@ -811,11 +842,13 @@ model ItemFactura {
   proximoPreventivo DateTime?
   equipoGeneradoId String?  @unique
   sucursalInstalacionId String?
+  inventarioUnidadId String? @unique
 
   inventario Inventario? @relation(fields: [inventarioId], references: [id])
   factura    Factura     @relation(fields: [facturaId], references: [id], onDelete: Cascade)
   equipoGenerado Equipo? @relation("FacturaItemEquipo", fields: [equipoGeneradoId], references: [id])
   sucursalInstalacion ClienteSucursal? @relation(fields: [sucursalInstalacionId], references: [id])
+  inventarioUnidad InventarioUnidad? @relation("UnidadVendida", fields: [inventarioUnidadId], references: [id])
 
   @@map("items_factura")
 }
@@ -831,6 +864,7 @@ model Inventario {
   esSerializado Boolean @default(false)
   requierePreventivo Boolean @default(false)
   intervaloPreventivoDias Int?
+  modoTrazabilidad ModoTrazabilidad @default(NINGUNA)
   stock       Int      @default(0)
   stockMinimo Int      @default(5)
   stockMaximo Int?
@@ -853,10 +887,37 @@ model Inventario {
   kitComoEquipo    InventarioKitItem[] @relation("KitEquipoPadre")
   kitComoIncluido  InventarioKitItem[] @relation("KitEquipoHijo")
   itemsListaPrecios ListaPreciosItem[]
+  unidades         InventarioUnidad[]
+  equipos          Equipo[]
+  stockDepositos   StockDeposito[]
 
   alicuotaIva AlicuotaIva? @relation(fields: [alicuotaIvaId], references: [id])
 
   @@map("inventario")
+}
+
+model InventarioUnidad {
+  id            String                 @id @default(cuid())
+  inventarioId  String
+  numeroSerie   String?
+  lote          String?
+  estado        EstadoInventarioUnidad @default(EN_STOCK)
+  fechaIngreso  DateTime               @default(now())
+  notas         String?
+  equipoId      String?                @unique
+  depositoId    String?
+  ubicacionDetalle String?
+
+  inventario           Inventario   @relation(fields: [inventarioId], references: [id], onDelete: Cascade)
+  deposito             Deposito?    @relation(fields: [depositoId], references: [id])
+  equipo               Equipo?      @relation("UnidadEquipo", fields: [equipoId], references: [id])
+  itemFacturaReservado ItemFactura? @relation("UnidadVendida")
+
+  @@unique([inventarioId, numeroSerie])
+  @@index([inventarioId])
+  @@index([inventarioId, estado])
+  @@index([depositoId])
+  @@map("inventario_unidades")
 }
 
 model ListaPrecios {
@@ -1174,12 +1235,30 @@ model Deposito {
   id       String  @id @default(cuid())
   nombre   String
   direccion String?
+  tipo     TipoDeposito @default(DEPOSITO)
   activo   Boolean @default(true)
   creadoEn DateTime @default(now())
 
-  movimientos MovimientoStock[]
+  movimientos      MovimientoStock[]
+  stockDepositos   StockDeposito[]
+  unidadesInventario InventarioUnidad[]
 
   @@map("depositos")
+}
+
+model StockDeposito {
+  id               String  @id @default(cuid())
+  inventarioId     String
+  depositoId       String
+  cantidad         Int     @default(0)
+  ubicacionDetalle String?
+
+  inventario Inventario @relation(fields: [inventarioId], references: [id], onDelete: Cascade)
+  deposito   Deposito   @relation(fields: [depositoId], references: [id])
+
+  @@unique([inventarioId, depositoId])
+  @@index([inventarioId])
+  @@map("stock_depositos")
 }
 
 enum TipoMovimientoStock {

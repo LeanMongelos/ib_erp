@@ -39,7 +39,7 @@ sociedad 30-...) y elegir cuál usar al emitir.
 | Dato                     | Ejemplo (del presupuesto)             |
 | ------------------------ | ------------------------------------- |
 | Razón social             | INGENIERIA BIOMEDICA                   |
-| CUIT                     | *cargable* (ej. 20-24440827-4 o 30-70902717-0) |
+| CUIT                     | 20-24440827-4 (Ingeniería Biomédica) |
 | Condición frente al IVA  | Responsable Inscripto                  |
 | Ingresos Brutos          | *cargable*                             |
 | Inicio de actividades    | 01-08-2003                             |

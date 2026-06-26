@@ -17,7 +17,7 @@ function fail(msg: string) {
 function main() {
   console.log('\n=== Test parseo CSV clientes ===\n')
 
-  const linea = parsearLineaCsv('"Clínica SA",30-70902717-0,mail@test.com,3704')
+  const linea = parsearLineaCsv('"Clínica SA",33-70999888-9,mail@test.com,3704')
   if (linea.length === 4 && linea[0] === 'Clínica SA') {
     pass('parsearLineaCsv respeta comillas')
   } else {
@@ -26,8 +26,8 @@ function main() {
 
   const csv = [
     'razonSocial,cuit,email,telefono',
-    'Hospital Norte,30-70902717-0,admin@hospital.com,3704123456',
-    'Duplicado,30-70902717-0,,',
+    'Hospital Norte,33-70999888-9,admin@hospital.com,3704123456',
+    'Duplicado,33-70999888-9,,',
     'Sin CUIT,,,',
     'Nombre corto,X,,',
   ].join('\n')

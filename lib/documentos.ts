@@ -21,6 +21,7 @@ export interface ItemDocumentoInput {
   numeroSerie?: string | null
   proximoPreventivo?: Date | string | null
   sucursalInstalacionId?: string | null
+  inventarioUnidadId?: string | null
 }
 
 export interface ItemDocumentoCalculado extends ItemDocumentoInput {

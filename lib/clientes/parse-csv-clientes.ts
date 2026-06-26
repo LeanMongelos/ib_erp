@@ -122,7 +122,7 @@ export function parsearCsvClientes(contenido: string): FilaCsvCliente[] {
 export function generarPlantillaCsvClientes(): string {
   return [
     'razonSocial,cuit,email,telefono',
-    'Clínica Ejemplo SA,30-70902717-0,contacto@ejemplo.com.ar,3704123456',
+    'Clínica Ejemplo SA,33-70999888-9,contacto@ejemplo.com.ar,3704123456',
     'Hospital Regional,20-24440827-4,,',
   ].join('\n')
 }

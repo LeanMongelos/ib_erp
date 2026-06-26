@@ -97,7 +97,7 @@ async function main() {
   // ============ EMISORES (multi-CUIT, carga manual editable) ============
   await prisma.emisor.upsert({
     where: { cuit: '20-24440827-4' },
-    update: {},
+    update: { predeterminado: true, activo: true },
     create: {
       razonSocial: 'INGENIERIA BIOMEDICA',
       cuit: '20-24440827-4',
@@ -113,24 +113,7 @@ async function main() {
       predeterminado: true,
     },
   })
-  await prisma.emisor.upsert({
-    where: { cuit: '30-70902717-0' },
-    update: {},
-    create: {
-      razonSocial: 'INGENIERIA BIOMEDICA',
-      cuit: '30-70902717-0',
-      condicionIva: 'Responsable Inscripto',
-      inicioActividades: new Date('2003-08-01'),
-      domicilio: 'Eva Perón Nº679',
-      ciudad: 'Formosa',
-      telefono: '3705 343364',
-      email: 'ingenieriabiomedica@hotmail.com',
-      ambiente: 'HOMOLOGACION',
-      puntoVenta: 1,
-      predeterminado: false,
-    },
-  })
-  console.log('✅ Emisores cargados')
+  console.log('✅ Emisor cargado (CUIT 20-24440827-4)')
 
   // ============ PLANTILLAS DEFAULT (idempotente) ============
   const { PLANTILLA_PRESUPUESTO_DEFAULT, PLANTILLA_FACTURA_DEFAULT } = await import('../lib/plantillas/defaults')

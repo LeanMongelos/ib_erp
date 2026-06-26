@@ -9,11 +9,12 @@ import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { ConfigPageShell } from '@/components/configuracion/ConfigPageShell'
 import { mensajeErrorDesconocido, mensajeErrorRespuesta } from '@/lib/errores'
+import { TIPOS_DEPOSITO } from '@/lib/inventario-constants'
 
 type Tab = 'categorias' | 'depositos' | 'condiciones'
 
 interface Categoria { id: string; codigo: string; nombre: string; orden: number; activo: boolean }
-interface Deposito { id: string; nombre: string; direccion: string | null; activo: boolean }
+interface Deposito { id: string; nombre: string; direccion: string | null; tipo?: string | null; activo: boolean }
 interface CondicionPago { id: string; codigo: string; nombre: string; diasPlazo: number; plazosCobranza: string | null; activo: boolean; esDefault: boolean }
 
 const TABS: { id: Tab; label: string }[] = [
@@ -114,10 +115,13 @@ export function CatalogosManager() {
             <TablaCatalogo
               titulo="Depósitos y ubicaciones de stock"
               onNuevo={() => setModal({ tipo: 'depositos' })}
-              columnas={['Nombre', 'Dirección', 'Estado', '']}
+              columnas={['Nombre', 'Tipo', 'Dirección', 'Estado', '']}
               filas={depositos.map((d) => (
                 <tr key={d.id} className="border-t border-[#f4f5f7]">
                   <td className="px-5 py-3 font-semibold text-[12.5px]">{d.nombre}</td>
+                  <td className="px-5 py-3 text-[12px] text-[#6b7280]">
+                    {TIPOS_DEPOSITO.find((t) => t.value === d.tipo)?.label ?? d.tipo ?? 'Depósito'}
+                  </td>
                   <td className="px-5 py-3 text-[12px] text-[#6b7280]">{d.direccion ?? '—'}</td>
                   <td className="px-5 py-3"><EstadoBadge activo={d.activo} /></td>
                   <td className="px-5 py-3 text-right space-x-1">
@@ -267,6 +271,12 @@ function CatalogoModal({
           {tipo === 'depositos' && (
             <>
               <Input label="Nombre" name="nombre" defaultValue={d?.nombre} required />
+              <Select
+                label="Tipo"
+                name="tipo"
+                defaultValue={d?.tipo ?? 'DEPOSITO'}
+                options={[...TIPOS_DEPOSITO]}
+              />
               <Input label="Dirección" name="direccion" defaultValue={d?.direccion ?? ''} />
             </>
           )}

@@ -16,7 +16,8 @@ import { useCan } from '@/components/auth/useCan'
 import { formatMontoMoneda } from '@/lib/moneda'
 import { mensajeErrorDesconocido, mensajeErrorRespuesta } from '@/lib/errores'
 import { ProductoFotoField, subirFotoInventario } from '@/components/inventario/ProductoFotoField'
-import { TIPOS_ARTICULO, TIPOS_KIT } from '@/lib/inventario-constants'
+import { TIPOS_ARTICULO, TIPOS_KIT, MODOS_TRAZABILIDAD } from '@/lib/inventario-constants'
+import { InventarioUnidadesPanel } from '@/components/inventario/InventarioUnidadesPanel'
 
 export interface KitItemForm {
   nombre: string
@@ -40,6 +41,7 @@ export interface ItemInventario {
   esSerializado: boolean
   requierePreventivo: boolean
   intervaloPreventivoDias: number | null
+  modoTrazabilidad?: string
   stock: number
   stockMinimo: number
   stockMaximo: number | null
@@ -63,6 +65,7 @@ type FormData = {
   esSerializado: boolean
   requierePreventivo: boolean
   intervaloPreventivoDias: string
+  modoTrazabilidad: string
   stock: string
   stockMinimo: string
   stockMaximo: string
@@ -90,6 +93,7 @@ const formVacio = (): FormData => ({
   esSerializado: false,
   requierePreventivo: false,
   intervaloPreventivoDias: '180',
+  modoTrazabilidad: 'NINGUNA',
   stock: '0',
   stockMinimo: '5',
   stockMaximo: '',
@@ -111,6 +115,7 @@ function itemAForm(item: ItemInventario): FormData {
     esSerializado: item.esSerializado ?? false,
     requierePreventivo: item.requierePreventivo ?? false,
     intervaloPreventivoDias: item.intervaloPreventivoDias != null ? String(item.intervaloPreventivoDias) : '180',
+    modoTrazabilidad: item.modoTrazabilidad ?? (item.tipoArticulo === 'EQUIPO' && item.esSerializado ? 'SERIE' : 'NINGUNA'),
     stock: String(item.stock),
     stockMinimo: String(item.stockMinimo),
     stockMaximo: item.stockMaximo != null ? String(item.stockMaximo) : '',
@@ -240,6 +245,7 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
       esSerializado: esEquipo ? form.esSerializado : false,
       requierePreventivo: esEquipo ? form.requierePreventivo : false,
       intervaloPreventivoDias: esEquipo ? intervalo : null,
+      modoTrazabilidad: esEquipo ? form.modoTrazabilidad : 'NINGUNA',
       stock: editable ? undefined : stock,
       stockMinimo,
       stockMaximo,
@@ -631,6 +637,7 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
           fotoUrl={fotoUrl}
           onFotoChange={setFotoUrl}
           onArchivoPendiente={setFotoPendiente}
+          puedeEditarUnidades={editando ? puedeEditar : puedeCrear}
           onClose={() => { setModalAlta(false); setEditando(null); setFotoUrl(null); setFotoPendiente(null) }}
           onSave={editando ? guardarEdicion : guardarAlta}
         />
@@ -704,6 +711,7 @@ function ModalForm({
   fotoUrl,
   onFotoChange,
   onArchivoPendiente,
+  puedeEditarUnidades,
   onClose,
   onSave,
 }: {
@@ -717,12 +725,23 @@ function ModalForm({
   fotoUrl: string | null
   onFotoChange: (url: string | null) => void
   onArchivoPendiente: (file: File | null) => void
+  puedeEditarUnidades: boolean
   onClose: () => void
   onSave: () => void
 }) {
   const esEquipo = form.tipoArticulo === 'EQUIPO'
+  const muestraUnidades = esEquipo || form.modoTrazabilidad !== 'NINGUNA'
+  const [tab, setTab] = useState<'general' | 'stock' | 'unidades' | 'preventivo' | 'kit'>('general')
 
-  const field = (key: keyof Omit<FormData, 'kitItems' | 'esSerializado' | 'requierePreventivo'>, label: string, opts?: { type?: string; required?: boolean; span?: boolean; autoComplete?: string }) => (
+  const tabs = [
+    { id: 'general' as const, label: 'General' },
+    { id: 'stock' as const, label: 'Stock y precio' },
+    ...(muestraUnidades ? [{ id: 'unidades' as const, label: 'SN/Lote' }] : []),
+    ...(esEquipo ? [{ id: 'preventivo' as const, label: 'Preventivo' }] : []),
+    ...(esEquipo ? [{ id: 'kit' as const, label: 'Kit' }] : []),
+  ]
+
+  const field = (key: keyof Omit<FormData, 'kitItems' | 'esSerializado' | 'requierePreventivo' | 'modoTrazabilidad'>, label: string, opts?: { type?: string; required?: boolean; span?: boolean; autoComplete?: string }) => (
     <div className={`flex flex-col gap-1.5 ${opts?.span ? 'sm:col-span-2' : ''}`}>
       <label className="text-[11.5px] font-semibold text-[#5b626d] uppercase">{label}</label>
       <input
@@ -749,8 +768,25 @@ function ModalForm({
         <div className="px-5 py-4 border-b border-[#eef0f2]">
           <h3 className="text-[14px] font-bold">{titulo}</h3>
           <p className="text-[11.5px] text-[#6b7280] mt-1">Tipo «Equipo» habilita kit clínico y flujo automático de preventivo al facturar.</p>
+          <div className="flex flex-wrap gap-1 mt-3">
+            {tabs.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setTab(t.id)}
+                className={`px-3 py-1 text-[11.5px] font-bold rounded-full border ${
+                  tab === t.id
+                    ? 'bg-[#FFF4EC] border-[#E8650A] text-[#E8650A]'
+                    : 'border-[#e4e7eb] text-[#6b7280] hover:border-[#d1d5db]'
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
         </div>
         <div className="p-5 flex flex-col gap-5">
+          {tab === 'general' && (
           <section>
             <h4 className="text-[12px] font-bold text-[#E8650A] mb-3 uppercase tracking-wide">Identificación</h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -765,11 +801,22 @@ function ModalForm({
                       tipoArticulo: t,
                       esSerializado: t === 'EQUIPO' ? true : form.esSerializado,
                       requierePreventivo: t === 'EQUIPO' ? true : form.requierePreventivo,
+                      modoTrazabilidad: t === 'EQUIPO' ? 'SERIE' : 'NINGUNA',
                     })
                   }}
                   options={[...TIPOS_ARTICULO]}
                 />
               </div>
+              {esEquipo && (
+                <div className="sm:col-span-2">
+                  <Select
+                    label="Trazabilidad por unidad"
+                    value={form.modoTrazabilidad}
+                    onChange={(e) => setForm({ ...form, modoTrazabilidad: e.target.value })}
+                    options={[...MODOS_TRAZABILIDAD]}
+                  />
+                </div>
+              )}
               {field('nombre', 'Nombre *', { required: true, span: true, autoComplete: 'off' })}
               {field('sku', 'SKU', { autoComplete: 'off' })}
               {field('marca', 'Marca', { autoComplete: 'off' })}
@@ -796,11 +843,21 @@ function ModalForm({
               />
             </div>
           </section>
+          )}
 
+          {tab === 'stock' && (
           <section>
             <h4 className="text-[12px] font-bold text-[#E8650A] mb-3 uppercase tracking-wide">Stock y precio</h4>
+            {form.modoTrazabilidad !== 'NINGUNA' && (
+              <p className="text-[11px] text-[#6b7280] mb-3">
+                Con trazabilidad activa, el stock se calcula desde las unidades SN/Lote en estado «En stock».
+              </p>
+            )}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {!ocultarStock && field('stock', 'Stock inicial', { type: 'number' })}
+              {!ocultarStock && form.modoTrazabilidad === 'NINGUNA' && field('stock', 'Stock inicial', { type: 'number' })}
+              {!ocultarStock && form.modoTrazabilidad !== 'NINGUNA' && (
+                <p className="sm:col-span-2 text-[11px] text-[#9aa1ab]">El stock inicial se define cargando unidades en la pestaña SN/Lote.</p>
+              )}
               {field('stockMinimo', 'Stock mínimo', { type: 'number' })}
               {field('stockMaximo', 'Stock máximo', { type: 'number' })}
               {field('puntoPedido', 'Punto de pedido', { type: 'number' })}
@@ -816,8 +873,23 @@ function ModalForm({
               />
             </div>
           </section>
+          )}
 
-          {esEquipo && (
+          {tab === 'unidades' && muestraUnidades && (
+            inventarioId ? (
+              <InventarioUnidadesPanel
+                inventarioId={inventarioId}
+                modoTrazabilidad={form.modoTrazabilidad}
+                puedeEditar={puedeEditarUnidades}
+              />
+            ) : (
+              <p className="text-[12px] text-[#6b7280] py-4">
+                Guardá el producto primero para cargar unidades con serie o lote.
+              </p>
+            )
+          )}
+
+          {tab === 'preventivo' && esEquipo && (
             <>
               <section>
                 <h4 className="text-[12px] font-bold text-[#E8650A] mb-3 uppercase tracking-wide">Preventivo (post-venta)</h4>
@@ -833,7 +905,10 @@ function ModalForm({
                   {field('intervaloPreventivoDias', 'Intervalo preventivo (días)', { type: 'number' })}
                 </div>
               </section>
+            </>
+          )}
 
+          {tab === 'kit' && esEquipo && (
               <section>
                 <div className="flex items-center justify-between mb-3">
                   <h4 className="text-[12px] font-bold text-[#E8650A] uppercase tracking-wide">Kit del equipo</h4>
@@ -902,7 +977,6 @@ function ModalForm({
                   ))}
                 </div>
               </section>
-            </>
           )}
         </div>
         <div className="px-5 py-4 border-t border-[#eef0f2] flex justify-end gap-2">

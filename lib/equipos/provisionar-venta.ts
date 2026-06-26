@@ -4,6 +4,7 @@
 import { addDays, addMonths } from 'date-fns'
 import { prisma } from '@/lib/prisma'
 import { registrarMovimientoStock } from '@/lib/inventario'
+import { marcarUnidadVendida, trazabilidadActiva } from '@/lib/inventario/unidades'
 import { crearConNumeroUnico, siguienteNumeroOT } from '@/lib/sequences'
 import { registrarEntradaHistoria } from '@/lib/equipos/historia-clinica'
 import { registrarCicloInstalacionDesdeVenta } from '@/lib/tracking-automation'
@@ -41,6 +42,7 @@ export async function provisionarEquiposDesdeFactura(
       cliente: true,
       items: {
         include: {
+          inventarioUnidad: true,
           inventario: {
             include: {
               kitComoEquipo: { orderBy: { orden: 'asc' }, include: { hijo: true } },
@@ -65,13 +67,18 @@ export async function provisionarEquiposDesdeFactura(
       continue
     }
 
-    if (cat.esSerializado && !item.numeroSerie?.trim()) {
+    if (cat.esSerializado && !item.numeroSerie?.trim() && !item.inventarioUnidadId) {
       resultado.errores.push(`«${item.descripcion}»: falta número de serie en la línea de factura`)
       continue
     }
 
+    if (trazabilidadActiva(cat.modoTrazabilidad) && !item.inventarioUnidadId) {
+      resultado.errores.push(`«${item.descripcion}»: falta unidad de inventario (serie/lote)`)
+      continue
+    }
+
     try {
-      const numeroSerie = item.numeroSerie?.trim() || null
+      let numeroSerie = item.numeroSerie?.trim() || item.inventarioUnidad?.numeroSerie?.trim() || null
       if (numeroSerie) {
         const dup = await prisma.equipo.findUnique({ where: { numeroSerie } })
         if (dup) {
@@ -107,6 +114,8 @@ export async function provisionarEquiposDesdeFactura(
           fechaInstalacion: new Date(),
           referenciaCompra: factura.numero,
           instaladoPorUsuarioId: usuarioId ?? null,
+          inventarioId: cat.id,
+          origen: 'VENTA',
           estado: 'ACTIVO',
         },
       })
@@ -197,7 +206,9 @@ export async function provisionarEquiposDesdeFactura(
         fechaBase: new Date(),
       }).catch(() => null)
 
-      if (cat.stock > 0) {
+      if (item.inventarioUnidadId) {
+        await marcarUnidadVendida(item.inventarioUnidadId, { equipoId: equipo.id })
+      } else if (cat.stock > 0 && !trazabilidadActiva(cat.modoTrazabilidad)) {
         await registrarMovimientoStock({
           inventarioId: cat.id,
           tipo: 'SALIDA',

@@ -7,6 +7,8 @@ import { toast } from 'sonner'
 import { Card, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Select } from '@/components/ui/select'
+import { Input } from '@/components/ui/input'
+import { Combobox } from '@/components/ui/combobox'
 import { ClienteCombobox } from '@/components/clientes/ClienteCombobox'
 import { PRIORIDAD_OT, SLA_HORAS } from '@/lib/form-options'
 import { TIPOS_OT } from '@/lib/inventario-constants'
@@ -30,7 +32,17 @@ interface Tecnico {
   nombre: string
 }
 
+type ModoEquipo = 'ninguno' | 'cliente' | 'manual'
+
 const PRIORIDADES = PRIORIDAD_OT
+
+const equipoManualVacio = () => ({
+  nombre: '',
+  marca: '',
+  modelo: '',
+  numeroSerie: '',
+  notasTecnicas: '',
+})
 
 export function NuevaOTForm({
   clientes,
@@ -48,7 +60,9 @@ export function NuevaOTForm({
   const router = useRouter()
   const puedeCrear = useCan('servicio.create')
   const [clienteId, setClienteId] = useState(clienteInicialId)
+  const [modoEquipo, setModoEquipo] = useState<ModoEquipo>(equipoInicialId ? 'cliente' : 'ninguno')
   const [equipoId, setEquipoId] = useState(equipoInicialId)
+  const [equipoManual, setEquipoManual] = useState(equipoManualVacio())
   const [tecnicoId, setTecnicoId] = useState('')
   const [descripcion, setDescripcion] = useState('')
   const [tipo, setTipo] = useState<string>('CORRECTIVO')
@@ -66,13 +80,23 @@ export function NuevaOTForm({
   }, [clienteInicialId])
 
   useEffect(() => {
-    if (equipoInicialId) setEquipoId(equipoInicialId)
+    if (equipoInicialId) {
+      setEquipoId(equipoInicialId)
+      setModoEquipo('cliente')
+    }
   }, [equipoInicialId])
 
   useEffect(() => {
+    if (modoEquipo !== 'cliente') return
     if (!equipoId) return
     if (!equiposCliente.some((e) => e.id === equipoId)) setEquipoId('')
-  }, [equipoId, equiposCliente])
+  }, [equipoId, equiposCliente, modoEquipo])
+
+  function cambiarModoEquipo(modo: ModoEquipo) {
+    setModoEquipo(modo)
+    if (modo !== 'cliente') setEquipoId('')
+    if (modo !== 'manual') setEquipoManual(equipoManualVacio())
+  }
 
   async function guardar(e: React.FormEvent) {
     e.preventDefault()
@@ -88,22 +112,41 @@ export function NuevaOTForm({
       toast.error('La descripción debe tener al menos 5 caracteres')
       return
     }
+    if (modoEquipo === 'manual' && equipoManual.nombre.trim().length < 2) {
+      toast.error('Indicá el nombre del equipo (mínimo 2 caracteres)')
+      return
+    }
 
     setLoading(true)
     try {
+      const payload: Record<string, unknown> = {
+        clienteId,
+        tecnicoId: tecnicoId || null,
+        descripcion: descripcion.trim(),
+        prioridad,
+        slaHoras,
+        tipo,
+      }
+
+      if (modoEquipo === 'cliente' && equipoId) {
+        payload.equipoId = equipoId
+      } else if (modoEquipo === 'manual') {
+        payload.equipoNuevo = {
+          nombre: equipoManual.nombre.trim(),
+          marca: equipoManual.marca.trim() || null,
+          modelo: equipoManual.modelo.trim() || null,
+          numeroSerie: equipoManual.numeroSerie.trim() || null,
+          notasTecnicas: equipoManual.notasTecnicas.trim() || null,
+        }
+      } else {
+        payload.equipoId = null
+      }
+
       const ot = await parsearRespuestaApi<{ id: string; numero: string }>(
         await fetch('/api/ots', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            clienteId,
-            equipoId: equipoId || null,
-            tecnicoId: tecnicoId || null,
-            descripcion: descripcion.trim(),
-            prioridad,
-            slaHoras,
-            tipo,
-          }),
+          body: JSON.stringify(payload),
         }),
         'No se pudo crear la orden de trabajo',
       )
@@ -116,6 +159,12 @@ export function NuevaOTForm({
       setLoading(false)
     }
   }
+
+  const tabsEquipo: { value: ModoEquipo; label: string }[] = [
+    { value: 'ninguno', label: 'Sin equipo' },
+    { value: 'cliente', label: 'Del cliente' },
+    { value: 'manual', label: 'Equipo externo sin stock' },
+  ]
 
   return (
     <form onSubmit={guardar} className="max-w-2xl flex flex-col gap-4">
@@ -136,17 +185,77 @@ export function NuevaOTForm({
             placeholder="Seleccionar…"
           />
 
-          <Select
-            label="Equipo (opcional)"
-            value={equipoId}
-            onChange={(e) => setEquipoId(e.target.value)}
-            disabled={!clienteId}
-            placeholder="Sin equipo específico"
-            options={equiposCliente.map((eq) => ({
-              value: eq.id,
-              label: `${eq.nombre}${eq.cliente?.nombre ? ` — ${eq.cliente.nombre}` : ''}`,
-            }))}
-          />
+          <div className="flex flex-col gap-2">
+            <label className="text-[11.5px] font-semibold text-[#5b626d] uppercase">Equipo (opcional)</label>
+            <div className="inline-flex rounded-[9px] border border-[#e4e7eb] p-0.5 bg-[#fafbfc] w-fit">
+              {tabsEquipo.map((tab) => (
+                <button
+                  key={tab.value}
+                  type="button"
+                  disabled={!clienteId && tab.value !== 'ninguno'}
+                  onClick={() => cambiarModoEquipo(tab.value)}
+                  className={`px-3 py-1.5 text-[12px] font-semibold rounded-[7px] transition-colors ${
+                    modoEquipo === tab.value
+                      ? 'bg-white text-[#E8650A] shadow-sm'
+                      : 'text-[#6b7280] hover:text-[#3a4150]'
+                  } disabled:opacity-40`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {modoEquipo === 'cliente' && (
+              <Combobox
+                value={equipoId}
+                onChange={setEquipoId}
+                options={equiposCliente.map((eq) => ({
+                  value: eq.id,
+                  label: eq.nombre,
+                }))}
+                placeholder={equiposCliente.length ? 'Seleccionar equipo del cliente…' : 'Este cliente no tiene equipos registrados'}
+                disabled={!clienteId}
+              />
+            )}
+
+            {modoEquipo === 'manual' && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 border border-[#eef0f2] rounded-[9px] p-3 bg-[#fafbfc]">
+                <p className="sm:col-span-2 text-[11px] text-[#6b7280]">
+                  Para equipos externos o no vendidos por la empresa. Se crea la ficha en el cliente y queda en la historia clínica.
+                </p>
+                <Input
+                  label="Nombre del equipo *"
+                  value={equipoManual.nombre}
+                  onChange={(e) => setEquipoManual({ ...equipoManual, nombre: e.target.value })}
+                  placeholder="Ej. Monitor multiparamétrico"
+                />
+                <Input
+                  label="Marca"
+                  value={equipoManual.marca}
+                  onChange={(e) => setEquipoManual({ ...equipoManual, marca: e.target.value })}
+                />
+                <Input
+                  label="Modelo"
+                  value={equipoManual.modelo}
+                  onChange={(e) => setEquipoManual({ ...equipoManual, modelo: e.target.value })}
+                />
+                <Input
+                  label="N° serie"
+                  value={equipoManual.numeroSerie}
+                  onChange={(e) => setEquipoManual({ ...equipoManual, numeroSerie: e.target.value })}
+                />
+                <div className="sm:col-span-2 flex flex-col gap-1.5">
+                  <label className="text-[11.5px] font-semibold text-[#5b626d] uppercase">Notas técnicas</label>
+                  <textarea
+                    value={equipoManual.notasTecnicas}
+                    onChange={(e) => setEquipoManual({ ...equipoManual, notasTecnicas: e.target.value })}
+                    rows={2}
+                    className="bg-white border border-[#e4e7eb] rounded-[9px] px-3 py-2 text-[13px] resize-y"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
 
           <Select
             label="Tipo de OT"

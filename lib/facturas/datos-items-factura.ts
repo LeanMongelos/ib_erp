@@ -7,6 +7,7 @@ type ItemFacturaExtra = {
   numeroSerie?: string | null
   proximoPreventivo?: Date | string | null
   sucursalInstalacionId?: string | null
+  inventarioUnidadId?: string | null
 }
 
 export function datosItemsFacturaCreate(
@@ -33,6 +34,7 @@ export function datosItemsFacturaCreate(
       numeroSerie,
       proximoPreventivo: proxRaw ? new Date(proxRaw as string | Date) : null,
       sucursalInstalacionId: ext?.sucursalInstalacionId ?? i.sucursalInstalacionId ?? null,
+      inventarioUnidadId: ext?.inventarioUnidadId ?? i.inventarioUnidadId ?? null,
     }
   })
 }

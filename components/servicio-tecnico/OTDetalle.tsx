@@ -16,6 +16,7 @@ import { mensajeErrorDesconocido, mensajeErrorRespuesta } from '@/lib/errores'
 import { InventarioPicker, type InventarioOption } from '@/components/inventario/InventarioPicker'
 import { validarRepuestosOTCliente } from '@/lib/ots/repuestos-ot-client'
 import { transicionesOTPermitidas, validarTransicionOT } from '@/lib/ots/transiciones-client'
+import { labelOrigenEquipo } from '@/lib/inventario-constants'
 import type { EstadoOT } from '@/types'
 import {
   parseChecklistFromDiagnostico,
@@ -172,6 +173,11 @@ export function OTDetalle({ ot }: { ot: any }) {
               )}
               {ot.equipo?.modelo && ` · ${ot.equipo.modelo}`}
               {ot.equipo?.numeroSerie && ` · N° serie ${ot.equipo.numeroSerie}`}
+              {ot.equipo?.origen && ot.equipo.origen !== 'VENTA' && (
+                <span className="ml-1 inline-flex text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#f0f1f4] text-[#6b7280] uppercase">
+                  {labelOrigenEquipo(ot.equipo.origen)}
+                </span>
+              )}
             </p>
             {ot.equipo?.id && (
               <Button
