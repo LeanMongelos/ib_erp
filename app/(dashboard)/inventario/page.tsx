@@ -1,4 +1,5 @@
 import { Header } from '@/components/layout/Header'
+import { Suspense } from 'react'
 import { prisma } from '@/lib/prisma'
 import { InventarioManager } from '@/components/inventario/InventarioManager'
 import { ExportMovimientosStockButton } from '@/components/inventario/ExportMovimientosStockButton'
@@ -44,10 +45,12 @@ export default async function InventarioPage() {
             <ExportMovimientosStockButton />
           </div>
         )}
-        <InventarioManager
-          items={JSON.parse(JSON.stringify(plain(items)))}
-          faltantesCount={faltantes.length}
-        />
+        <Suspense fallback={<p className="text-[12.5px] text-[#9aa1ab] p-6">Cargando inventario…</p>}>
+          <InventarioManager
+            items={JSON.parse(JSON.stringify(plain(items)))}
+            faltantesCount={faltantes.length}
+          />
+        </Suspense>
       </div>
     </>
   )

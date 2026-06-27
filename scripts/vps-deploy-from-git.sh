@@ -170,6 +170,9 @@ done
 pm2 save
 
 echo "==> Post-deploy scripts..."
+run_optional_step "Permisos RBAC nuevos (compras/tesoreria, idempotente)" \
+  npx tsx --env-file=.env scripts/sync-permisos-post-deploy.ts
+
 run_optional_step "Migración emails @ib.com + cierre de sesiones (idempotente)" \
   npx tsx --env-file=.env scripts/migrate-emails-ib-com.ts --execute
 

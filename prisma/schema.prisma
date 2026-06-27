@@ -1622,10 +1622,10 @@ model FacturaCompra {
   notaMonedaOc          String?
   alertaFcPendienteEn   DateTime?
   cae                   String?
-  caeVencimiento        DateTime?
-  constatacionResultado String?
-  constatadoEn          DateTime?
-  constatacionObservaciones String?
+  caeVencimiento        DateTime? @map("cae_vencimiento")
+  constatacionResultado String?   @map("constatacion_resultado")
+  constatadoEn          DateTime? @map("constatado_en")
+  constatacionObservaciones String? @map("constatacion_observaciones")
   creadoPorId           String?
   registradaEn          DateTime?
   anuladaEn             DateTime?

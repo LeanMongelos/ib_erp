@@ -1,4 +1,5 @@
 import { Header } from '@/components/layout/Header'
+import { Suspense } from 'react'
 import { ComprasManager } from '@/components/compras/ComprasManager'
 import { prisma } from '@/lib/prisma'
 import { requirePagePermission } from '@/lib/page-guard'
@@ -8,10 +9,10 @@ import { contarArticulosStockBajo } from '@/lib/inventario/alerta-stock-minimo'
 import { fcInclude } from '@/lib/compras/factura-compra-crud'
 import { ocInclude } from '@/lib/compras/oc-include'
 import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { getAuthOptions } from '@/lib/auth'
 
 export default async function ComprasPage() {
-  const session = await getServerSession(authOptions)
+  const session = await getServerSession(await getAuthOptions())
   await requirePagePermission('compras.read')
 
   const [proveedores, ordenes, faltantes, stockBajoCount, facturas, tiposComprobante, usuarios, depositos, plantillasOc, configContable] = await Promise.all([
@@ -22,6 +23,7 @@ export default async function ComprasPage() {
     }),
     prisma.ordenCompra.findMany({
       orderBy: { creadoEn: 'desc' },
+      take: 200,
       include: ocInclude,
     }),
     getFaltantesStock(),
@@ -84,18 +86,20 @@ export default async function ComprasPage() {
     <>
       <Header title="Compras" subtitle={subtitle} />
       <div className="flex-1 overflow-y-auto bg-[#F4F6F9] p-6">
-        <ComprasManager
-          proveedores={inicial.proveedores}
-          tiposComprobante={inicial.tiposComprobante}
-          inicialOrdenes={inicial.ordenes}
-          inicialFaltantes={inicial.faltantes}
-          inicialFacturas={inicial.facturas}
-          usuarios={inicial.usuarios}
-          depositos={inicial.depositos}
-          plantillasOc={inicial.plantillasOc}
-          actorId={session?.user?.id}
-          cotizacionUsdDefault={configContable?.cotizacionUsdManual ?? null}
-        />
+        <Suspense fallback={<p className="text-[12.5px] text-[#9aa1ab]">Cargando compras…</p>}>
+          <ComprasManager
+            proveedores={inicial.proveedores}
+            tiposComprobante={inicial.tiposComprobante}
+            inicialOrdenes={inicial.ordenes}
+            inicialFaltantes={inicial.faltantes}
+            inicialFacturas={inicial.facturas}
+            usuarios={inicial.usuarios}
+            depositos={inicial.depositos}
+            plantillasOc={inicial.plantillasOc}
+            actorId={session?.user?.id}
+            cotizacionUsdDefault={configContable?.cotizacionUsdManual ?? null}
+          />
+        </Suspense>
       </div>
     </>
   )
