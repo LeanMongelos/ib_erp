@@ -21,6 +21,10 @@ async function getOT(id: string) {
         orderBy: { creadoEn: 'desc' },
         include: { factura: { select: { id: true, numero: true } } },
       },
+      ordenesCompra: {
+        select: { id: true, numero: true, estado: true },
+        orderBy: { creadoEn: 'desc' },
+      },
     },
   })
 }

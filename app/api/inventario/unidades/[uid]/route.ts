@@ -3,11 +3,15 @@ import { prisma } from '@/lib/prisma'
 import { requirePermission, handleApiError, ApiError } from '@/lib/api-auth'
 import { inventarioUnidadUpdateSchema } from '@/lib/validation'
 import { plain } from '@/lib/serialize'
-import { sincronizarStockDesdeUnidades, validarDepositoActivo } from '@/lib/inventario/unidades'
+import {
+  sincronizarStockDesdeUnidades,
+  validarDepositoActivo,
+  moverUnidadEntreDepositos,
+} from '@/lib/inventario/unidades'
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ uid: string }> }) {
   try {
-    await requirePermission('inventario.update')
+    const actor = await requirePermission('inventario.update')
     const { uid } = await params
     const data = inventarioUnidadUpdateSchema.parse(await req.json())
 
@@ -21,7 +25,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ ui
         throw new ApiError(400, 'No se puede editar una unidad ya vendida')
       }
 
-      const numeroSerie = data.numeroSerie !== undefined ? (data.numeroSerie?.trim() || null) : prev.numeroSerie
+      const numeroSerie =
+        data.numeroSerie !== undefined ? (data.numeroSerie?.trim() || null) : prev.numeroSerie
       const lote = data.lote !== undefined ? (data.lote?.trim() || null) : prev.lote
 
       if (numeroSerie && numeroSerie !== prev.numeroSerie) {
@@ -31,31 +36,50 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ ui
         if (dup) throw new ApiError(409, `Ya existe otra unidad con el número de serie «${numeroSerie}»`)
       }
 
-      if (data.depositoId !== undefined) {
+      const nuevoDepositoId =
+        data.depositoId !== undefined ? (data.depositoId?.trim() || null) : prev.depositoId
+      const cambiaDeposito =
+        data.depositoId !== undefined && nuevoDepositoId !== prev.depositoId
+
+      if (cambiaDeposito && prev.estado === 'EN_STOCK') {
+        await moverUnidadEntreDepositos(
+          {
+            unidadId: uid,
+            depositoDestinoId: nuevoDepositoId,
+            ubicacionDetalle:
+              data.ubicacionDetalle !== undefined ? data.ubicacionDetalle : prev.ubicacionDetalle,
+            usuarioId: actor.id,
+          },
+          tx,
+        )
+      } else if (data.depositoId !== undefined) {
         await validarDepositoActivo(data.depositoId, tx)
       }
 
-      const actualizada = await tx.inventarioUnidad.update({
-        where: { id: uid },
-        data: {
-          numeroSerie: data.numeroSerie !== undefined ? numeroSerie : undefined,
-          lote: data.lote !== undefined ? lote : undefined,
-          notas: data.notas !== undefined ? (data.notas?.trim() || null) : undefined,
-          fechaIngreso: data.fechaIngreso,
-          estado: data.estado,
-          depositoId: data.depositoId !== undefined ? (data.depositoId?.trim() || null) : undefined,
-          ubicacionDetalle:
-            data.ubicacionDetalle !== undefined
-              ? (data.ubicacionDetalle?.trim() || null)
-              : undefined,
-        },
-        include: { deposito: { select: { id: true, nombre: true, tipo: true } } },
-      })
+      const camposExtra: Record<string, unknown> = {}
+      if (data.numeroSerie !== undefined) camposExtra.numeroSerie = numeroSerie
+      if (data.lote !== undefined) camposExtra.lote = lote
+      if (data.notas !== undefined) camposExtra.notas = data.notas?.trim() || null
+      if (data.fechaIngreso !== undefined) camposExtra.fechaIngreso = data.fechaIngreso
+      if (data.estado !== undefined) camposExtra.estado = data.estado
+      if (!cambiaDeposito && data.depositoId !== undefined) camposExtra.depositoId = nuevoDepositoId
+      if (!cambiaDeposito && data.ubicacionDetalle !== undefined) {
+        camposExtra.ubicacionDetalle = data.ubicacionDetalle?.trim() || null
+      }
+
+      if (Object.keys(camposExtra).length > 0) {
+        await tx.inventarioUnidad.update({ where: { id: uid }, data: camposExtra })
+      }
 
       if (data.estado === 'EN_STOCK' || data.estado === 'BAJA' || data.estado === 'RESERVADO') {
         await sincronizarStockDesdeUnidades(prev.inventarioId, tx)
       }
 
+      const actualizada = await tx.inventarioUnidad.findUnique({
+        where: { id: uid },
+        include: { deposito: { select: { id: true, nombre: true, tipo: true } } },
+      })
+      if (!actualizada) throw new ApiError(404, 'Unidad no encontrada')
       return actualizada
     })
 

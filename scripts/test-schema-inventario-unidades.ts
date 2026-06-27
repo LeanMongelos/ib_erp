@@ -24,6 +24,7 @@ function main() {
 
   const inv = inventarioCreateSchema.parse({
     nombre: 'Monitor UCI',
+    sku: 'MON123',
     tipoArticulo: 'EQUIPO',
     modoTrazabilidad: 'SERIE',
   })

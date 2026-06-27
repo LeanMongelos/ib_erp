@@ -152,6 +152,7 @@ export function InventarioUnidadesPanel({ inventarioId, modoTrazabilidad, puedeE
       <p className="text-[11px] text-[#6b7280]">
         Modo: <span className="font-semibold">{modo?.label ?? modoTrazabilidad}</span>. El stock se sincroniza con las unidades en estado «En stock».
         {(muestraSerie || muestraLote) && ' Serie y lote son opcionales al ingresar; si cargás serie, debe ser única por producto.'}
+        {' '}Al cambiar el depósito de una unidad se registra una transferencia interna.
       </p>
 
       {puedeEditar && (

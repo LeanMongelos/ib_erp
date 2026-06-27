@@ -93,6 +93,11 @@ const REGLAS = [
   { codigo: 'REGLA_OT_SLA', nombre: 'Aviso SLA de OT', evento: 'ot.sla_proximo', diasAnticipacion: 1, plantillaCodigo: 'OT_SLA' },
   { codigo: 'REGLA_PREVENTIVO', nombre: 'Aviso preventivo', evento: 'preventivo.proximo', diasAnticipacion: 7, plantillaCodigo: 'PREVENTIVO_PROXIMO' },
   { codigo: 'REGLA_COMPONENTE', nombre: 'Aviso componente', evento: 'equipo.componente_vence', diasAnticipacion: 30, plantillaCodigo: 'COMPONENTE_VENCE' },
+  { codigo: 'REGLA_COMPRAS_FC', nombre: 'FC compra pendiente', evento: 'compras.fc_pendiente', diasAnticipacion: 3, plantillaCodigo: 'COBRANZA_VENCIDA' },
+  { codigo: 'REGLA_COMPRAS_CHEQUE', nombre: 'Cheque emitido próximo débito', evento: 'compras.cheque_debito', diasAnticipacion: 3, plantillaCodigo: 'COBRANZA_VENCIDA' },
+  { codigo: 'REGLA_COMPRAS_AP_VENCIDA', nombre: 'Cuenta a pagar vencida', evento: 'compras.ap_vencida', diasAnticipacion: 0, plantillaCodigo: 'COBRANZA_VENCIDA' },
+  { codigo: 'REGLA_COMPRAS_AP_PROXIMO', nombre: 'Cuenta a pagar vence pronto', evento: 'compras.ap_proximo', diasAnticipacion: 7, plantillaCodigo: 'COBRANZA_RECORDATORIO' },
+  { codigo: 'REGLA_COMPRAS_ALQUILER', nombre: 'Recordatorio OC alquiler', evento: 'compras.alquiler_recordatorio', diasAnticipacion: 0, plantillaCodigo: 'COBRANZA_VENCIDA' },
 ]
 
 export async function seedModulosConfigIfEmpty() {
@@ -171,6 +176,32 @@ export async function seedModulosConfigIfEmpty() {
         nombre: reglaCheque.nombre,
         evento: reglaCheque.evento,
         diasAnticipacion: reglaCheque.diasAnticipacion,
+        plantillaId: plantilla?.id ?? null,
+      },
+    })
+  }
+
+  for (const codigo of [
+    'REGLA_COMPRAS_FC',
+    'REGLA_COMPRAS_CHEQUE',
+    'REGLA_COMPRAS_AP_VENCIDA',
+    'REGLA_COMPRAS_AP_PROXIMO',
+    'REGLA_COMPRAS_ALQUILER',
+  ] as const) {
+    const regla = REGLAS.find((r) => r.codigo === codigo)
+    if (!regla) continue
+    const plantilla = await prisma.plantillaNotificacion.findUnique({
+      where: { codigo: regla.plantillaCodigo },
+      select: { id: true },
+    })
+    await prisma.reglaNotificacion.upsert({
+      where: { codigo: regla.codigo },
+      update: { evento: regla.evento, nombre: regla.nombre, diasAnticipacion: regla.diasAnticipacion },
+      create: {
+        codigo: regla.codigo,
+        nombre: regla.nombre,
+        evento: regla.evento,
+        diasAnticipacion: regla.diasAnticipacion,
         plantillaId: plantilla?.id ?? null,
       },
     })

@@ -6,6 +6,7 @@ import { siguienteNumeroOC, crearConNumeroUnico } from '@/lib/sequences'
 import { plain } from '@/lib/serialize'
 import { registrarAuditoria, getIp } from '@/lib/audit'
 import { generarOcFaltantesSchema } from '@/lib/validation'
+import { calcularPrecioNeto } from '@/lib/compras/bonificacion'
 
 export async function POST(req: NextRequest) {
   try {
@@ -21,16 +22,26 @@ export async function POST(req: NextRequest) {
       include: { inventario: true },
     })
 
-    const items: { inventarioId: string; descripcion: string; cantidad: number; precioUnit: number }[] = []
+    const items: {
+      inventarioId: string
+      descripcion: string
+      cantidad: number
+      precioUnit: number
+      precioLista: number
+      bonificacionPct: number
+    }[] = []
 
     for (const f of faltantes) {
       const prod = productosProv.find((p) => p.inventarioId === f.id)
       if (!prod?.costo) continue
+      const bonif = prod.bonificacionPct ?? 0
       items.push({
         inventarioId: f.id,
         descripcion: f.nombre,
         cantidad: f.faltante,
-        precioUnit: prod.costo,
+        precioLista: prod.costo,
+        bonificacionPct: bonif,
+        precioUnit: calcularPrecioNeto(prod.costo, bonif, prod.costo),
       })
     }
 
@@ -51,12 +62,16 @@ export async function POST(req: NextRequest) {
             subtotal,
             total: subtotal,
             estado: 'BORRADOR',
+            moneda: proveedor.moneda,
+            creadoPorId: actor.id,
             items: {
               create: items.map((i) => ({
                 inventarioId: i.inventarioId,
                 descripcion: i.descripcion,
                 cantidad: i.cantidad,
                 precioUnit: i.precioUnit,
+                precioLista: i.precioLista,
+                bonificacionPct: i.bonificacionPct,
                 subtotal: i.cantidad * i.precioUnit,
               })),
             },

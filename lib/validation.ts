@@ -7,6 +7,7 @@
  */
 
 import { z } from 'zod'
+import { codigoInternoOpcionalSchema, codigoInternoSchema } from '@/lib/inventario/codigo-interno'
 import '@/lib/zod-es'
 import { monedaDocumentoEnum } from '@/lib/moneda'
 import { validarListaSucursales } from '@/lib/clientes/validar-sucursales'
@@ -384,6 +385,7 @@ export const pagoCreateSchema = z.object({
   medio:     medioPagoEnum.default('TRANSFERENCIA'),
   referencia: z.string().trim().max(80).optional(),
   notas:     z.string().trim().max(500).optional(),
+  cuentaTesoreriaId: z.string().min(1).optional(),
   cheque:    chequeDatosSchema.optional(),
   imputaciones: z.array(z.object({
     facturaId: z.string().min(1),
@@ -405,15 +407,284 @@ export const pagoAccionSchema = z.object({
   accion: z.enum(['anular', 'conciliar']),
 })
 
-export const ordenCompraCreateSchema = z.object({
-  proveedorId: z.string().min(1),
-  observaciones: z.string().trim().max(1000).optional(),
-  items: z.array(z.object({
-    inventarioId: z.string().min(1).optional().nullable(),
-    descripcion:  z.string().trim().min(1),
-    cantidad:     z.number().int().positive(),
-    precioUnit:   z.number().nonnegative(),
+const tipoCuentaTesoreriaEnum = z.enum(['BANCO', 'CAJA'])
+const tipoMovimientoTesoreriaManualEnum = z.enum(['INGRESO', 'EGRESO', 'AJUSTE'])
+
+export const cuentaTesoreriaCreateSchema = z.object({
+  nombre: z.string().trim().min(2).max(120),
+  tipo: tipoCuentaTesoreriaEnum,
+  banco: z.string().trim().max(120).optional(),
+  cbu: z.string().trim().max(22).optional(),
+  alias: z.string().trim().max(40).optional(),
+  moneda: z.string().trim().max(8).default('ARS'),
+  planCuentaId: z.string().min(1).optional().nullable(),
+  predeterminada: z.boolean().optional(),
+})
+
+export const cuentaTesoreriaUpdateSchema = z.object({
+  nombre: z.string().trim().min(2).max(120).optional(),
+  banco: z.string().trim().max(120).optional().nullable(),
+  cbu: z.string().trim().max(22).optional().nullable(),
+  alias: z.string().trim().max(40).optional().nullable(),
+  moneda: z.string().trim().max(8).optional(),
+  planCuentaId: z.string().min(1).optional().nullable(),
+  activa: z.boolean().optional(),
+  predeterminada: z.boolean().optional(),
+})
+
+export const saldoInicialTesoreriaSchema = z.object({
+  fecha: z.coerce.date(),
+  monto: z.number().positive(),
+})
+
+export const movimientoTesoreriaCreateSchema = z.object({
+  cuentaTesoreriaId: z.string().min(1),
+  fecha: z.coerce.date(),
+  tipo: tipoMovimientoTesoreriaManualEnum,
+  monto: z.number(),
+  descripcion: z.string().trim().min(2).max(500),
+  referencia: z.string().trim().max(120).optional(),
+})
+
+export const conciliarMovimientoSchema = z.object({
+  extractoRef: z.string().trim().max(120).optional(),
+  notaConciliacion: z.string().trim().max(500).optional(),
+})
+
+export const transferenciaTesoreriaSchema = z.object({
+  cuentaOrigenId: z.string().min(1),
+  cuentaDestinoId: z.string().min(1),
+  monto: z.number().positive(),
+  fecha: z.coerce.date(),
+  descripcion: z.string().trim().min(2).max(500).optional(),
+})
+
+export const conciliarExtractoSchema = z.object({
+  matches: z.array(z.object({
+    movimientoId: z.string().min(1),
+    extractoRef: z.string().trim().min(1).max(120),
   })).min(1),
+})
+
+export const cuotaPagoSchema = z.object({
+  numeroCuota: z.number().int().positive(),
+  fecha: z.coerce.date(),
+  monto: z.number().positive(),
+})
+
+export function validarCuotasConTotal(cuotas: { monto: number }[], total: number): boolean {
+  const sum = Math.round(cuotas.reduce((a, c) => a + c.monto, 0) * 100) / 100
+  return Math.abs(sum - total) <= 0.01
+}
+
+export const clasificacionOrigenOcEnum = z.enum([
+  'REPUESTO_OT',
+  'STOCK_REPOSICION',
+  'EQUIPO_VENTA',
+  'SHOWROOM_MUESTRA',
+  'GASTO_EDILICIO',
+  'ALQUILER',
+  'SERVICIO',
+  'OTRO',
+])
+
+export const ordenCompraItemSchema = z.object({
+  inventarioId: z.string().min(1).optional().nullable(),
+  concepto:     z.string().trim().max(120).optional().nullable(),
+  descripcion:  z.string().trim().min(1, 'La descripción es obligatoria'),
+  cantidad:     z.number().int().positive('La cantidad debe ser mayor a 0'),
+  precioUnit:   z.number().nonnegative('El precio no puede ser negativo'),
+  precioLista:  z.number().nonnegative().optional().nullable(),
+  bonificacionPct: z.number().min(0).max(100).optional(),
+  depositoDestinoId: z.string().min(1).optional().nullable(),
+})
+
+export const ordenCompraCreateSchema = z.object({
+  proveedorId: z.string().min(1, 'El proveedor es obligatorio'),
+  observaciones: z.string().trim().max(1000).optional(),
+  solicitanteId: z.string().min(1).optional().nullable(),
+  justificacion: z.string().trim().max(2000).optional().nullable(),
+  clasificacionOrigen: clasificacionOrigenOcEnum.optional().nullable(),
+  ordenTrabajoId: z.string().min(1).optional().nullable(),
+  presupuestoId: z.string().min(1).optional().nullable(),
+  clienteId: z.string().min(1).optional().nullable(),
+  depositoDestinoDefaultId: z.string().min(1).optional().nullable(),
+  moneda: z.string().trim().min(1).optional(),
+  cotizacionUsd: z.number().positive().optional().nullable(),
+  plantillaOcId: z.string().min(1).optional().nullable(),
+  items: z.array(ordenCompraItemSchema).min(1, 'Agregá al menos un ítem'),
+})
+
+export const ordenCompraUpdateSchema = ordenCompraCreateSchema
+
+export const ordenCompraRecibirItemSchema = z.object({
+  id: z.string().min(1),
+  cantidad: z.number().int().positive(),
+  depositoId: z.string().min(1).optional(),
+  ubicacionDetalle: z.string().trim().max(200).optional(),
+  unidades: z.array(z.object({
+    numeroSerie: z.string().trim().max(120).optional(),
+    lote: z.string().trim().max(120).optional(),
+  })).optional(),
+})
+
+export const ordenCompraRecibirSchema = z.object({
+  items: z.array(ordenCompraRecibirItemSchema).min(1),
+})
+
+export const plantillaOcItemSchema = z.object({
+  descripcion: z.string().trim().min(1),
+  concepto: z.string().trim().max(120).optional().nullable(),
+  cantidad: z.number().int().positive(),
+  precioUnit: z.number().nonnegative(),
+  inventarioId: z.string().min(1).optional().nullable(),
+})
+
+export const plantillaOcCreateSchema = z.object({
+  nombre: z.string().trim().min(1),
+  clasificacionOrigen: clasificacionOrigenOcEnum,
+  proveedorId: z.string().min(1),
+  descripcionDefault: z.string().trim().max(1000).optional().nullable(),
+  justificacionDefault: z.string().trim().max(2000).optional().nullable(),
+  moneda: z.string().trim().min(1).optional(),
+  activa: z.boolean().optional(),
+  recordatorioDiaMes: z.number().int().min(1).max(28).optional().nullable(),
+  items: z.array(plantillaOcItemSchema).min(1),
+})
+
+export const plantillaOcUpdateSchema = plantillaOcCreateSchema.partial().extend({
+  items: z.array(plantillaOcItemSchema).min(1).optional(),
+})
+
+export const ordenCompraRechazarSchema = z.object({
+  motivo: z.string().trim().min(3, 'Indicá el motivo del rechazo').max(500),
+})
+
+// ============ FACTURAS DE COMPRA ============
+
+export const tipoFacturaCompraEnum = z.enum(['REMITO', 'CONCEPTOS'])
+
+export const estadoFacturaCompraEnum = z.enum(['BORRADOR', 'REGISTRADA', 'ANULADA'])
+
+export const facturaCompraItemSchema = z.object({
+  descripcion: z.string().trim().min(1, 'La descripción es obligatoria'),
+  concepto: z.string().trim().max(120).optional().nullable(),
+  cantidad: z.number().positive('La cantidad debe ser mayor a 0'),
+  precioUnitario: z.number().nonnegative('El precio no puede ser negativo'),
+  precioLista: z.number().nonnegative().optional().nullable(),
+  bonificacionPct: z.number().min(0).max(100).optional(),
+  alicuotaIvaPct: z.number().min(0).max(100).optional(),
+  inventarioId: z.string().min(1).optional().nullable(),
+  itemOrdenCompraId: z.string().min(1).optional().nullable(),
+})
+
+const facturaCompraBodySchema = z.object({
+  proveedorId: z.string().min(1, 'El proveedor es obligatorio'),
+  tipo: tipoFacturaCompraEnum,
+  fecha: z.coerce.date(),
+  fechaVencimiento: z.coerce.date().optional().nullable(),
+  puntoVenta: z.number().int().min(1).max(99999),
+  numeroComprobante: z.number().int().min(1),
+  tipoComprobanteAfipId: z.string().min(1).optional().nullable(),
+  moneda: z.string().trim().min(1).max(8).optional(),
+  ordenCompraId: z.string().min(1).optional().nullable(),
+  fcSinRecepcion: z.boolean().optional(),
+  notaFcSinRecepcion: z.string().trim().max(500).optional().nullable(),
+  notaMonedaOc: z.string().trim().max(500).optional().nullable(),
+  cae: z.string().trim().max(20).optional().nullable(),
+  caeVencimiento: z.coerce.date().optional().nullable(),
+  items: z.array(facturaCompraItemSchema).min(1, 'Agregá al menos un ítem'),
+  cuotas: z.array(cuotaPagoSchema).min(1).optional(),
+})
+
+function validarCuotasEnFc(
+  data: z.infer<typeof facturaCompraBodySchema>,
+  ctx: z.RefinementCtx,
+) {
+  if (!data.cuotas?.length) return
+  const netoItems = data.items.reduce((acc, it) => {
+    const n = it.cantidad * it.precioUnitario
+    const iva = n * ((it.alicuotaIvaPct ?? 21) / 100)
+    return acc + n + iva
+  }, 0)
+  const totalEst = Math.round(netoItems * 100) / 100
+  if (!validarCuotasConTotal(data.cuotas, totalEst)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'La suma de cuotas debe coincidir con el total de la factura',
+      path: ['cuotas'],
+    })
+  }
+}
+
+export const facturaCompraCreateSchema = facturaCompraBodySchema
+  .extend({ registrar: z.boolean().optional() })
+  .superRefine(validarCuotasEnFc)
+
+export const facturaCompraUpdateSchema = facturaCompraBodySchema.superRefine(validarCuotasEnFc)
+
+export const facturaCompraDesdeOcSchema = z.object({
+  ordenCompraId: z.string().min(1, 'La orden de compra es obligatoria'),
+  tipo: tipoFacturaCompraEnum.optional(),
+  fecha: z.coerce.date().optional(),
+  puntoVenta: z.number().int().min(1).max(99999).optional(),
+  numeroComprobante: z.number().int().min(1).optional(),
+  tipoComprobanteAfipId: z.string().min(1).optional().nullable(),
+  registrar: z.boolean().optional(),
+})
+
+export const libroComprasQuerySchema = z.object({
+  desde: z.coerce.date(),
+  hasta: z.coerce.date(),
+  proveedorId: z.string().min(1).optional(),
+  formato: z.enum(['json', 'csv']).optional(),
+})
+
+export const pagoProveedorCreateSchema = z.object({
+  proveedorId: z.string().min(1),
+  monto: z.number().positive(),
+  moneda: z.string().trim().min(1).max(8).optional(),
+  fecha: z.coerce.date().optional(),
+  medio: medioPagoEnum.default('TRANSFERENCIA'),
+  cuentaTesoreriaId: z.string().min(1).optional(),
+  referencia: z.string().trim().max(80).optional(),
+  notas: z.string().trim().max(500).optional(),
+  facturaCompraId: z.string().min(1).optional(),
+  imputaciones: z.array(z.object({
+    vencimientoPagoId: z.string().min(1),
+    monto: z.number().positive(),
+  })).min(1),
+  cheque: z.object({
+    numero: z.string().trim().min(1),
+    banco: z.string().trim().max(80).optional(),
+    fechaEmision: z.coerce.date().optional(),
+    fechaDebito: z.coerce.date().optional(),
+  }).optional(),
+}).refine(
+  (d) => d.medio !== 'CHEQUE' || !!d.cheque,
+  { message: 'Completá los datos del cheque', path: ['cheque'] },
+).refine(
+  (d) => !!d.cuentaTesoreriaId,
+  { message: 'Seleccioná la cuenta de tesorería', path: ['cuentaTesoreriaId'] },
+)
+
+export const chequeEmitidoDebitarSchema = z.object({
+  fechaDebito: z.coerce.date().optional(),
+})
+
+export const chequeEmitidoCreateSchema = z.object({
+  proveedorId: z.string().min(1),
+  numero: z.string().trim().min(1),
+  banco: z.string().trim().max(80).optional(),
+  monto: z.number().positive(),
+  fechaEmision: z.coerce.date().optional(),
+  fechaDebito: z.coerce.date().optional(),
+  cuentaTesoreriaId: z.string().min(1),
+  pagoProveedorId: z.string().min(1).optional(),
+})
+
+export const alertaCompraDismissSchema = z.object({
+  alertKey: z.string().trim().min(1),
 })
 
 /** POST /api/inventario/generar-oc — solo proveedor; ítems se resuelven en servidor. */
@@ -448,7 +719,7 @@ export const inventarioKitItemSchema = z.object({
 export const inventarioCreateSchema = z.object({
   nombre:       z.string().trim().min(2, 'El nombre debe tener al menos 2 caracteres'),
   descripcion:  z.string().trim().max(300).optional(),
-  sku:          z.string().trim().max(40).optional(),
+  sku:          codigoInternoSchema,
   tipoArticulo: z.enum(['REPUESTO', 'CONSUMIBLE', 'ACCESORIO', 'BATERIA', 'EQUIPO']).default('REPUESTO'),
   marca:        z.string().trim().max(80).optional().nullable(),
   modelo:       z.string().trim().max(80).optional().nullable(),
@@ -475,18 +746,27 @@ export const inventarioAjusteSchema = z.object({
   ubicacionDetalle: z.string().trim().max(200).optional().nullable(),
 })
 
-export const inventarioTransferenciaSchema = z.object({
-  depositoOrigenId:  z.string().min(1, 'Seleccioná depósito de origen'),
-  depositoDestinoId: z.string().min(1, 'Seleccioná depósito de destino'),
-  cantidad:          z.number().int().positive('La cantidad debe ser mayor a 0'),
-  motivo:            z.string().trim().max(200).optional(),
-}).refine((d) => d.depositoOrigenId !== d.depositoDestinoId, {
-  message: 'Origen y destino deben ser distintos',
-  path: ['depositoDestinoId'],
-})
+export const inventarioTransferenciaSchema = z
+  .object({
+    depositoOrigenId: z.string().min(1, 'Seleccioná depósito de origen'),
+    depositoDestinoId: z.string().min(1, 'Seleccioná depósito de destino'),
+    cantidad: z.number().int().positive('La cantidad debe ser mayor a 0').optional(),
+    unidadIds: z.array(z.string().min(1)).optional(),
+    ubicacionDetalleDestino: z.string().trim().max(200).optional().nullable(),
+    motivo: z.string().trim().max(200).optional(),
+  })
+  .refine((d) => d.depositoOrigenId !== d.depositoDestinoId, {
+    message: 'Origen y destino deben ser distintos',
+    path: ['depositoDestinoId'],
+  })
+  .refine((d) => (d.cantidad != null && d.cantidad > 0) || (d.unidadIds != null && d.unidadIds.length > 0), {
+    message: 'Indicá cantidad o seleccioná unidades',
+    path: ['cantidad'],
+  })
 
 export const inventarioUpdateSchema = inventarioCreateSchema.partial().extend({
   activo: z.boolean().optional(),
+  sku: codigoInternoOpcionalSchema.optional(),
   kitItems: z.array(inventarioKitItemSchema).optional(),
 })
 
@@ -591,6 +871,19 @@ export const emisorUpdateSchema = emisorCreateSchema.partial().extend({
 
 export const origenProveedorEnum = z.enum(['NACIONAL', 'IMPORTADO'])
 
+export const tipoCompraProveedorEnum = z.enum(['REMITO', 'CONCEPTOS', 'AMBOS'])
+
+export const estadoOrdenCompraEnum = z.enum([
+  'BORRADOR',
+  'PENDIENTE_APROBACION',
+  'APROBADA',
+  'RECHAZADA',
+  'ENVIADA',
+  'PARCIAL',
+  'RECIBIDA',
+  'CANCELADA',
+])
+
 export const contactoProveedorSchema = z.object({
   nombre:    z.string().trim().min(2, 'El nombre del contacto es obligatorio'),
   cargo:     z.string().trim().max(80).optional(),
@@ -611,6 +904,7 @@ export const productoProveedorSchema = z.object({
   inventarioId:   z.string().min(1).optional().nullable(),
   nombreProducto: z.string().trim().min(1, 'El nombre del producto es obligatorio').max(160),
   costo:          z.number().nonnegative('El costo no puede ser negativo'),
+  bonificacionPct: z.number().min(0).max(100).optional(),
   moneda:         z.string().trim().max(6).default('ARS'),
   leadTimeDias:   z.number().int().nonnegative().optional().nullable(),
   garantiaMeses:  z.number().int().nonnegative().optional().nullable(),
@@ -623,6 +917,7 @@ export const proveedorCreateSchema = z.object({
   condicionIva:     z.string().trim().max(60).optional(),
   rubro:            z.string().trim().max(80).optional(),
   origen:           origenProveedorEnum.default('NACIONAL'),
+  tipoCompra:       tipoCompraProveedorEnum.default('AMBOS'),
   moneda:           z.string().trim().max(6).default('ARS'),
   email:            emailOpcional,
   telefono:         z.string().trim().max(40).optional(),

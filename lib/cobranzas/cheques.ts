@@ -39,7 +39,7 @@ export async function confirmarFacturasPagadasPorImputaciones(
   }
 }
 
-export async function marcarChequeDepositado(chequeId: string) {
+export async function marcarChequeDepositado(chequeId: string, usuarioId: string) {
   return prisma.$transaction(async (tx) => {
     const cheque = await tx.chequeCobranza.findUnique({
       where: { id: chequeId },
@@ -55,6 +55,9 @@ export async function marcarChequeDepositado(chequeId: string) {
 
     const facturaIds = cheque.pago.imputaciones.map((i) => i.facturaId)
     await confirmarFacturasPagadasPorImputaciones(facturaIds, tx)
+
+    const { registrarIngresoDesdePago } = await import('@/lib/tesoreria/registrar-ingreso-pago')
+    await registrarIngresoDesdePago(cheque.pagoId, usuarioId, tx)
 
     return tx.chequeCobranza.findUnique({
       where: { id: chequeId },

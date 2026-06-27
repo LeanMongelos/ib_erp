@@ -18,7 +18,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       const otro = await prisma.inventario.findFirst({
         where: { sku: data.sku.trim(), id: { not: id } },
       })
-      if (otro) throw new ApiError(400, 'Ya existe otro producto con ese SKU')
+      if (otro) throw new ApiError(400, 'Ya existe otro producto con ese código interno')
     }
 
     const { stock: _stock, kitItems, ...resto } = data
@@ -26,7 +26,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       where: { id },
       data: {
         ...resto,
-        sku: data.sku !== undefined ? (data.sku?.trim() || null) : undefined,
+        sku: data.sku !== undefined ? data.sku : undefined,
       },
       include: {
         alicuotaIva: { select: { id: true, porcentaje: true, nombre: true } },

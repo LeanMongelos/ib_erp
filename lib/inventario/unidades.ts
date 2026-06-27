@@ -4,6 +4,7 @@
 import type { ModoTrazabilidad, Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { ApiError } from '@/lib/api-auth'
+import { registrarMovimientoStock } from '@/lib/inventario'
 
 type DbClient = Prisma.TransactionClient | typeof prisma
 
@@ -188,4 +189,140 @@ export async function transferirUnidadesSerializadas(
       ubicacionDetalle: opts.ubicacionDetalleDestino?.trim() || null,
     },
   })
+}
+
+export async function transferirUnidadesPorIds(
+  opts: {
+    inventarioId: string
+    depositoOrigenId: string
+    depositoDestinoId: string
+    unidadIds: string[]
+    ubicacionDetalleDestino?: string | null
+  },
+  db?: DbClient,
+) {
+  const client = db ?? prisma
+  if (!opts.unidadIds.length) {
+    throw new ApiError(400, 'Seleccioná al menos una unidad para transferir')
+  }
+
+  const unidades = await client.inventarioUnidad.findMany({
+    where: {
+      id: { in: opts.unidadIds },
+      inventarioId: opts.inventarioId,
+      estado: 'EN_STOCK',
+    },
+    select: { id: true, depositoId: true },
+  })
+
+  if (unidades.length !== opts.unidadIds.length) {
+    throw new ApiError(400, 'Una o más unidades no están disponibles en stock')
+  }
+
+  for (const u of unidades) {
+    if (u.depositoId !== null && u.depositoId !== opts.depositoOrigenId) {
+      throw new ApiError(400, 'Una o más unidades no pertenecen al depósito de origen')
+    }
+  }
+
+  await client.inventarioUnidad.updateMany({
+    where: { id: { in: opts.unidadIds } },
+    data: {
+      depositoId: opts.depositoDestinoId,
+      ubicacionDetalle: opts.ubicacionDetalleDestino?.trim() || null,
+    },
+  })
+}
+
+export async function moverUnidadEntreDepositos(
+  opts: {
+    unidadId: string
+    depositoDestinoId: string | null
+    ubicacionDetalle?: string | null
+    usuarioId?: string
+    motivo?: string
+  },
+  db?: DbClient,
+) {
+  const client = db ?? prisma
+  const unidad = await client.inventarioUnidad.findUnique({
+    where: { id: opts.unidadId },
+    include: { deposito: { select: { id: true, nombre: true } } },
+  })
+  if (!unidad) throw new ApiError(404, 'Unidad no encontrada')
+  if (unidad.estado !== 'EN_STOCK') {
+    throw new ApiError(400, 'Solo se pueden mover unidades en stock')
+  }
+
+  const origenId = unidad.depositoId
+  const destinoId = opts.depositoDestinoId?.trim() || null
+  if (origenId === destinoId && opts.ubicacionDetalle === undefined) return unidad
+
+  if (destinoId) await validarDepositoActivo(destinoId, client)
+
+  const actualizada = await client.inventarioUnidad.update({
+    where: { id: opts.unidadId },
+    data: {
+      depositoId: destinoId,
+      ...(opts.ubicacionDetalle !== undefined
+        ? { ubicacionDetalle: opts.ubicacionDetalle?.trim() || null }
+        : {}),
+    },
+    include: { deposito: { select: { id: true, nombre: true, tipo: true } } },
+  })
+
+  if (origenId !== destinoId && destinoId) {
+    const destino = await client.deposito.findUnique({
+      where: { id: destinoId },
+      select: { nombre: true },
+    })
+    await registrarMovimientoStock(
+      {
+        inventarioId: unidad.inventarioId,
+        tipo: 'TRANSFERENCIA',
+        cantidad: 1,
+        depositoId: destinoId,
+        motivo:
+          opts.motivo?.trim() ||
+          `Transferencia ${unidad.deposito?.nombre ?? 'sin depósito'} → ${destino?.nombre ?? destinoId}`,
+        referencia: `transfer-unidad:${opts.unidadId}:${origenId ?? 'null'}:${destinoId}`,
+        usuarioId: opts.usuarioId,
+        actualizarStock: false,
+      },
+      client as Prisma.TransactionClient,
+    )
+  }
+
+  return actualizada
+}
+
+export async function contarStockEnDeposito(
+  inventarioId: string,
+  depositoId: string,
+  db?: DbClient,
+) {
+  const client = db ?? prisma
+  const inv = await client.inventario.findUnique({
+    where: { id: inventarioId },
+    select: { modoTrazabilidad: true },
+  })
+  if (!inv) return 0
+
+  if (trazabilidadActiva(inv.modoTrazabilidad)) {
+    const [enDeposito, sinDeposito] = await Promise.all([
+      client.inventarioUnidad.count({
+        where: { inventarioId, estado: 'EN_STOCK', depositoId },
+      }),
+      client.inventarioUnidad.count({
+        where: { inventarioId, estado: 'EN_STOCK', depositoId: null },
+      }),
+    ])
+    return enDeposito + sinDeposito
+  }
+
+  const row = await client.stockDeposito.findUnique({
+    where: { inventarioId_depositoId: { inventarioId, depositoId } },
+    select: { cantidad: true },
+  })
+  return row?.cantidad ?? 0
 }

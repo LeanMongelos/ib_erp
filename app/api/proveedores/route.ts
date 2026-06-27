@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requirePermission, handleApiError } from '@/lib/api-auth'
-import { proveedorCreateSchema, origenProveedorEnum } from '@/lib/validation'
+import { proveedorCreateSchema, origenProveedorEnum, tipoCompraProveedorEnum } from '@/lib/validation'
 import { registrarAuditoria, getIp } from '@/lib/audit'
 
 export async function GET(req: NextRequest) {
@@ -11,7 +11,9 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const search = searchParams.get('q')?.trim() ?? ''
     const origenRaw = searchParams.get('origen') ?? ''
+    const tipoCompraRaw = searchParams.get('tipoCompra') ?? ''
     const origen = origenProveedorEnum.safeParse(origenRaw).success ? origenRaw : ''
+    const tipoCompra = tipoCompraProveedorEnum.safeParse(tipoCompraRaw).success ? tipoCompraRaw : ''
 
     const proveedores = await prisma.proveedor.findMany({
       where: {
@@ -24,7 +26,12 @@ export async function GET(req: NextRequest) {
             { ciudad:      { contains: search, mode: 'insensitive' } },
           ],
         }),
-        ...(origen && { origen: origen as any }),
+        ...(origen && { origen: origen as 'NACIONAL' | 'IMPORTADO' }),
+        ...(tipoCompra && tipoCompra !== 'AMBOS'
+          ? { OR: [{ tipoCompra: tipoCompra as 'REMITO' | 'CONCEPTOS' }, { tipoCompra: 'AMBOS' }] }
+          : tipoCompra === 'AMBOS'
+            ? { tipoCompra: 'AMBOS' }
+            : {}),
       },
       include: { _count: { select: { productos: true, contactos: true } } },
       orderBy: { razonSocial: 'asc' },

@@ -1,29 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requirePermission, handleApiError } from '@/lib/api-auth'
-import { ordenCompraCreateSchema } from '@/lib/validation'
+import { ordenCompraCreateSchema, estadoOrdenCompraEnum, tipoCompraProveedorEnum } from '@/lib/validation'
 import { siguienteNumeroOC, crearConNumeroUnico } from '@/lib/sequences'
 import { plain } from '@/lib/serialize'
 import { registrarAuditoria, getIp } from '@/lib/audit'
+import { registrarOcCreada } from '@/lib/compras/oc-workflow/aprobacion'
+import { calcularTotalesOC, filtroProveedorPorTipoCompra } from '@/lib/compras/oc'
+import { mapOcHeaderFields, mapOcItemsCreate, resolverCotizacionUsd } from '@/lib/compras/oc-crud'
+import { ocInclude } from '@/lib/compras/oc-include'
+import type { Prisma } from '@prisma/client'
 
-function calcularTotalesOC(items: { cantidad: number; precioUnit: number }[]) {
-  const itemsCalc = items.map((i) => ({
-    ...i,
-    subtotal: Math.round(i.cantidad * i.precioUnit * 100) / 100,
-  }))
-  const subtotal = itemsCalc.reduce((a, i) => a + i.subtotal, 0)
-  return { itemsCalc, subtotal, total: subtotal }
-}
-
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     await requirePermission('compras.read')
+    const { searchParams } = new URL(req.url)
+    const estadoRaw = searchParams.get('estado') ?? ''
+    const proveedorId = searchParams.get('proveedorId')?.trim() ?? ''
+    const tipoCompraRaw = searchParams.get('tipoCompra') ?? ''
+
+    const estado = estadoOrdenCompraEnum.safeParse(estadoRaw).success ? estadoRaw : ''
+    const tipoCompra = tipoCompraProveedorEnum.safeParse(tipoCompraRaw).success ? tipoCompraRaw : ''
+
     const ordenes = await prisma.ordenCompra.findMany({
-      orderBy: { creadoEn: 'desc' },
-      include: {
-        proveedor: { select: { razonSocial: true } },
-        items: true,
+      where: {
+        ...(estado && { estado: estado as Prisma.EnumEstadoOrdenCompraFilter['equals'] }),
+        ...(proveedorId && { proveedorId }),
+        ...(tipoCompra && {
+          proveedor: filtroProveedorPorTipoCompra(tipoCompra as 'REMITO' | 'CONCEPTOS' | 'AMBOS'),
+        }),
       },
+      orderBy: { creadoEn: 'desc' },
+      include: ocInclude,
     })
     return NextResponse.json(plain(ordenes))
   } catch (error) {
@@ -37,30 +45,38 @@ export async function POST(req: NextRequest) {
     const data = ordenCompraCreateSchema.parse(await req.json())
     const { itemsCalc, subtotal, total } = calcularTotalesOC(data.items)
 
+    const proveedor = await prisma.proveedor.findFirst({
+      where: { id: data.proveedorId, activo: true },
+    })
+    if (!proveedor) {
+      return NextResponse.json({ error: 'Proveedor no encontrado o inactivo' }, { status: 404 })
+    }
+
+    const moneda = data.moneda ?? proveedor.moneda
+    const cotizacionUsd = await resolverCotizacionUsd(moneda, data.cotizacionUsd)
+
     const oc = await crearConNumeroUnico(
       siguienteNumeroOC,
       (numero) =>
         prisma.ordenCompra.create({
           data: {
             numero,
-            proveedorId: data.proveedorId,
-            observaciones: data.observaciones ?? null,
+            ...mapOcHeaderFields(data),
+            moneda,
+            cotizacionUsd,
             subtotal,
             total,
             estado: 'BORRADOR',
+            creadoPorId: actor.id,
             items: {
-              create: itemsCalc.map((i, idx) => ({
-                inventarioId: data.items[idx].inventarioId ?? null,
-                descripcion: data.items[idx].descripcion,
-                cantidad: i.cantidad,
-                precioUnit: i.precioUnit,
-                subtotal: i.subtotal,
-              })),
+              create: mapOcItemsCreate(data, itemsCalc),
             },
           },
-          include: { proveedor: true, items: true },
+          include: ocInclude,
         }),
     )
+
+    await registrarOcCreada(oc.id, actor.id, oc.numero)
 
     await registrarAuditoria({
       usuarioId: actor.id,

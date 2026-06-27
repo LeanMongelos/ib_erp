@@ -72,6 +72,11 @@ export interface ContactoCliente {
 // ============ PROVEEDORES ============
 
 export type OrigenProveedor = 'NACIONAL' | 'IMPORTADO'
+export type TipoCompraProveedor = 'REMITO' | 'CONCEPTOS' | 'AMBOS'
+
+export type TipoFacturaCompra = 'REMITO' | 'CONCEPTOS'
+
+export type EstadoFacturaCompra = 'BORRADOR' | 'REGISTRADA' | 'ANULADA'
 
 export interface ContactoProveedor {
   id: string
@@ -100,6 +105,7 @@ export interface ProveedorProducto {
   inventarioId?: string | null
   nombreProducto: string
   costo: number
+  bonificacionPct?: number
   moneda: string
   leadTimeDias?: number | null
   garantiaMeses?: number | null
@@ -115,6 +121,7 @@ export interface Proveedor {
   condicionIva?: string | null
   rubro?: string | null
   origen: OrigenProveedor
+  tipoCompra: TipoCompraProveedor
   moneda: string
   email?: string | null
   telefono?: string | null

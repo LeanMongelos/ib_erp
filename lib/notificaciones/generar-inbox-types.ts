@@ -8,6 +8,8 @@ export type CategoriaAlerta =
   | 'presupuesto'
   | 'factura'
   | 'crm'
+  | 'compras'
+  | 'tesoreria'
 
 export interface AlertaInbox {
   clave: string

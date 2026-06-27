@@ -138,6 +138,12 @@ enum OrigenProveedor {
   IMPORTADO
 }
 
+enum TipoCompraProveedor {
+  REMITO    // equipos / stock (factura remito)
+  CONCEPTOS // gastos, sin stock
+  AMBOS
+}
+
 enum EstadoFactura {
   BORRADOR
   PENDIENTE       // legado: pendiente de cobro (pre-AFIP)
@@ -190,11 +196,67 @@ enum EstadoChequeCobranza {
 
 enum EstadoOrdenCompra {
   BORRADOR
-  ENVIADA
+  PENDIENTE_APROBACION
   APROBADA
+  RECHAZADA
+  ENVIADA // legado: equivalente operativo a APROBADA
   PARCIAL
   RECIBIDA
   CANCELADA
+}
+
+enum TipoEventoOC {
+  OC_CREADA
+  OC_ENVIADA_APROBACION
+  OC_REENVIADA
+  OC_APROBADA
+  OC_RECHAZADA
+  OC_RECEPCION_PARCIAL
+  OC_RECEPCION_COMPLETA
+  OC_FC_REGISTRADA
+  OC_FC_ANULADA
+  OC_PAGO_PARCIAL
+  OC_PAGO_COMPLETO
+  OC_CANCELADA
+}
+
+enum TipoNotificacionOC {
+  OC_PENDIENTE_APROBACION
+  OC_APROBADA
+  OC_RECHAZADA
+}
+
+enum ClasificacionOrigenOC {
+  REPUESTO_OT
+  STOCK_REPOSICION
+  EQUIPO_VENTA
+  SHOWROOM_MUESTRA
+  GASTO_EDILICIO
+  ALQUILER
+  SERVICIO
+  OTRO
+}
+
+enum TipoFacturaCompra {
+  REMITO
+  CONCEPTOS
+}
+
+enum EstadoFacturaCompra {
+  BORRADOR
+  REGISTRADA
+  ANULADA
+}
+
+enum EstadoPagoProveedor {
+  REGISTRADO
+  ANULADO
+}
+
+enum EstadoChequeEmitido {
+  EMITIDO
+  DEBITADO
+  ANULADO
 }
 
 enum TipoListaPrecios {
@@ -231,6 +293,17 @@ model Usuario {
   entradasHistoriaClinica HistoriaClinicaEntrada[]
   historialEmbudo         HistorialEmbudo[]
   pagosConciliados        Pago[] @relation("PagosConciliados")
+  movimientosTesoreriaCreados     MovimientoTesoreria[] @relation("MovimientosTesoreriaCreados")
+  movimientosTesoreriaConciliados MovimientoTesoreria[] @relation("MovimientosTesoreriaConciliados")
+  ordenesCompraCreadas            OrdenCompra[] @relation("OcCreador")
+  ordenesCompraSolicitadas        OrdenCompra[] @relation("OcSolicitante")
+  ordenesCompraAprobadas          OrdenCompra[] @relation("OcAprobador")
+  ordenesCompraRechazadas         OrdenCompra[] @relation("OcRechazador")
+  facturasCompraCreadas           FacturaCompra[] @relation("FcCompraCreador")
+  pagosProveedorCreados           PagoProveedor[] @relation("PagoProveedorCreador")
+  alertasCompraDismiss            AlertaCompraDismiss[]
+  eventosOrdenCompra              EventoOrdenCompra[]
+  notificacionesUsuario           NotificacionUsuario[]
 
   @@map("usuarios")
 }
@@ -404,6 +477,7 @@ model Cliente {
   conversaciones ConversacionCRM[]
   negociosEmbudo NegocioEmbudo[]
   sucursales   ClienteSucursal[]
+  ordenesCompra  OrdenCompra[]
 
   @@map("clientes")
 }
@@ -573,6 +647,7 @@ model OrdenTrabajo {
   historial HistorialOT[]
   factura   Factura?
   presupuestos Presupuesto[]
+  ordenesCompra OrdenCompra[]
   eventosTracking EventoTracking[]
 
   @@map("ordenes_trabajo")
@@ -736,6 +811,7 @@ model PlanCuenta {
 
   padre PlanCuenta?  @relation("PlanCuentaArbol", fields: [padreId], references: [id])
   hijos PlanCuenta[] @relation("PlanCuentaArbol")
+  cuentasTesoreria CuentaTesoreria[]
 
   @@map("plan_cuentas")
 }
@@ -763,6 +839,8 @@ model TipoComprobanteAfip {
   descripcion String
   aplicaIva   Boolean @default(true)
   activo      Boolean @default(true)
+
+  facturasCompra FacturaCompra[]
 
   @@map("tipos_comprobante_afip")
 }
@@ -881,6 +959,8 @@ model Inventario {
   itemsFactura ItemFactura[]
   movimientos  MovimientoStock[]
   itemsOC      ItemOrdenCompra[]
+  plantillaOCItems PlantillaOCItem[]
+  itemsFacturaCompra ItemFacturaCompra[]
   accesoriosEquipo EquipoAccesorio[]
   repuestosOT      RepuestoOT[]
   itemsPresupuesto ItemPresupuesto[]
@@ -984,8 +1064,9 @@ model Proveedor {
   cuit             String?
   condicionIva     String?
   rubro            String? // rubro / categoría comercial
-  origen           OrigenProveedor @default(NACIONAL)
-  moneda           String          @default("ARS") // moneda habitual de operación
+  origen           OrigenProveedor     @default(NACIONAL)
+  tipoCompra       TipoCompraProveedor @default(AMBOS)
+  moneda           String              @default("ARS") // moneda habitual de operación
   email            String?
   telefono         String?
   sitioWeb         String?
@@ -1005,7 +1086,11 @@ model Proveedor {
   condiciones CondicionComercialProveedor[]
   productos   ProveedorProducto[]
   equiposOrigen Equipo[]
-  ordenesCompra OrdenCompra[]
+  ordenesCompra   OrdenCompra[]
+  facturasCompra  FacturaCompra[]
+  pagosProveedor  PagoProveedor[]
+  chequesEmitidos ChequeEmitido[]
+  plantillasOC    PlantillaOC[]
 
   @@map("proveedores")
 }
@@ -1050,6 +1135,7 @@ model ProveedorProducto {
   inventarioId   String? // vínculo opcional con un ítem del inventario
   nombreProducto String // nombre/descripción del producto que provee
   costo          Float
+  bonificacionPct Float   @default(0)
   moneda         String   @default("ARS")
   leadTimeDias   Int?
   garantiaMeses  Int?
@@ -1120,6 +1206,7 @@ model Presupuesto {
   items     ItemPresupuesto[]
   factura   Factura?
   negociosEmbudo NegocioEmbudo[]
+  ordenesCompra  OrdenCompra[]
 
   @@index([otId])
   @@map("presupuestos")
@@ -1160,15 +1247,19 @@ model Pago {
   anuladoEn         DateTime?
   conciliadoEn      DateTime?
   conciliadoPorId   String?
+  cuentaTesoreriaId String?
   creadoEn          DateTime  @default(now())
 
-  cliente       Cliente       @relation(fields: [clienteId], references: [id])
-  conciliadoPor Usuario?      @relation("PagosConciliados", fields: [conciliadoPorId], references: [id])
-  imputaciones  PagoFactura[]
-  cheque        ChequeCobranza?
+  cliente         Cliente              @relation(fields: [clienteId], references: [id])
+  conciliadoPor   Usuario?             @relation("PagosConciliados", fields: [conciliadoPorId], references: [id])
+  cuentaTesoreria CuentaTesoreria?     @relation(fields: [cuentaTesoreriaId], references: [id])
+  imputaciones    PagoFactura[]
+  cheque          ChequeCobranza?
+  movimientoTesoreria MovimientoTesoreria?
 
   @@index([anuladoEn])
   @@index([conciliadoEn])
+  @@index([cuentaTesoreriaId])
   @@map("pagos")
 }
 
@@ -1229,6 +1320,76 @@ model VencimientoCobranza {
   @@map("vencimientos_cobranza")
 }
 
+// ============ TESORERÍA ============
+
+enum TipoCuentaTesoreria {
+  BANCO
+  CAJA
+}
+
+enum TipoMovimientoTesoreria {
+  SALDO_INICIAL
+  INGRESO
+  EGRESO
+  AJUSTE
+  TRANSFERENCIA
+}
+
+model CuentaTesoreria {
+  id                  String              @id @default(cuid())
+  nombre              String
+  tipo                TipoCuentaTesoreria
+  banco               String?
+  cbu                 String?
+  alias               String?
+  moneda              String              @default("ARS")
+  planCuentaId        String?
+  activa              Boolean             @default(true)
+  saldoInicialCargado Boolean             @default(false)
+  predeterminada      Boolean             @default(false)
+  creadoEn            DateTime            @default(now())
+  actualizadoEn       DateTime            @updatedAt
+
+  planCuenta      PlanCuenta?            @relation(fields: [planCuentaId], references: [id])
+  movimientos     MovimientoTesoreria[]
+  pagos           Pago[]
+  pagosProveedor  PagoProveedor[]
+  chequesEmitidos ChequeEmitido[]
+
+  @@map("cuentas_tesoreria")
+}
+
+model MovimientoTesoreria {
+  id                String                  @id @default(cuid())
+  cuentaTesoreriaId String
+  fecha             DateTime
+  tipo              TipoMovimientoTesoreria
+  monto             Float
+  descripcion       String
+  referencia        String?
+  conciliadoEn      DateTime?
+  conciliadoPorId   String?
+  extractoRef       String?
+  notaConciliacion  String?
+  pagoId            String?                 @unique
+  pagoProveedorId   String?                 @unique
+  anuladoEn         DateTime?
+  transferenciaId   String?
+  creadoPorId       String
+  creadoEn          DateTime                @default(now())
+
+  cuentaTesoreria CuentaTesoreria @relation(fields: [cuentaTesoreriaId], references: [id])
+  pago            Pago?           @relation(fields: [pagoId], references: [id])
+  pagoProveedor   PagoProveedor?  @relation(fields: [pagoProveedorId], references: [id])
+  chequeEmitido   ChequeEmitido?
+  conciliadoPor   Usuario?        @relation("MovimientosTesoreriaConciliados", fields: [conciliadoPorId], references: [id])
+  creadoPor       Usuario         @relation("MovimientosTesoreriaCreados", fields: [creadoPorId], references: [id])
+
+  @@index([cuentaTesoreriaId, fecha])
+  @@index([conciliadoEn])
+  @@map("movimientos_tesoreria")
+}
+
 // ============ INVENTARIO AVANZADO (Fase 2 inv) ============
 
 model Deposito {
@@ -1242,6 +1403,8 @@ model Deposito {
   movimientos      MovimientoStock[]
   stockDepositos   StockDeposito[]
   unidadesInventario InventarioUnidad[]
+  ordenesCompraDestinoDefault OrdenCompra[] @relation("OcDepositoDefault")
+  itemsOcDestino   ItemOrdenCompra[] @relation("ItemOcDepositoDestino")
 
   @@map("depositos")
 }
@@ -1290,38 +1453,324 @@ model MovimientoStock {
 
 // ============ ÓRDENES DE COMPRA (Fase 6) ============
 
+model PlantillaOC {
+  id                   String                @id @default(cuid())
+  nombre               String
+  clasificacionOrigen  ClasificacionOrigenOC
+  proveedorId          String
+  descripcionDefault   String?
+  justificacionDefault String?
+  moneda               String                @default("ARS")
+  activa               Boolean               @default(true)
+  recordatorioDiaMes   Int?
+  creadoEn             DateTime              @default(now())
+
+  proveedor     Proveedor         @relation(fields: [proveedorId], references: [id])
+  items         PlantillaOCItem[]
+  ordenesCompra OrdenCompra[]
+
+  @@index([activa, clasificacionOrigen])
+  @@map("plantillas_oc")
+}
+
+model PlantillaOCItem {
+  id           String  @id @default(cuid())
+  plantillaId  String
+  descripcion  String
+  concepto     String?
+  cantidad     Int
+  precioUnit   Float // precio neto unitario
+  inventarioId String?
+
+  plantilla  PlantillaOC @relation(fields: [plantillaId], references: [id], onDelete: Cascade)
+  inventario Inventario? @relation(fields: [inventarioId], references: [id])
+
+  @@map("plantillas_oc_items")
+}
+
 model OrdenCompra {
-  id           String            @id @default(cuid())
-  numero       String            @unique
-  proveedorId  String
-  estado       EstadoOrdenCompra @default(BORRADOR)
-  subtotal     Float             @default(0)
-  total        Float             @default(0)
-  observaciones String?
-  fechaEmision DateTime          @default(now())
-  fechaEntrega DateTime?
-  creadoEn     DateTime          @default(now())
+  id                    String            @id @default(cuid())
+  numero                String            @unique
+  proveedorId           String
+  estado                EstadoOrdenCompra @default(BORRADOR)
+  subtotal              Float             @default(0)
+  total                 Float             @default(0)
+  observaciones         String?
+  fechaEmision          DateTime          @default(now())
+  fechaEntrega          DateTime?
+  ultimaRecepcionEn     DateTime?
+  creadoEn              DateTime          @default(now())
+  creadoPorId           String?
+  solicitanteId         String?
+  justificacion         String?
+  clasificacionOrigen   ClasificacionOrigenOC?
+  ordenTrabajoId        String?
+  presupuestoId         String?
+  clienteId             String?
+  depositoDestinoDefaultId String?
+  moneda                String            @default("ARS")
+  cotizacionUsd         Float?
+  plantillaOcId         String?
+  enviadaAprobacionEn   DateTime?
+  aprobadoPorId         String?
+  aprobadoEn            DateTime?
+  rechazadoPorId        String?
+  rechazadoEn           DateTime?
+  rechazadoMotivo       String?
 
-  proveedor Proveedor         @relation(fields: [proveedorId], references: [id])
-  items     ItemOrdenCompra[]
+  proveedor   Proveedor         @relation(fields: [proveedorId], references: [id])
+  creadoPor   Usuario?          @relation("OcCreador", fields: [creadoPorId], references: [id])
+  solicitante Usuario?          @relation("OcSolicitante", fields: [solicitanteId], references: [id])
+  aprobadoPor Usuario?          @relation("OcAprobador", fields: [aprobadoPorId], references: [id])
+  rechazadoPor Usuario?         @relation("OcRechazador", fields: [rechazadoPorId], references: [id])
+  ordenTrabajo OrdenTrabajo?    @relation(fields: [ordenTrabajoId], references: [id])
+  presupuesto  Presupuesto?     @relation(fields: [presupuestoId], references: [id])
+  cliente      Cliente?         @relation(fields: [clienteId], references: [id])
+  depositoDestinoDefault Deposito? @relation("OcDepositoDefault", fields: [depositoDestinoDefaultId], references: [id])
+  plantillaOc  PlantillaOC?     @relation(fields: [plantillaOcId], references: [id])
+  items       ItemOrdenCompra[]
+  facturasCompra FacturaCompra[]
+  eventos     EventoOrdenCompra[]
+  notificaciones NotificacionUsuario[]
 
+  @@index([estado])
+  @@index([proveedorId])
+  @@index([plantillaOcId])
   @@map("ordenes_compra")
 }
 
 model ItemOrdenCompra {
-  id             String @id @default(cuid())
-  ordenCompraId  String
-  inventarioId   String?
-  descripcion    String
-  cantidad       Int
-  cantidadRecibida Int  @default(0)
-  precioUnit     Float
-  subtotal       Float
+  id               String  @id @default(cuid())
+  ordenCompraId    String
+  inventarioId     String?
+  concepto         String? // ítem de gasto (sin stock)
+  descripcion      String
+  cantidad         Int
+  cantidadRecibida Int     @default(0)
+  precioUnit       Float // precio neto unitario (post-bonificación o lista)
+  precioLista      Float?
+  bonificacionPct  Float   @default(0)
+  subtotal         Float
+  depositoDestinoId String?
 
   ordenCompra OrdenCompra @relation(fields: [ordenCompraId], references: [id], onDelete: Cascade)
   inventario  Inventario? @relation(fields: [inventarioId], references: [id])
+  depositoDestino Deposito? @relation("ItemOcDepositoDestino", fields: [depositoDestinoId], references: [id])
+  itemsFacturaCompra ItemFacturaCompra[]
 
   @@map("items_orden_compra")
+}
+
+model EventoOrdenCompra {
+  id            String       @id @default(cuid())
+  ordenCompraId String
+  tipo          TipoEventoOC
+  fecha         DateTime     @default(now())
+  usuarioId     String?
+  referencia    String?
+  payload       Json?
+
+  ordenCompra OrdenCompra @relation(fields: [ordenCompraId], references: [id], onDelete: Cascade)
+  usuario     Usuario?    @relation(fields: [usuarioId], references: [id])
+
+  @@index([ordenCompraId, fecha])
+  @@map("eventos_orden_compra")
+}
+
+model NotificacionUsuario {
+  id            String             @id @default(cuid())
+  usuarioId     String
+  tipo          TipoNotificacionOC
+  ordenCompraId String
+  titulo        String
+  mensaje       String
+  href          String
+  prioridad     String             @default("importante")
+  creadaEn      DateTime           @default(now())
+  leidaEn       DateTime?
+  resueltaEn    DateTime?
+
+  usuario     Usuario     @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  ordenCompra OrdenCompra @relation(fields: [ordenCompraId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId, resueltaEn])
+  @@index([ordenCompraId, tipo])
+  @@map("notificaciones_usuario")
+}
+
+// ============ FACTURAS DE COMPRA (Fase B) ============
+
+model FacturaCompra {
+  id                    String              @id @default(cuid())
+  numero                String              @unique
+  proveedorId           String
+  tipo                  TipoFacturaCompra
+  estado                EstadoFacturaCompra @default(BORRADOR)
+  fecha                 DateTime
+  fechaVencimiento      DateTime?
+  puntoVenta            Int
+  numeroComprobante     Int
+  tipoComprobanteAfipId String?
+  neto                  Float
+  iva                   Float
+  total                 Float
+  moneda                String              @default("ARS")
+  ordenCompraId         String?
+  recepcionCompleta     Boolean             @default(false)
+  fcSinRecepcion        Boolean             @default(false)
+  notaFcSinRecepcion    String?
+  notaMonedaOc          String?
+  alertaFcPendienteEn   DateTime?
+  cae                   String?
+  caeVencimiento        DateTime?
+  constatacionResultado String?
+  constatadoEn          DateTime?
+  constatacionObservaciones String?
+  creadoPorId           String?
+  registradaEn          DateTime?
+  anuladaEn             DateTime?
+  creadoEn              DateTime            @default(now())
+  actualizadoEn         DateTime            @updatedAt
+
+  proveedor           Proveedor            @relation(fields: [proveedorId], references: [id])
+  ordenCompra         OrdenCompra?         @relation(fields: [ordenCompraId], references: [id])
+  tipoComprobanteAfip TipoComprobanteAfip? @relation(fields: [tipoComprobanteAfipId], references: [id])
+  creadoPor           Usuario?             @relation("FcCompraCreador", fields: [creadoPorId], references: [id])
+  items               ItemFacturaCompra[]
+  vencimientos        VencimientoPago[]
+  pagosProveedor      PagoProveedor[]
+
+  @@unique([proveedorId, puntoVenta, numeroComprobante])
+  @@index([estado])
+  @@index([proveedorId])
+  @@index([fecha])
+  @@index([tipo])
+  @@map("facturas_compra")
+}
+
+model ItemFacturaCompra {
+  id                String  @id @default(cuid())
+  facturaCompraId   String
+  descripcion       String
+  concepto          String?
+  cantidad          Float
+  precioUnitario    Float
+  precioLista       Float?
+  bonificacionPct   Float   @default(0)
+  alicuotaIvaPct    Float   @default(21)
+  neto              Float
+  iva               Float
+  inventarioId      String?
+  itemOrdenCompraId String?
+
+  facturaCompra   FacturaCompra    @relation(fields: [facturaCompraId], references: [id], onDelete: Cascade)
+  inventario      Inventario?      @relation(fields: [inventarioId], references: [id])
+  itemOrdenCompra ItemOrdenCompra? @relation(fields: [itemOrdenCompraId], references: [id])
+
+  @@map("items_factura_compra")
+}
+
+model VencimientoPago {
+  id              String    @id @default(cuid())
+  facturaCompraId String
+  numeroCuota     Int       @default(1)
+  fecha           DateTime
+  monto           Float
+  saldo           Float
+  pagado          Boolean   @default(false)
+  pagadoEn        DateTime?
+  creadoEn        DateTime  @default(now())
+
+  facturaCompra FacturaCompra              @relation(fields: [facturaCompraId], references: [id], onDelete: Cascade)
+  imputaciones  ImputacionPagoProveedor[]
+
+  @@unique([facturaCompraId, numeroCuota])
+  @@index([fecha, pagado])
+  @@map("vencimientos_pago")
+}
+
+// ============ PAGOS PROVEEDOR (Fase C) ============
+
+model PagoProveedor {
+  id                String              @id @default(cuid())
+  proveedorId       String
+  facturaCompraId   String?
+  monto             Float
+  moneda            String              @default("ARS")
+  fecha             DateTime            @default(now())
+  medio             MedioPago           @default(TRANSFERENCIA)
+  cuentaTesoreriaId String?
+  referencia        String?
+  notas             String?
+  estado            EstadoPagoProveedor @default(REGISTRADO)
+  creadoPorId       String
+  anuladoEn         DateTime?
+  creadoEn          DateTime            @default(now())
+
+  proveedor           Proveedor                  @relation(fields: [proveedorId], references: [id])
+  facturaCompra       FacturaCompra?             @relation(fields: [facturaCompraId], references: [id])
+  cuentaTesoreria     CuentaTesoreria?           @relation(fields: [cuentaTesoreriaId], references: [id])
+  creadoPor           Usuario                    @relation("PagoProveedorCreador", fields: [creadoPorId], references: [id])
+  imputaciones        ImputacionPagoProveedor[]
+  chequeEmitido       ChequeEmitido?
+  movimientoTesoreria MovimientoTesoreria?
+
+  @@index([proveedorId, estado])
+  @@index([fecha])
+  @@index([cuentaTesoreriaId])
+  @@map("pagos_proveedor")
+}
+
+model ImputacionPagoProveedor {
+  id                String @id @default(cuid())
+  pagoProveedorId   String
+  vencimientoPagoId String
+  monto             Float
+
+  pagoProveedor   PagoProveedor   @relation(fields: [pagoProveedorId], references: [id], onDelete: Cascade)
+  vencimientoPago VencimientoPago @relation(fields: [vencimientoPagoId], references: [id])
+
+  @@index([vencimientoPagoId])
+  @@map("imputaciones_pago_proveedor")
+}
+
+model ChequeEmitido {
+  id                String              @id @default(cuid())
+  pagoProveedorId   String?             @unique
+  proveedorId       String
+  numero            String
+  banco             String              @default("")
+  monto             Float
+  fechaEmision      DateTime            @default(now())
+  fechaDebito       DateTime?
+  estado            EstadoChequeEmitido @default(EMITIDO)
+  cuentaTesoreriaId String
+  movimientoTesoreriaId String?         @unique
+  creadoEn          DateTime            @default(now())
+  actualizadoEn     DateTime            @updatedAt
+
+  pagoProveedor       PagoProveedor?      @relation(fields: [pagoProveedorId], references: [id])
+  proveedor           Proveedor           @relation(fields: [proveedorId], references: [id])
+  cuentaTesoreria     CuentaTesoreria     @relation(fields: [cuentaTesoreriaId], references: [id])
+  movimientoTesoreria MovimientoTesoreria? @relation(fields: [movimientoTesoreriaId], references: [id])
+
+  @@unique([numero, banco])
+  @@index([fechaDebito, estado])
+  @@index([proveedorId, estado])
+  @@map("cheques_emitidos")
+}
+
+model AlertaCompraDismiss {
+  id           String   @id @default(cuid())
+  alertKey     String
+  dismissedById String
+  dismissedEn  DateTime @default(now())
+
+  dismissedBy Usuario @relation(fields: [dismissedById], references: [id])
+
+  @@unique([alertKey, dismissedById])
+  @@index([alertKey])
+  @@map("alertas_compra_dismiss")
 }
 
 // ============ MANTENIMIENTO PREVENTIVO (Fase 7) ============

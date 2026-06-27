@@ -20,6 +20,7 @@ import {
   Receipt,
   ShoppingCart,
   Banknote,
+  Wallet,
   Calendar,
   BarChart3,
 } from 'lucide-react'
@@ -34,6 +35,7 @@ const navItems = [
   { label: 'Presupuestos',      href: '/presupuestos',                icon: ClipboardList   },
   { label: 'Facturación',       href: '/facturacion',                 icon: Receipt         },
   { label: 'Cobranzas',         href: '/cobranzas',                   icon: Banknote        },
+  { label: 'Tesorería',         href: '/tesoreria',                   icon: Wallet          },
   { label: 'Compras',           href: '/compras',                     icon: ShoppingCart    },
   { label: 'Proveedores',       href: '/proveedores',                 icon: Truck           },
   { label: 'Automatizaciones',  href: '/automatizaciones',            icon: Zap             },

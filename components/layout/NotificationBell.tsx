@@ -11,7 +11,7 @@ export function NotificationBell() {
       ariaLabel="Notificaciones"
       panelTitle="Notificaciones"
       emptyTitle="Sin alertas pendientes"
-      emptyHint="Cobranzas, OT, preventivos y stock se monitorean en vivo."
+      emptyHint="Cobranzas, compras, tesorería, OT y stock se monitorean en vivo."
       footerHref="/configuracion/notificaciones"
       footerLabel="Configurar reglas de aviso"
     />

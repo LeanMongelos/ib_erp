@@ -14,6 +14,8 @@ import {
   Calendar,
   Settings,
   CheckCheck,
+  ShoppingCart,
+  Landmark,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { CategoriaAlerta, PrioridadAlerta } from '@/lib/notificaciones/generar-inbox-types'
@@ -39,6 +41,8 @@ const ICONO_CATEGORIA: Record<CategoriaAlerta, typeof Bell> = {
   presupuesto: ClipboardList,
   factura: Receipt,
   crm: MessageCircle,
+  compras: ShoppingCart,
+  tesoreria: Landmark,
 }
 
 const PRIORIDAD_COLOR: Record<PrioridadAlerta, string> = {

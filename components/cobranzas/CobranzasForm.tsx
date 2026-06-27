@@ -36,8 +36,24 @@ export function CobranzasForm({ clientes }: { clientes: Cliente[] }) {
   const [chequeBanco, setChequeBanco] = useState('')
   const [chequeTitular, setChequeTitular] = useState('')
   const [chequeVencimiento, setChequeVencimiento] = useState('')
+  const [cuentaTesoreriaId, setCuentaTesoreriaId] = useState('')
+  const [cuentasTesoreria, setCuentasTesoreria] = useState<Array<{ id: string; nombre: string; tipo: string }>>([])
   const [loading, setLoading] = useState(false)
   const puedeCheques = useCan('cobranzas.cheques.manage')
+
+  useEffect(() => {
+    if (medio === 'CHEQUE') return
+    fetch('/api/tesoreria/cuentas', { credentials: 'include' })
+      .then((r) => (r.ok ? r.json() : []))
+      .then((list: Array<{ id: string; nombre: string; tipo: string; predeterminada: boolean }>) => {
+        setCuentasTesoreria(list)
+        const tipo = medio === 'EFECTIVO' ? 'CAJA' : 'BANCO'
+        const pred = list.find((c) => c.tipo === tipo && c.predeterminada)
+        const fallback = list.find((c) => c.tipo === tipo)
+        setCuentaTesoreriaId(pred?.id ?? fallback?.id ?? '')
+      })
+      .catch(() => setCuentasTesoreria([]))
+  }, [medio])
 
   useEffect(() => {
     if (!clienteId) { setFacturas([]); return }
@@ -78,6 +94,9 @@ export function CobranzasForm({ clientes }: { clientes: Cliente[] }) {
         medio,
         referencia: referencia || undefined,
         imputaciones: imps,
+      }
+      if (medio !== 'CHEQUE' && cuentaTesoreriaId) {
+        body.cuentaTesoreriaId = cuentaTesoreriaId
       }
       if (medio === 'CHEQUE') {
         body.cheque = {
@@ -123,6 +142,17 @@ export function CobranzasForm({ clientes }: { clientes: Cliente[] }) {
             onChange={(e) => setMedio(e.target.value)}
             options={MEDIO_PAGO}
           />
+          {medio !== 'CHEQUE' && cuentasTesoreria.length > 0 && (
+            <Select
+              label="Cuenta tesorería"
+              value={cuentaTesoreriaId}
+              onChange={(e) => setCuentaTesoreriaId(e.target.value)}
+              options={cuentasTesoreria.map((c) => ({
+                value: c.id,
+                label: `${c.nombre} (${c.tipo === 'CAJA' ? 'Caja' : 'Banco'})`,
+              }))}
+            />
+          )}
           <div className="col-span-2">
             <Input
               label={medio === 'TARJETA' ? 'N° cupón / lote' : medio === 'OTRO' ? 'Referencia / acreditación' : 'Referencia'}

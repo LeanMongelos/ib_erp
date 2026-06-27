@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { Combobox } from '@/components/ui/combobox'
 import type { Proveedor } from '@/types'
-import { CONDICION_IVA, MONEDA, ORIGEN_PROVEEDOR, CONDICION_PAGO } from '@/lib/form-options'
+import { CONDICION_IVA, MONEDA, ORIGEN_PROVEEDOR, CONDICION_PAGO, TIPO_COMPRA_PROVEEDOR } from '@/lib/form-options'
 import { mensajeErrorDesconocido, mensajeErrorJson } from '@/lib/errores'
 
 interface ContactoRow { nombre: string; cargo: string; email: string; telefono: string; whatsapp: string; principal: boolean }
@@ -16,7 +16,7 @@ interface CondicionRow { descripcion: string; plazoDias: string; recargoPct: str
 interface ProductoRow { nombreProducto: string; costo: string; moneda: string; leadTimeDias: string; garantiaMeses: string }
 
 const emptyBase = {
-  razonSocial: '', cuit: '', condicionIva: '', rubro: '', origen: 'NACIONAL', moneda: 'ARS',
+  razonSocial: '', cuit: '', condicionIva: '', rubro: '', origen: 'NACIONAL', tipoCompra: 'AMBOS', moneda: 'ARS',
   email: '', telefono: '', sitioWeb: '', direccion: '', ciudad: '', marcas: '',
   condicionPago: '', financiacionPct: '', plazoEntregaDias: '', minimoCompra: '', notas: '',
 }
@@ -46,7 +46,7 @@ export function ProveedorModal({
         if (cancel || !res.ok) return
         setBase({
           razonSocial: p.razonSocial ?? '', cuit: p.cuit ?? '', condicionIva: p.condicionIva ?? '',
-          rubro: p.rubro ?? '', origen: p.origen ?? 'NACIONAL', moneda: p.moneda ?? 'ARS',
+          rubro: p.rubro ?? '', origen: p.origen ?? 'NACIONAL', tipoCompra: p.tipoCompra ?? 'AMBOS', moneda: p.moneda ?? 'ARS',
           email: p.email ?? '', telefono: p.telefono ?? '', sitioWeb: p.sitioWeb ?? '',
           direccion: p.direccion ?? '', ciudad: p.ciudad ?? '', marcas: p.marcas ?? '',
           condicionPago: p.condicionPago ?? '',
@@ -89,6 +89,7 @@ export function ProveedorModal({
         condicionIva: base.condicionIva || undefined,
         rubro: base.rubro || undefined,
         origen: base.origen,
+        tipoCompra: base.tipoCompra,
         moneda: base.moneda || 'ARS',
         email: base.email,
         telefono: base.telefono || undefined,
@@ -144,6 +145,7 @@ export function ProveedorModal({
               <Combobox label="Condición IVA" value={base.condicionIva} onChange={(v) => setB('condicionIva', v)} options={CONDICION_IVA} placeholder="Seleccionar…" allowCustom />
               <Input label="Rubro" value={base.rubro} onChange={(e) => setB('rubro', e.target.value)} autoComplete="off" />
               <Select label="Origen" value={base.origen} onChange={(e) => setB('origen', e.target.value)} options={[...ORIGEN_PROVEEDOR]} />
+              <Select label="Tipo de compra" value={base.tipoCompra} onChange={(e) => setB('tipoCompra', e.target.value)} options={[...TIPO_COMPRA_PROVEEDOR]} />
               <Input label="Marcas / líneas" value={base.marcas} onChange={(e) => setB('marcas', e.target.value)} placeholder="HAEMONETICS, ..." autoComplete="off" />
               <Input label="Email" type="email" value={base.email} onChange={(e) => setB('email', e.target.value)} autoComplete="email" />
               <Input label="Teléfono" value={base.telefono} onChange={(e) => setB('telefono', e.target.value)} autoComplete="tel" />

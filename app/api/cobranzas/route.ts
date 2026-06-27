@@ -7,6 +7,8 @@ import { registrarAuditoria, getIp } from '@/lib/audit'
 import { imputarPagoAVencimientos } from '@/lib/cobranzas/vencimientos'
 import { crearChequeConPago } from '@/lib/cobranzas/cheques'
 import { validarImputacionesContraFacturas } from '@/lib/cobranzas/validar-pago'
+import { registrarIngresoDesdePago } from '@/lib/tesoreria/registrar-ingreso-pago'
+import { resolverCuentaTesoreriaParaPago } from '@/lib/tesoreria/cuenta-default'
 
 export async function GET() {
   try {
@@ -57,6 +59,10 @@ export async function POST(req: NextRequest) {
 
     validarImputacionesContraFacturas(facturas, data.imputaciones)
 
+    if (data.medio !== 'CHEQUE' && data.cuentaTesoreriaId) {
+      await resolverCuentaTesoreriaParaPago(data.medio, data.cuentaTesoreriaId)
+    }
+
     const pago = await prisma.$transaction(async (tx) => {
       if (data.medio === 'CHEQUE' && data.cheque) {
         const fechaVenc = new Date(data.cheque.fechaVencimiento)
@@ -88,6 +94,7 @@ export async function POST(req: NextRequest) {
           medio: data.medio,
           referencia: data.referencia ?? null,
           notas: data.notas ?? null,
+          cuentaTesoreriaId: data.medio !== 'CHEQUE' ? data.cuentaTesoreriaId ?? null : null,
           imputaciones: {
             create: data.imputaciones.map((i) => ({
               facturaId: i.facturaId,
@@ -114,6 +121,10 @@ export async function POST(req: NextRequest) {
             data: { estado: 'PAGADA', fechaPago: new Date() },
           })
         }
+      }
+
+      if (data.medio !== 'CHEQUE') {
+        await registrarIngresoDesdePago(nuevo.id, actor.id, tx, data.cuentaTesoreriaId)
       }
 
       return nuevo

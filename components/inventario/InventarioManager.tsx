@@ -18,6 +18,9 @@ import { mensajeErrorDesconocido, mensajeErrorRespuesta } from '@/lib/errores'
 import { ProductoFotoField, subirFotoInventario } from '@/components/inventario/ProductoFotoField'
 import { TIPOS_ARTICULO, TIPOS_KIT, MODOS_TRAZABILIDAD } from '@/lib/inventario-constants'
 import { InventarioUnidadesPanel } from '@/components/inventario/InventarioUnidadesPanel'
+import { TransferirStockModal } from '@/components/inventario/TransferirStockModal'
+import { StockPorDepositoPanel } from '@/components/inventario/StockPorDepositoPanel'
+import { validarCodigoInterno } from '@/lib/inventario/codigo-interno'
 
 export interface KitItemForm {
   nombre: string
@@ -147,7 +150,9 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
   const puedeEditar = useCan('inventario.update')
   const puedeAjustar = useCan('inventario.adjust_stock')
   const puedeTransferir = useCan('inventario.transfer')
+  const puedeVerStockDeposito = useCan('inventario.read')
 
+  const [vista, setVista] = useState<'catalogo' | 'stock-deposito'>('catalogo')
   const [items, setItems] = useState(inicial)
   const [busqueda, setBusqueda] = useState('')
   const [modalAlta, setModalAlta] = useState(false)
@@ -155,9 +160,6 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
   const [ajustando, setAjustando] = useState<ItemInventario | null>(null)
   const [transfiriendo, setTransfiriendo] = useState<ItemInventario | null>(null)
   const [depositos, setDepositos] = useState<Array<{ id: string; nombre: string }>>([])
-  const [transferOrigen, setTransferOrigen] = useState('')
-  const [transferDestino, setTransferDestino] = useState('')
-  const [transferCant, setTransferCant] = useState('1')
   const [importando, setImportando] = useState(false)
   const [form, setForm] = useState<FormData>(formVacio())
   const [loading, setLoading] = useState(false)
@@ -189,14 +191,14 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
   }, [])
 
   useEffect(() => {
-    if (!puedeTransferir) return
+    if (!puedeVerStockDeposito) return
     fetch('/api/config/catalogos?tipo=depositos', { credentials: 'include' })
       .then((r) => r.json())
       .then((rows: { id: string; nombre: string }[]) => {
         if (Array.isArray(rows)) setDepositos(rows)
       })
       .catch(() => {})
-  }, [puedeTransferir])
+  }, [puedeVerStockDeposito])
 
   const filtrados = useMemo(() => {
     let list = items
@@ -234,9 +236,21 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
     if (!form.nombre.trim()) throw new Error('El nombre es obligatorio')
     if (Number.isNaN(stock) || stock < 0) throw new Error('Stock inválido')
     const esEquipo = form.tipoArticulo === 'EQUIPO'
+
+    let sku: string | undefined
+    if (!editable) {
+      const codigo = validarCodigoInterno(form.sku)
+      if (!codigo.ok) throw new Error(codigo.error)
+      sku = codigo.codigo
+    } else if (form.sku.trim()) {
+      const codigo = validarCodigoInterno(form.sku)
+      if (!codigo.ok) throw new Error(codigo.error)
+      sku = codigo.codigo
+    }
+
     return {
       nombre: form.nombre.trim(),
-      sku: form.sku.trim() || undefined,
+      sku,
       descripcion: form.descripcion.trim() || undefined,
       categoria: form.categoria.trim() || undefined,
       tipoArticulo: form.tipoArticulo,
@@ -340,43 +354,6 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
     }
   }
 
-  async function guardarTransferencia() {
-    if (!transfiriendo) return
-    const cantidad = Number(transferCant)
-    if (!transferOrigen || !transferDestino) {
-      toast.error('Seleccioná depósito de origen y destino')
-      return
-    }
-    if (!Number.isInteger(cantidad) || cantidad <= 0) {
-      toast.error('Cantidad inválida')
-      return
-    }
-    setLoading(true)
-    try {
-      const res = await fetch(`/api/inventario/${transfiriendo.id}/transferir`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          depositoOrigenId: transferOrigen,
-          depositoDestinoId: transferDestino,
-          cantidad,
-        }),
-      })
-      if (!res.ok) throw new Error(await mensajeErrorRespuesta(res, 'No se pudo transferir'))
-      toast.success('Transferencia registrada')
-      setTransfiriendo(null)
-      setTransferOrigen('')
-      setTransferDestino('')
-      setTransferCant('1')
-      await recargar()
-    } catch (e) {
-      toast.error(mensajeErrorDesconocido(e, 'No se pudo transferir'))
-    } finally {
-      setLoading(false)
-    }
-  }
-
   async function descargarPlantilla() {
     try {
       const res = await fetch('/api/inventario/plantilla', { credentials: 'include' })
@@ -439,6 +416,33 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
 
   return (
     <div className="flex flex-col gap-4">
+      {puedeVerStockDeposito && (
+        <div className="flex flex-wrap gap-2 border-b border-[#e4e7eb] pb-2">
+          <button
+            type="button"
+            onClick={() => setVista('catalogo')}
+            className={`px-3 py-2 rounded-[8px] text-[12px] font-semibold transition-colors ${
+              vista === 'catalogo' ? 'bg-[#E8650A] text-white' : 'bg-white text-[#3a4150] border border-[#e4e7eb]'
+            }`}
+          >
+            Catálogo de productos
+          </button>
+          <button
+            type="button"
+            onClick={() => setVista('stock-deposito')}
+            className={`px-3 py-2 rounded-[8px] text-[12px] font-semibold transition-colors ${
+              vista === 'stock-deposito' ? 'bg-[#E8650A] text-white' : 'bg-white text-[#3a4150] border border-[#e4e7eb]'
+            }`}
+          >
+            Stock por depósito
+          </button>
+        </div>
+      )}
+
+      {vista === 'stock-deposito' ? (
+        <StockPorDepositoPanel depositos={depositos} />
+      ) : (
+        <>
       {faltantesCount > 0 && (
         <div className="flex items-center justify-between gap-3 bg-orange-50 border border-orange-200 rounded-[10px] px-4 py-3">
           <p className="text-[12.5px] font-semibold text-orange-800">
@@ -473,7 +477,7 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
           <input
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
-            placeholder="Buscar producto o SKU…"
+            placeholder="Buscar producto o código interno…"
             className="flex-1 text-[13px] outline-none bg-transparent"
           />
         </div>
@@ -528,7 +532,7 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
           <table className="w-full">
             <thead>
               <tr>
-                {['', 'Producto', 'Tipo', 'SKU', 'Stock', 'Preventivo', 'Precio', 'Estado', ''].map((h) => (
+                {['', 'Producto', 'Tipo', 'Código interno', 'Stock', 'Preventivo', 'Precio', 'Estado', ''].map((h) => (
                   <th key={h || 'acc'} className="px-5 py-3 text-left text-[10.5px] font-bold text-[#8a909a] tracking-[0.6px] uppercase border-b border-[#eef0f2]">
                     {h}
                   </th>
@@ -595,12 +599,7 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
                         {puedeTransferir && depositos.length >= 2 && (
                           <button
                             type="button"
-                            onClick={() => {
-                              setTransfiriendo(item)
-                              setTransferOrigen(depositos[0]?.id ?? '')
-                              setTransferDestino(depositos[1]?.id ?? '')
-                              setTransferCant('1')
-                            }}
+                            onClick={() => setTransfiriendo(item)}
                             className="p-1.5 rounded hover:bg-gray-100 text-[#6b7280]"
                             title="Transferir entre depósitos"
                           >
@@ -629,6 +628,7 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
         <ModalForm
           categoriasOpciones={categoriasOpciones}
           titulo={editando ? 'Editar producto' : 'Nuevo producto'}
+          esAlta={!editando}
           form={form}
           setForm={setForm}
           loading={loading}
@@ -665,36 +665,14 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
       )}
 
       {transfiriendo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setTransfiriendo(null)}>
-          <div className="bg-white rounded-[14px] w-full max-w-sm shadow-xl p-5" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-[14px] font-bold mb-1">Transferir entre depósitos</h3>
-            <p className="text-[12px] text-[#6b7280] mb-4">
-              {transfiriendo.nombre} · stock disponible: {transfiriendo.stock}
-            </p>
-            <p className="text-[11px] text-[#9aa1ab] mb-3">
-              El stock global no cambia; queda trazabilidad entre ubicaciones.
-            </p>
-            <div className="flex flex-col gap-3">
-              <select value={transferOrigen} onChange={(e) => setTransferOrigen(e.target.value)} className="border border-[#e4e7eb] rounded-[9px] px-3 py-2 text-[13px]">
-                <option value="">Depósito origen…</option>
-                {depositos.map((d) => (
-                  <option key={d.id} value={d.id}>{d.nombre}</option>
-                ))}
-              </select>
-              <select value={transferDestino} onChange={(e) => setTransferDestino(e.target.value)} className="border border-[#e4e7eb] rounded-[9px] px-3 py-2 text-[13px]">
-                <option value="">Depósito destino…</option>
-                {depositos.map((d) => (
-                  <option key={d.id} value={d.id}>{d.nombre}</option>
-                ))}
-              </select>
-              <input value={transferCant} onChange={(e) => setTransferCant(e.target.value)} type="number" min={1} max={transfiriendo.stock} className="border border-[#e4e7eb] rounded-[9px] px-3 py-2 text-[13px]" />
-            </div>
-            <div className="flex justify-end gap-2 mt-4">
-              <Button variant="secondary" onClick={() => setTransfiriendo(null)}>Cancelar</Button>
-              <Button variant="primary" loading={loading} onClick={guardarTransferencia}>Transferir</Button>
-            </div>
-          </div>
-        </div>
+        <TransferirStockModal
+          item={transfiriendo}
+          depositos={depositos}
+          onClose={() => setTransfiriendo(null)}
+          onSuccess={() => recargar().catch(() => toast.error('Error al actualizar'))}
+        />
+      )}
+        </>
       )}
     </div>
   )
@@ -702,6 +680,7 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
 
 function ModalForm({
   titulo,
+  esAlta = false,
   form,
   setForm,
   loading,
@@ -716,6 +695,7 @@ function ModalForm({
   onSave,
 }: {
   titulo: string
+  esAlta?: boolean
   form: FormData
   setForm: (f: FormData) => void
   loading: boolean
@@ -818,7 +798,27 @@ function ModalForm({
                 </div>
               )}
               {field('nombre', 'Nombre *', { required: true, span: true, autoComplete: 'off' })}
-              {field('sku', 'SKU', { autoComplete: 'off' })}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[11.5px] font-semibold text-[#5b626d] uppercase">
+                  Código interno{esAlta ? ' *' : ''}
+                </label>
+                <input
+                  type="text"
+                  required={esAlta}
+                  value={form.sku}
+                  onChange={(e) => {
+                    const v = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8)
+                    setForm({ ...form, sku: v })
+                  }}
+                  maxLength={8}
+                  autoComplete="off"
+                  placeholder="HOE098"
+                  className="border border-[#e4e7eb] rounded-[9px] px-3 py-2 text-[13px] font-mono uppercase"
+                />
+                <p className="text-[10.5px] text-[#9aa1ab] leading-snug">
+                  3–4 letras + 3–4 números (mín. HOE098 · máx. ABCD1234). Identificador único en stock.
+                </p>
+              </div>
               {field('marca', 'Marca', { autoComplete: 'off' })}
               {field('modelo', 'Modelo', { autoComplete: 'off' })}
               <div className="sm:col-span-2">

@@ -38,6 +38,7 @@ export const config = {
     '/presupuestos/:path*',
     '/proveedores/:path*',
     '/cobranzas/:path*',
+    '/tesoreria/:path*',
     '/compras/:path*',
     '/servicio-tecnico/:path*',
     '/inventario/:path*',

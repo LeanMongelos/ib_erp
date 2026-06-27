@@ -15,7 +15,7 @@ export async function PATCH(
 
     const resultado =
       accion === 'depositar'
-        ? await marcarChequeDepositado(params.id)
+        ? await marcarChequeDepositado(params.id, actor.id)
         : accion === 'rechazar'
           ? await marcarChequeRechazado(params.id)
           : await marcarChequeAnulado(params.id)

@@ -22,6 +22,8 @@ import {
   parseChecklistFromDiagnostico,
   type ChecklistItemSolucion,
 } from '@/lib/ots/checklist-solucion'
+import { BotonGenerarOcDesde } from '@/components/compras/BotonGenerarOcDesde'
+import { OcsVinculadasLinks } from '@/components/compras/OcsVinculadasLinks'
 
 const ESTADO_LABEL: Record<EstadoOT, string> = {
   ABIERTA: 'Abierta',
@@ -41,6 +43,9 @@ export function OTDetalle({ ot }: { ot: any }) {
   const [estadoMenu, setEstadoMenu] = useState(false)
 
   const totalRepuestos = repuestos.reduce((acc, r) => acc + r.cantidad * r.precioUnit, 0)
+  const repuestosGuardados = (ot.repuestos ?? []).length
+  const ordenesCompra: { id: string; numero: string; estado: string }[] = ot.ordenesCompra ?? []
+  const otActiva = ot.estado !== 'CANCELADA' && ot.estado !== 'CERRADA'
 
   async function cambiarEstado(nuevoEstado: string) {
     setEstadoMenu(false)
@@ -179,6 +184,7 @@ export function OTDetalle({ ot }: { ot: any }) {
                 </span>
               )}
             </p>
+            <OcsVinculadasLinks ordenes={ordenesCompra} />
             {ot.equipo?.id && (
               <Button
                 variant="secondary"
@@ -201,6 +207,16 @@ export function OTDetalle({ ot }: { ot: any }) {
               <FileText size={14} />
               Informe PDF
             </Button>
+            <BotonGenerarOcDesde
+              origen="ot"
+              origenId={ot.id}
+              disabled={!otActiva || repuestosGuardados === 0}
+              disabledTitle={
+                repuestosGuardados === 0
+                  ? 'Guardá repuestos en la OT antes de generar la OC'
+                  : 'La OT está cerrada o cancelada'
+              }
+            />
             {/* Dropdown cambiar estado */}
             <div className="relative">
               <Button variant="secondary" size="sm" onClick={() => setEstadoMenu(!estadoMenu)}>
@@ -293,6 +309,13 @@ export function OTDetalle({ ot }: { ot: any }) {
               <div className="flex items-center justify-between">
                 <CardTitle>Repuestos utilizados</CardTitle>
                 <div className="flex items-center gap-3">
+                  <BotonGenerarOcDesde
+                    origen="ot"
+                    origenId={ot.id}
+                    variant="outline"
+                    disabled={!otActiva || repuestosGuardados === 0}
+                    disabledTitle="Guardá los repuestos en la OT antes de generar la OC"
+                  />
                   <button
                     onClick={agregarRepuesto}
                     className="text-[11.5px] text-[#E8650A] font-bold hover:underline"

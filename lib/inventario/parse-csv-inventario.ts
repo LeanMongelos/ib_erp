@@ -1,8 +1,9 @@
 /**
  * Parseo CSV de importación masiva de inventario (sin Prisma — testeable).
- * Columnas: sku|codigo, nombre, stock, stockMinimo, precio (opcional).
+ * Columnas: codigoInterno|codigo|sku, nombre, stock, stockMinimo, precio (opcional).
  */
 import { parsearLineaCsv } from '@/lib/clientes/parse-csv-clientes'
+import { validarCodigoInterno } from '@/lib/inventario/codigo-interno'
 
 export interface InventarioCsvRow {
   sku: string
@@ -22,6 +23,14 @@ const COLUMNAS_OBLIGATORIAS = ['nombre', 'stock', 'stockminimo'] as const
 
 function normalizarHeader(h: string): string {
   return h.trim().toLowerCase().replace(/\s+/g, '').replace(/_/g, '')
+}
+
+function indiceCodigoInterno(headerMap: Map<string, number>): number | undefined {
+  for (const key of ['codigointerno', 'codigo', 'sku']) {
+    const idx = headerMap.get(key)
+    if (idx != null) return idx
+  }
+  return undefined
 }
 
 function parsearEntero(val: string, campo: string): number | string {
@@ -44,9 +53,9 @@ function parsearPrecioOpcional(val: string): number | undefined | string {
 
 export function generarPlantillaCsvInventario(): string {
   return [
-    'sku,nombre,stock,stockMinimo,precio',
-    'REP-001,Filtro bacteriano,50,10,1500.50',
-    'REP-002,Sensor SpO2 reutilizable,25,5,',
+    'codigoInterno,nombre,stock,stockMinimo,precio',
+    'HOE098,Filtro bacteriano,50,10,1500.50',
+    'FIL123,Sensor SpO2 reutilizable,25,5,',
   ].join('\n')
 }
 
@@ -63,11 +72,11 @@ export function parsearCsvInventario(contenido: string): FilaCsvInventario[] {
     headerMap.set(normalizarHeader(h), idx)
   })
 
-  const skuIdx = headerMap.has('sku') ? headerMap.get('sku')! : headerMap.get('codigo')
+  const skuIdx = indiceCodigoInterno(headerMap)
   if (skuIdx == null) {
     return [{
       fila: 1,
-      error: 'Columna obligatoria faltante: sku o codigo',
+      error: 'Columna obligatoria faltante: codigoInterno o codigo',
     }]
   }
 
@@ -75,7 +84,7 @@ export function parsearCsvInventario(contenido: string): FilaCsvInventario[] {
   if (faltantes.length > 0) {
     return [{
       fila: 1,
-      error: `Columnas obligatorias faltantes: ${faltantes.join(', ')} (esperado: sku/codigo, nombre, stock, stockMinimo)`,
+      error: `Columnas obligatorias faltantes: ${faltantes.join(', ')} (esperado: codigoInterno, nombre, stock, stockMinimo)`,
     }]
   }
 
@@ -90,13 +99,13 @@ export function parsearCsvInventario(contenido: string): FilaCsvInventario[] {
   for (let i = 1; i < lineas.length; i++) {
     const fila = i + 1
     const cols = parsearLineaCsv(lineas[i]!)
-    const sku = (cols[skuIdx] ?? '').trim()
+    const skuRaw = (cols[skuIdx] ?? '').trim()
     const nombre = (cols[idxNombre] ?? '').trim()
 
-    if (!sku && !nombre) continue
+    if (!skuRaw && !nombre) continue
 
-    if (!sku) {
-      resultados.push({ fila, error: 'sku/codigo obligatorio' })
+    if (!skuRaw) {
+      resultados.push({ fila, error: 'código interno obligatorio' })
       continue
     }
     if (!nombre) {
@@ -104,11 +113,17 @@ export function parsearCsvInventario(contenido: string): FilaCsvInventario[] {
       continue
     }
 
-    if (skusEnArchivo.has(sku.toLowerCase())) {
-      resultados.push({ fila, error: `SKU duplicado en el archivo: ${sku}` })
+    const codigo = validarCodigoInterno(skuRaw)
+    if (!codigo.ok) {
+      resultados.push({ fila, error: codigo.error })
       continue
     }
-    skusEnArchivo.add(sku.toLowerCase())
+
+    if (skusEnArchivo.has(codigo.codigo)) {
+      resultados.push({ fila, error: `Código interno duplicado en el archivo: ${codigo.codigo}` })
+      continue
+    }
+    skusEnArchivo.add(codigo.codigo)
 
     const stock = parsearEntero(cols[idxStock] ?? '', 'stock')
     if (typeof stock === 'string') {
@@ -134,7 +149,7 @@ export function parsearCsvInventario(contenido: string): FilaCsvInventario[] {
 
     resultados.push({
       fila,
-      datos: { sku, nombre, stock, stockMinimo, precio },
+      datos: { sku: codigo.codigo, nombre, stock, stockMinimo, precio },
     })
   }
 

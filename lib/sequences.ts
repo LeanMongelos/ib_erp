@@ -73,4 +73,15 @@ export async function siguienteNumeroOC(): Promise<string> {
   return `${prefijo}${String(maximo + 1).padStart(4, '0')}`
 }
 
+export async function siguienteNumeroFacturaCompra(): Promise<string> {
+  const año = new Date().getFullYear()
+  const prefijo = `FC-${año}-`
+  const ultimas = await prisma.facturaCompra.findMany({
+    where: { numero: { startsWith: prefijo } },
+    select: { numero: true },
+  })
+  const maximo = ultimas.reduce((max, { numero }) => Math.max(max, parseCorrelativo(numero)), 0)
+  return `${prefijo}${String(maximo + 1).padStart(4, '0')}`
+}
+
 export { parseCorrelativo }

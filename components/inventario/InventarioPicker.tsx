@@ -38,7 +38,7 @@ interface Props {
 
 export function InventarioPicker({
   onSelect,
-  placeholder = 'Buscar en inventario (nombre o SKU)…',
+  placeholder = 'Buscar en inventario (nombre o código interno)…',
   className,
   disabled,
   clienteId,
@@ -160,7 +160,7 @@ export function InventarioPicker({
             >
               <p className="text-[12px] font-semibold text-[#1f242c] truncate">{item.nombre}</p>
               <p className="text-[10.5px] text-[#6b7280]">
-                {item.sku ? `SKU ${item.sku} · ` : ''}
+                {item.sku ? `Cód. ${item.sku} · ` : ''}
                 Stock {item.stock}
                 {item.precioUnit != null ? ` · ${formatMontoMoneda(item.precioUnit, item.moneda ?? 'ARS')}` : ''}
                 {clienteId ? ' · precio sugerido al elegir' : ''}

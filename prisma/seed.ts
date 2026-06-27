@@ -144,13 +144,14 @@ async function main() {
   await ensureSecuenciasActuales()
   console.log('✅ Secuencias de numeración default')
 
-  // ============ DEPÓSITO CENTRAL (idempotente) ============
-  await prisma.deposito.upsert({
-    where: { id: 'seed-deposito-central' },
-    update: {},
-    create: { id: 'seed-deposito-central', nombre: 'Depósito Central', direccion: 'Eva Perón Nº679, Formosa' },
-  })
-  console.log('✅ Depósito Central')
+  // ============ DEPÓSITOS BASE (idempotente) ============
+  const { seedDepositosBase } = await import('../lib/inventario/seed-depositos')
+  await seedDepositosBase()
+  console.log('✅ Depósitos base (Showroom, Depósito, Área ST)')
+
+  const { seedPlantillaAlquilerMensual } = await import('../lib/compras/seed-plantilla-alquiler')
+  await seedPlantillaAlquilerMensual()
+  console.log('✅ Plantilla OC alquiler mensual')
 
   // ============ CRM OMNICANAL DEMO (Fase 9) ============
   const tiposCanal = ['WHATSAPP', 'INSTAGRAM', 'FACEBOOK', 'EMAIL_IMAP', 'N8N'] as const
@@ -433,6 +434,9 @@ async function main() {
   const { ensureContabilidadArgentina } = await import('../lib/contabilidad/seed-argentina')
   await ensureAlicuotasIvaDefault()
   await ensureContabilidadArgentina()
+  const { seedCuentasTesoreria } = await import('../lib/tesoreria/seed')
+  const tesoreriaCount = await seedCuentasTesoreria(prisma)
+  if (tesoreriaCount > 0) console.log(`✅ ${tesoreriaCount} cuentas de tesorería demo`)
   await ensureClienteEventual()
 
   const clientesData = [

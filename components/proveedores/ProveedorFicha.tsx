@@ -1,26 +1,61 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Mail, Phone, Globe, MapPin, Pencil, Package, TrendingUp, Truck, Clock } from 'lucide-react'
+import { Mail, Phone, Globe, MapPin, Pencil, Package, TrendingUp, Truck, Clock, Wallet } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useCan } from '@/components/auth/useCan'
 import { ProveedorModal } from '@/components/proveedores/ProveedorModal'
+import { HistorialApTimeline } from '@/components/compras/HistorialApTimeline'
 import { formatFecha, formatMonto } from '@/lib/utils'
+import { formatMontoMoneda } from '@/lib/compras/moneda-compra'
 import type { MetricasProveedor } from '@/lib/proveedores-metrics'
 import type { Proveedor } from '@/types'
 
-const TABS = ['Condiciones', 'Lista de precios', 'Contactos', 'Desempeño'] as const
+const TABS = ['Condiciones', 'Lista de precios', 'Contactos', 'Desempeño', 'Cuenta corriente', 'Historial AP', 'Pagos'] as const
 type Tab = typeof TABS[number]
+
+interface CuentaCorrienteResumen {
+  saldoPendiente: number
+  saldosPorMoneda?: Record<string, number>
+  vencidos: number
+  porVencer: number
+  vencimientos: Array<{
+    id: string
+    facturaNumero: string
+    moneda?: string
+    fecha: string
+    saldo: number
+    diasVencido: number
+  }>
+}
+
+interface PagoProveedorResumen {
+  id: string
+  monto: number
+  moneda?: string
+  fecha: string
+  medio: string
+  referencia?: string | null
+  imputaciones?: Array<{
+    monto: number
+    vencimientoPago?: { facturaCompra?: { numero: string } }
+  }>
+}
 
 export function ProveedorFicha({
   proveedor,
   metricas,
+  pagosProveedor = [],
+  cuentaCorriente,
 }: {
   proveedor: Proveedor
   metricas: MetricasProveedor
+  pagosProveedor?: PagoProveedorResumen[]
+  cuentaCorriente?: CuentaCorrienteResumen
 }) {
   const router = useRouter()
   const puedeEditar = useCan('proveedores.update')
@@ -136,7 +171,14 @@ export function ProveedorFicha({
                         {p.nombreProducto}
                         {p.inventario && <span className="block text-[11px] text-[#9aa1ab] font-normal">SKU {p.inventario.sku ?? '—'}</span>}
                       </td>
-                      <td className="px-5 py-3 text-[12.5px] font-bold text-[#3a4150] border-b border-[#f4f5f7]">{montoMoneda(p.costo, p.moneda)}</td>
+                      <td className="px-5 py-3 text-[12.5px] font-bold text-[#3a4150] border-b border-[#f4f5f7]">
+                        {montoMoneda(p.costo, p.moneda)}
+                        {(p as { bonificacionPct?: number }).bonificacionPct ? (
+                          <span className="block text-[11px] text-green-700 font-normal">
+                            Bonif. {(p as { bonificacionPct?: number }).bonificacionPct}%
+                          </span>
+                        ) : null}
+                      </td>
                       <td className="px-5 py-3 text-[12.5px] text-[#6b7280] border-b border-[#f4f5f7]">{p.leadTimeDias != null ? `${p.leadTimeDias} días` : '—'}</td>
                       <td className="px-5 py-3 text-[12.5px] text-[#6b7280] border-b border-[#f4f5f7]">{formatFecha(p.vigenteDesde)}</td>
                     </tr>
@@ -189,19 +231,130 @@ export function ProveedorFicha({
                     </div>
                   )}
                 </section>
+              </div>
+            )}
 
-                <div className="flex items-start gap-2.5 bg-blue-50 border border-blue-200 rounded-[10px] px-3.5 py-3">
-                  <Truck size={16} className="text-blue-500 flex-shrink-0 mt-0.5" />
-                  <p className="text-[12px] font-medium text-blue-800">
-                    Volumen comprado, cumplimiento de plazos de entrega y cuenta corriente a pagar se calcularán cuando esté disponible el módulo de Compras / Órdenes de Compra (Fase 6).
-                  </p>
+            {tab === 'Cuenta corriente' && (
+              <div className="p-5 flex flex-col gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {Object.entries(cuentaCorriente?.saldosPorMoneda ?? { ARS: cuentaCorriente?.saldoPendiente ?? 0 }).map(([moneda, saldo]) => (
+                    <div key={moneda} className="rounded-[8px] border border-[#eef0f2] p-3">
+                      <p className="text-[11px] font-bold text-[#8a909a] uppercase">Saldo AP ({moneda})</p>
+                      <p className="text-[18px] font-extrabold text-[#1f242c] mt-1">
+                        {formatMontoMoneda(saldo, moneda)}
+                      </p>
+                    </div>
+                  ))}
+                  <div className="rounded-[8px] border border-red-100 bg-red-50/50 p-3">
+                    <p className="text-[11px] font-bold text-red-700 uppercase">Vencidos</p>
+                    <p className="text-[18px] font-extrabold text-red-700 mt-1">{cuentaCorriente?.vencidos ?? 0}</p>
+                  </div>
+                  <div className="rounded-[8px] border border-green-100 bg-green-50/50 p-3">
+                    <p className="text-[11px] font-bold text-green-700 uppercase">Por vencer</p>
+                    <p className="text-[18px] font-extrabold text-green-700 mt-1">{cuentaCorriente?.porVencer ?? 0}</p>
+                  </div>
+                </div>
+                {(cuentaCorriente?.vencimientos.length ?? 0) > 0 ? (
+                  <table className="w-full">
+                    <thead>
+                      <tr>
+                        {['Factura', 'Moneda', 'Vencimiento', 'Saldo', 'Estado'].map((h) => (
+                          <th key={h} className="px-3 py-2 text-left text-[10.5px] font-bold text-[#8a909a] uppercase border-b">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {cuentaCorriente!.vencimientos.map((v, i) => (
+                        <tr key={v.id} className={i % 2 === 0 ? 'bg-white' : 'bg-[#fafbfc]'}>
+                          <td className="px-3 py-2.5 text-[12.5px] font-semibold border-b">{v.facturaNumero}</td>
+                          <td className="px-3 py-2.5 text-[12px] border-b">{v.moneda ?? 'ARS'}</td>
+                          <td className="px-3 py-2.5 text-[12px] border-b">{formatFecha(v.fecha)}</td>
+                          <td className="px-3 py-2.5 text-[12.5px] font-bold border-b">{formatMontoMoneda(v.saldo, v.moneda ?? 'ARS')}</td>
+                          <td className={`px-3 py-2.5 text-[12px] border-b ${v.diasVencido > 0 ? 'text-red-600 font-semibold' : 'text-green-700'}`}>
+                            {v.diasVencido > 0 ? `${v.diasVencido} días vencido` : 'Al día'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <p className="text-[12.5px] text-[#9aa1ab]">Sin vencimientos pendientes</p>
+                )}
+                <div className="flex flex-wrap gap-4">
+                  <Link href="/compras?tab=cuenta" className="text-[12px] font-semibold text-[#E8650A] hover:underline">
+                    Ver cuenta corriente en Compras →
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => setTab('Historial AP')}
+                    className="text-[12px] font-semibold text-[#E8650A] hover:underline"
+                  >
+                    Ver historial AP →
+                  </button>
                 </div>
               </div>
+            )}
+
+            {tab === 'Historial AP' && (
+              <div className="p-5">
+                <HistorialApTimeline proveedorId={proveedor.id} proveedorNombre={proveedor.razonSocial} />
+              </div>
+            )}
+
+            {tab === 'Pagos' && (
+              <table className="w-full">
+                <thead>
+                  <tr>
+                    {['Fecha', 'Medio', 'Monto', 'Facturas', 'Referencia'].map((h) => (
+                      <th key={h} className="px-5 py-[11px] text-left text-[10.5px] font-bold text-[#8a909a] tracking-[0.6px] uppercase border-b border-[#f0f1f4]">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {pagosProveedor.map((p, i) => (
+                    <tr key={p.id} className={i % 2 === 0 ? 'bg-white' : 'bg-[#fafbfc]'}>
+                      <td className="px-5 py-3 text-[12.5px] border-b border-[#f4f5f7]">{formatFecha(p.fecha)}</td>
+                      <td className="px-5 py-3 text-[12.5px] border-b border-[#f4f5f7]">{p.medio}</td>
+                      <td className="px-5 py-3 text-[12.5px] font-bold border-b border-[#f4f5f7]">
+                        {formatMontoMoneda(p.monto, p.moneda ?? 'ARS')}
+                      </td>
+                      <td className="px-5 py-3 text-[12px] text-[#6b7280] border-b border-[#f4f5f7]">
+                        {p.imputaciones?.map((imp) => imp.vencimientoPago?.facturaCompra?.numero).filter(Boolean).join(', ') || '—'}
+                      </td>
+                      <td className="px-5 py-3 text-[12px] text-[#9aa1ab] border-b border-[#f4f5f7]">{p.referencia ?? '—'}</td>
+                    </tr>
+                  ))}
+                  {pagosProveedor.length === 0 && (
+                    <tr><td colSpan={5} className="px-5 py-8 text-center text-[12.5px] text-[#9aa1ab]">Sin pagos registrados</td></tr>
+                  )}
+                </tbody>
+              </table>
             )}
           </div>
         </Card>
 
         <div className="flex flex-col gap-4">
+          {cuentaCorriente && cuentaCorriente.saldoPendiente > 0 && (
+            <Card>
+              <div className="flex items-center gap-2 mb-3">
+                <Wallet size={16} className="text-[#E8650A]" />
+                <h3 className="text-[13px] font-bold text-[#1f242c]">Cuenta corriente (AP)</h3>
+              </div>
+              <div className="flex flex-col gap-2 text-[12.5px]">
+                <Fila label="Saldo pendiente" value={formatMonto(cuentaCorriente.saldoPendiente)} />
+                <Fila label="Vencimientos vencidos" value={String(cuentaCorriente.vencidos)} />
+                <Fila label="Por vencer" value={String(cuentaCorriente.porVencer)} />
+              </div>
+              <button
+                type="button"
+                onClick={() => setTab('Cuenta corriente')}
+                className="mt-3 text-[12px] font-semibold text-[#E8650A] hover:underline"
+              >
+                Ver detalle
+              </button>
+            </Card>
+          )}
+
           <Card>
             <h3 className="text-[13px] font-bold text-[#1f242c] mb-3.5">Datos de contacto</h3>
             <div className="flex flex-col gap-2.5 text-[12.5px] text-[#6b7280]">

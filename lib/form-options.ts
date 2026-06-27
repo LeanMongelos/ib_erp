@@ -98,6 +98,12 @@ export const ORIGEN_PROVEEDOR: FormOption[] = [
   { value: 'IMPORTADO', label: 'Importado' },
 ]
 
+export const TIPO_COMPRA_PROVEEDOR: FormOption[] = [
+  { value: 'REMITO', label: 'Remito / stock' },
+  { value: 'CONCEPTOS', label: 'Conceptos / gastos' },
+  { value: 'AMBOS', label: 'Ambos' },
+]
+
 export const CATEGORIAS_INVENTARIO: FormOption[] = [
   { value: 'Monitoreo', label: 'Monitoreo' },
   { value: 'Diagnóstico', label: 'Diagnóstico' },

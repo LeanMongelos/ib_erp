@@ -16,6 +16,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       depositoOrigenId: data.depositoOrigenId,
       depositoDestinoId: data.depositoDestinoId,
       cantidad: data.cantidad,
+      unidadIds: data.unidadIds,
+      ubicacionDetalleDestino: data.ubicacionDetalleDestino,
       motivo: data.motivo,
       usuarioId: actor.id,
     })

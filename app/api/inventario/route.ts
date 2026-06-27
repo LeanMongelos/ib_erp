@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
         ...resto,
         nombre: resto.nombre,
         descripcion: resto.descripcion ?? null,
-        sku: resto.sku?.trim() || null,
+        sku: resto.sku,
         marca: resto.marca ?? null,
         modelo: resto.modelo ?? null,
         esSerializado: esEquipo ? (resto.esSerializado ?? true) : (resto.esSerializado ?? false),

@@ -2,8 +2,10 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { FileText, Send, CheckCircle, Receipt, Kanban } from 'lucide-react'
 import Link from 'next/link'
+import { FileText, Send, CheckCircle, Receipt, Kanban } from 'lucide-react'
+import { BotonGenerarOcDesde } from '@/components/compras/BotonGenerarOcDesde'
+import { OcsVinculadasLinks } from '@/components/compras/OcsVinculadasLinks'
 import { toast } from 'sonner'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -48,6 +50,7 @@ interface PresupuestoDetalleProps {
     }[]
     factura?: { id: string; numero: string } | null
     negociosEmbudo?: Array<{ id: string; numero: number; etapa: string; vendedor: string }>
+    ordenesCompra?: { id: string; numero: string; estado: string }[]
   }
 }
 
@@ -129,6 +132,7 @@ export function PresupuestoDetalle({ presupuesto: p }: PresupuestoDetalleProps) 
               Negocio embudo #{p.negociosEmbudo[0].numero} · {p.negociosEmbudo[0].etapa}
             </Link>
           )}
+          <OcsVinculadasLinks ordenes={p.ordenesCompra ?? []} />
         </div>
         <BadgeEstadoPresupuesto estado={p.estado} />
       </div>
@@ -173,6 +177,14 @@ export function PresupuestoDetalle({ presupuesto: p }: PresupuestoDetalleProps) 
         <Button variant="outline" onClick={() => window.open(`/api/presupuestos/${p.id}/pdf`, '_blank')}>
           <FileText size={16} /> Ver PDF
         </Button>
+        <BotonGenerarOcDesde
+          origen="presupuesto"
+          origenId={p.id}
+          variant="outline"
+          size="md"
+          disabled={p.items.length === 0}
+          disabledTitle="El presupuesto no tiene ítems"
+        />
         {p.estado === 'BORRADOR' && (
           <Button variant="secondary" onClick={() => cambiarEstado('ENVIADO', 'enviar')} loading={loading === 'enviar'}>
             <Send size={16} /> Enviar al cliente

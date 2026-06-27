@@ -12,6 +12,7 @@ import { useCan } from '@/components/auth/useCan'
 import { ProveedorModal } from '@/components/proveedores/ProveedorModal'
 import { formatMonto } from '@/lib/utils'
 import { mensajeErrorDesconocido, mensajeErrorRespuesta } from '@/lib/errores'
+import { TIPO_COMPRA_PROVEEDOR } from '@/lib/form-options'
 import type { Proveedor } from '@/types'
 
 interface ProveedorRow extends Proveedor {
@@ -24,6 +25,8 @@ const ORIGENES = [
   { value: 'IMPORTADO', label: 'Importado' },
 ]
 
+const TIPOS_COMPRA = [{ value: 'TODOS', label: 'Todos los tipos' }, ...TIPO_COMPRA_PROVEEDOR]
+
 export function ProveedoresManager({ proveedores }: { proveedores: ProveedorRow[] }) {
   const router = useRouter()
   const fileRef = useRef<HTMLInputElement>(null)
@@ -32,6 +35,7 @@ export function ProveedoresManager({ proveedores }: { proveedores: ProveedorRow[
   const puedeBaja = useCan('proveedores.deactivate')
   const [search, setSearch] = useState('')
   const [origen, setOrigen] = useState('TODOS')
+  const [tipoCompra, setTipoCompra] = useState('TODOS')
   const [modal, setModal] = useState<null | 'nuevo' | string>(null)
   const [importando, setImportando] = useState(false)
 
@@ -44,7 +48,11 @@ export function ProveedoresManager({ proveedores }: { proveedores: ProveedorRow[
       (p.marcas ?? '').toLowerCase().includes(s) ||
       (p.ciudad ?? '').toLowerCase().includes(s)
     const matchOrigen = origen === 'TODOS' || p.origen === origen
-    return matchSearch && matchOrigen
+    const matchTipo =
+      tipoCompra === 'TODOS' ||
+      p.tipoCompra === tipoCompra ||
+      (tipoCompra !== 'AMBOS' && p.tipoCompra === 'AMBOS')
+    return matchSearch && matchOrigen && matchTipo
   })
 
   async function darDeBaja(p: ProveedorRow) {
@@ -117,6 +125,15 @@ export function ProveedoresManager({ proveedores }: { proveedores: ProveedorRow[
             {ORIGENES.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         </div>
+        <div className="flex items-center gap-2 bg-white border border-[#e4e7eb] rounded-[9px] px-3 py-2">
+          <select
+            value={tipoCompra}
+            onChange={(e) => setTipoCompra(e.target.value)}
+            className="text-[12.5px] text-[#3a4150] font-semibold bg-transparent border-none outline-none cursor-pointer"
+          >
+            {TIPOS_COMPRA.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </div>
         <div className="flex-1" />
         {puedeCrear && (
           <>
@@ -158,8 +175,8 @@ export function ProveedoresManager({ proveedores }: { proveedores: ProveedorRow[
           <table className="w-full">
             <thead>
               <tr>
-                {['Proveedor', 'Rubro / Marcas', 'Origen', 'Cond. pago', 'Productos', 'Acciones'].map((h, i) => (
-                  <th key={h} className={`px-5 py-3 text-[10.5px] font-bold text-[#8a909a] tracking-[0.6px] uppercase border-b border-[#eef0f2] ${i === 5 ? 'text-right' : 'text-left'} ${i === 4 ? 'text-center' : ''}`}>
+                {['Proveedor', 'Rubro / Marcas', 'Origen', 'Tipo compra', 'Cond. pago', 'Productos', 'Acciones'].map((h, i) => (
+                  <th key={h} className={`px-5 py-3 text-[10.5px] font-bold text-[#8a909a] tracking-[0.6px] uppercase border-b border-[#eef0f2] ${i === 6 ? 'text-right' : 'text-left'} ${i === 5 ? 'text-center' : ''}`}>
                     {h}
                   </th>
                 ))}
@@ -188,6 +205,11 @@ export function ProveedoresManager({ proveedores }: { proveedores: ProveedorRow[
                     <td className="px-5 py-[13px] border-b border-[#f4f5f7]">
                       <Badge variant={p.origen === 'IMPORTADO' ? 'info' : 'gray'}>
                         {p.origen === 'IMPORTADO' ? 'Importado' : 'Nacional'}
+                      </Badge>
+                    </td>
+                    <td className="px-5 py-[13px] border-b border-[#f4f5f7]">
+                      <Badge variant={p.tipoCompra === 'CONCEPTOS' ? 'warning' : p.tipoCompra === 'REMITO' ? 'info' : 'gray'}>
+                        {TIPO_COMPRA_PROVEEDOR.find((t) => t.value === (p.tipoCompra ?? 'AMBOS'))?.label ?? 'Ambos'}
                       </Badge>
                     </td>
                     <td className="px-5 py-[13px] text-[12.5px] text-[#6b7280] border-b border-[#f4f5f7]">

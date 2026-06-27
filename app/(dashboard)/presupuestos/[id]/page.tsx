@@ -26,6 +26,10 @@ export default async function PresupuestoDetallePage({ params }: { params: Promi
         select: { id: true, numero: true, etapa: true, vendedor: true },
         take: 1,
       },
+      ordenesCompra: {
+        select: { id: true, numero: true, estado: true },
+        orderBy: { creadoEn: 'desc' },
+      },
     },
   })
   if (!presupuesto) notFound()

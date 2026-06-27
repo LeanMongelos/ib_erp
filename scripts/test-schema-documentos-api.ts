@@ -72,6 +72,7 @@ function main() {
 
   inventarioCreateSchema.parse({
     nombre: 'Filtro HEPA',
+    sku: 'FIL123',
     tipoArticulo: 'REPUESTO',
   })
   pass('inventarioCreateSchema acepta payload mínimo')

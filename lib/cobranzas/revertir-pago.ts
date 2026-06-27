@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma'
 import { ApiError } from '@/lib/api-auth'
 import { revertirImputacionVencimientos } from '@/lib/cobranzas/vencimientos'
 import { recalcularEstadoFacturaTrasReversion } from '@/lib/cobranzas/estado-factura-cobranza'
+import { anularMovimientoPorPago } from '@/lib/tesoreria/movimientos'
 
 const MEDIOS_REVERSIBLES = ['TRANSFERENCIA', 'EFECTIVO', 'TARJETA', 'OTRO'] as const
 
@@ -47,6 +48,8 @@ export async function revertirPagoNoCheque(pagoId: string) {
       await revertirImputacionVencimientos(imp.facturaId, imp.monto, tx)
       await recalcularEstadoFacturaTrasReversion(imp.facturaId, tx)
     }
+
+    await anularMovimientoPorPago(pagoId, tx)
 
     const anulado = await tx.pago.update({
       where: { id: pagoId },

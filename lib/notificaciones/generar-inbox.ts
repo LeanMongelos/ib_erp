@@ -4,13 +4,79 @@
  */
 import { addDays, differenceInCalendarDays } from 'date-fns'
 import { prisma } from '@/lib/prisma'
+import { tienePermiso } from '@/lib/rbac'
 import { getAlertasComponentesEquipos } from '@/lib/equipos/historia-clinica'
+import { consultarAlertasCompra, UMBRAL_AP_PROXIMO_DIAS, type AlertaCompra } from '@/lib/compras/alertas-compra'
+import { consultarAlertasAlquiler } from '@/lib/compras/alquiler-recordatorio'
 import { formatFecha, formatMonto } from '@/lib/utils'
 import type { AlertaInbox, PrioridadAlerta } from '@/lib/notificaciones/generar-inbox-types'
 
 export type { AlertaInbox, PrioridadAlerta, CategoriaAlerta } from '@/lib/notificaciones/generar-inbox-types'
 
+export interface GenerarInboxOptions {
+  usuarioId?: string
+  permisos?: string[]
+}
+
 type ReglasMap = Record<string, { activo: boolean; diasAnticipacion: number | null }>
+
+function puedeVerModulo(permisos: string[] | undefined, clave: string): boolean {
+  if (!permisos) return true
+  return tienePermiso(permisos, clave)
+}
+
+function hrefAlertaCompra(a: AlertaCompra): string {
+  if (a.tipo === 'CHEQUE_PROXIMO_DEBITO') return '/compras?tab=pagos'
+  if (a.tipo === 'AP_VENCIDA' || a.tipo === 'AP_PROXIMO') return '/compras?tab=cuenta'
+  if (a.facturaCompraId) return `/compras?tab=facturas&fc=${a.facturaCompraId}`
+  if (a.ordenCompraId) return `/compras?tab=oc&oc=${a.ordenCompraId}`
+  return '/compras'
+}
+
+function prioridadAlertaCompra(a: AlertaCompra): PrioridadAlerta {
+  if (a.tipo === 'AP_VENCIDA' || a.tipo === 'CHEQUE_PROXIMO_DEBITO') {
+    return a.diasTranscurridos > 0 || a.diasAlerta <= 1 ? 'urgente' : 'importante'
+  }
+  if (a.tipo === 'AP_PROXIMO') return a.diasAlerta <= 3 ? 'importante' : 'info'
+  return a.diasAlerta >= 7 ? 'urgente' : a.diasAlerta >= 5 ? 'importante' : 'info'
+}
+
+function categoriaAlertaCompra(a: AlertaCompra): 'compras' | 'tesoreria' {
+  return a.tipo === 'CHEQUE_PROXIMO_DEBITO' ? 'tesoreria' : 'compras'
+}
+
+function tituloAlertaCompra(a: AlertaCompra): string {
+  switch (a.tipo) {
+    case 'FC_PENDIENTE_RECEPCION':
+      return `FC pendiente — OC ${a.numero}`
+    case 'FC_PENDIENTE_REGISTRO':
+      return `FC en borrador — ${a.numero}`
+    case 'CHEQUE_PROXIMO_DEBITO':
+      return a.diasTranscurridos > 0 ? `Cheque a debitar — ${a.numero}` : `Cheque próximo débito — ${a.numero}`
+    case 'AP_VENCIDA':
+      return `AP vencida — ${a.numero}`
+    case 'AP_PROXIMO':
+      return `AP vence pronto — ${a.numero}`
+    default:
+      return a.numero
+  }
+}
+
+function eventoReglaAlertaCompra(a: AlertaCompra): string {
+  switch (a.tipo) {
+    case 'FC_PENDIENTE_RECEPCION':
+    case 'FC_PENDIENTE_REGISTRO':
+      return 'compras.fc_pendiente'
+    case 'CHEQUE_PROXIMO_DEBITO':
+      return 'compras.cheque_debito'
+    case 'AP_VENCIDA':
+      return 'compras.ap_vencida'
+    case 'AP_PROXIMO':
+      return 'compras.ap_proximo'
+    default:
+      return 'compras.fc_pendiente'
+  }
+}
 
 async function cargarReglas(): Promise<ReglasMap> {
   const reglas = await prisma.reglaNotificacion.findMany({ where: { activo: true } })
@@ -31,10 +97,54 @@ function diasAnticipacion(reglas: ReglasMap, evento: string, fallback: number): 
   return reglas[evento]?.diasAnticipacion ?? fallback
 }
 
-export async function generarAlertasInbox(): Promise<AlertaInbox[]> {
+export async function generarAlertasInbox(opts?: GenerarInboxOptions): Promise<AlertaInbox[]> {
   const ahora = new Date()
   const reglas = await cargarReglas()
   const alertas: AlertaInbox[] = []
+  const permisos = opts?.permisos
+
+  const verCompras = puedeVerModulo(permisos, 'compras.read')
+  const verTesoreria = puedeVerModulo(permisos, 'tesoreria.read')
+
+  if (verCompras || verTesoreria) {
+    const comprasAlertas = await consultarAlertasCompra(opts?.usuarioId)
+    for (const a of comprasAlertas) {
+      const cat = categoriaAlertaCompra(a)
+      if (cat === 'compras' && !verCompras) continue
+      if (cat === 'tesoreria' && !verTesoreria && !verCompras) continue
+      const evento = eventoReglaAlertaCompra(a)
+      if (!reglaActiva(reglas, evento)) continue
+      if (a.tipo === 'AP_PROXIMO') {
+        const dias = diasAnticipacion(reglas, evento, UMBRAL_AP_PROXIMO_DIAS)
+        const diff = differenceInCalendarDays(new Date(a.fechaReferencia), ahora)
+        if (diff > dias) continue
+      }
+      alertas.push({
+        clave: `compras:${a.alertKey}`,
+        categoria: cat,
+        prioridad: prioridadAlertaCompra(a),
+        titulo: tituloAlertaCompra(a),
+        mensaje: a.mensaje,
+        href: hrefAlertaCompra(a),
+        fecha: a.fechaReferencia,
+      })
+    }
+
+    if (reglaActiva(reglas, 'compras.alquiler_recordatorio')) {
+      const alquilerAlertas = await consultarAlertasAlquiler(ahora)
+      for (const a of alquilerAlertas) {
+        alertas.push({
+          clave: `compras:alquiler:${a.plantillaId}`,
+          categoria: 'compras',
+          prioridad: 'importante',
+          titulo: `Generar OC alquiler — ${a.nombre}`,
+          mensaje: `Recordatorio mensual (día ${a.recordatorioDiaMes}): crear orden de compra desde la plantilla.`,
+          href: `/compras?tab=oc&plantilla=${a.plantillaId}`,
+          fecha: ahora.toISOString(),
+        })
+      }
+    }
+  }
 
   if (reglaActiva(reglas, 'ot.vencida')) {
     const otsVencidas = await prisma.ordenTrabajo.findMany({
