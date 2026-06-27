@@ -1,10 +1,5 @@
-/**
- * Mapeo de entidades Prisma → DatosDocumentoRender para PDF.
- * Server-only.
- */
-
-import type { PlantillaConfig } from './types'
-import type { DatosDocumentoRender } from './types'
+import { formatFecha } from '@/lib/utils'
+import type { PlantillaConfig, DatosDocumentoRender } from './types'
 import {
   resolverPlantillaDocumento,
   type TipoPlantillaDocumento,
@@ -65,7 +60,7 @@ function mapEmisor(e: EmisorRow) {
     cuit: e.cuit,
     condicionIva: e.condicionIva,
     ingresosBrutos: e.ingresosBrutos,
-    inicioActividades: e.inicioActividades?.toISOString() ?? null,
+    inicioActividades: e.inicioActividades ? formatFecha(e.inicioActividades) : null,
     domicilio: e.domicilio,
     telefono: e.telefono,
     email: e.email,

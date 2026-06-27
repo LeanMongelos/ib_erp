@@ -70,7 +70,6 @@ export function TransitionFormModal({
   onCancel,
 }: TransitionFormModalProps) {
   const [values, setValues] = useState<Record<string, unknown>>({})
-  const overlayRef = useRef<HTMLDivElement>(null)
   const inventarioPrecios = useRef(new Map<string, number>())
 
   useEffect(() => {
@@ -98,18 +97,21 @@ export function TransitionFormModal({
   }
 
   return (
-    <div
-      className={styles.overlay}
-      ref={overlayRef}
-      onClick={(e) => { if (e.target === overlayRef.current) onCancel() }}
-    >
-      <div className={`${styles.modal} ${retroceso ? styles.modalRetroceso : ''}`} style={{ position: 'relative' }}>
+    <div className={styles.overlay} data-modal-overlay>
+      <div
+        className={`${styles.modal} ${retroceso ? styles.modalRetroceso : ''}`}
+        style={{ position: 'relative' }}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="embudo-modal-title"
+        data-modal-panel
+      >
         {celebratory && <Confetti />}
         <div className={celebratory ? styles.modalHeaderCelebration : styles.modalHeader}>
           {celebratory && (
             <div style={{ fontSize: 22, fontWeight: 800, marginBottom: 4 }}>🎉 ¡VENTA GANADA!</div>
           )}
-          <div className={styles.modalTitle}>{title}</div>
+          <div className={styles.modalTitle} id="embudo-modal-title">{title}</div>
           <div className={styles.modalSubtitle}>{negocioNombre}</div>
           <div className={styles.transitionArrow}>
             <span>{etapaLabel(etapaDesde)}</span>
@@ -149,16 +151,11 @@ interface HistorialModalProps {
 }
 
 export function HistorialModal({ open, negocioNombre, items, loading, onClose }: HistorialModalProps) {
-  const overlayRef = useRef<HTMLDivElement>(null)
   if (!open) return null
 
   return (
-    <div
-      className={styles.overlay}
-      ref={overlayRef}
-      onClick={(e) => { if (e.target === overlayRef.current) onClose() }}
-    >
-      <div className={styles.modal}>
+    <div className={styles.overlay} data-modal-overlay>
+      <div className={styles.modal} role="dialog" aria-modal="true" data-modal-panel>
         <div className={styles.modalHeader}>
           <div className={styles.modalTitle}>Historial del negocio</div>
           <div className={styles.modalSubtitle}>{negocioNombre}</div>
@@ -219,7 +216,6 @@ export function GenericFormModal({
   onCancel,
 }: GenericFormModalProps) {
   const [values, setValues] = useState<Record<string, unknown>>({})
-  const overlayRef = useRef<HTMLDivElement>(null)
   const inventarioPrecios = useRef(new Map<string, number>())
 
   useEffect(() => {
@@ -246,10 +242,10 @@ export function GenericFormModal({
   }
 
   return (
-    <div className={styles.overlay} ref={overlayRef} onClick={(e) => { if (e.target === overlayRef.current) onCancel() }}>
-      <div className={styles.modal}>
+    <div className={styles.overlay} data-modal-overlay>
+      <div className={styles.modal} role="dialog" aria-modal="true" aria-labelledby="embudo-generic-modal-title" data-modal-panel>
         <div className={styles.modalHeader}>
-          <div className={styles.modalTitle}>{title}</div>
+          <div className={styles.modalTitle} id="embudo-generic-modal-title">{title}</div>
         </div>
         <form onSubmit={handleSubmit}>
           <div className={styles.modalBody}>

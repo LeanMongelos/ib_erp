@@ -59,3 +59,19 @@ body {
 .badge-cerrada   { background: #DCFCE7; color: #15803D; }
 .badge-vencida   { background: #FEE2E2; color: #C2261B; }
 .badge-cancelada { background: #F3F4F6; color: #6B7280; }
+
+/* Navegación por teclado — foco visible en campos nativos */
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+button:focus-visible,
+[role="combobox"]:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(232, 101, 10, 0.45);
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  border-color: #E8650A;
+}

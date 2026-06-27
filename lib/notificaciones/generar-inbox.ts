@@ -402,7 +402,7 @@ export async function generarAlertasInbox(opts?: GenerarInboxOptions): Promise<A
         prioridad: c.sinLeer >= 3 ? 'importante' : 'info',
         titulo: `${c.sinLeer} mensaje(s) sin leer`,
         mensaje: c.cliente?.nombre ?? c.contactoNombre ?? c.preview ?? 'Conversación CRM',
-        href: `/crm/${c.id}`,
+        href: `/clientes/${c.id}`,
         fecha: c.ultimoMensajeEn.toISOString(),
       })
     }

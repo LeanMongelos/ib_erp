@@ -67,7 +67,7 @@ export function HistorialOTDetalleModal({ otId, onClose }: Props) {
   return (
     <div
       className="fixed inset-0 z-[130] flex items-center justify-center bg-black/50 p-4"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
+      data-modal-overlay
     >
       <div className="bg-white rounded-[12px] w-full max-w-lg max-h-[88vh] shadow-xl flex flex-col overflow-hidden">
         <div className="flex items-start justify-between px-5 py-4 border-b border-[#e4e7eb] shrink-0">

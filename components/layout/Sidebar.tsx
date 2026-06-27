@@ -10,6 +10,7 @@ import { puedeVerNavItem } from '@/lib/page-permissions'
 import {
   LayoutDashboard,
   Users,
+  Building2,
   Truck,
   Wrench,
   Package,
@@ -37,6 +38,7 @@ const navItems = [
   { label: 'Cobranzas',         href: '/cobranzas',                   icon: Banknote        },
   { label: 'Tesorería',         href: '/tesoreria',                   icon: Wallet          },
   { label: 'Compras',           href: '/compras',                     icon: ShoppingCart    },
+  { label: 'Clientes',          href: '/clientes',                    icon: Building2       },
   { label: 'Proveedores',       href: '/proveedores',                 icon: Truck           },
   { label: 'Automatizaciones',  href: '/automatizaciones',            icon: Zap             },
   { label: 'Configuración',     href: '/configuracion',               icon: Settings        },

@@ -18,6 +18,11 @@ import {
   validarSucursalesDraft,
   type SucursalDraft,
 } from '@/components/clientes/SucursalesEditor'
+import {
+  CargarDatosArcaModal,
+  type ConfirmacionArca,
+} from '@/components/clientes/CargarDatosArcaModal'
+import { formatearCuit } from '@/lib/cuit'
 
 export function NuevoClienteForm() {
   const router = useRouter()
@@ -35,9 +40,51 @@ export function NuevoClienteForm() {
     condicionIva: '',
   })
   const [sucursales, setSucursales] = useState<SucursalDraft[]>([sucursalDraftVacia()])
+  const [arcaOpen, setArcaOpen] = useState(false)
 
   function setF(key: keyof typeof form, value: string) {
     setForm((prev) => ({ ...prev, [key]: value }))
+  }
+
+  function aplicarDatosArca({ data, mapFiscal, mapSucursal }: ConfirmacionArca) {
+    setForm((prev) => ({
+      ...prev,
+      cuit: formatearCuit(data.cuit),
+      nombre: data.nombre || prev.nombre,
+      condicionIva: data.condicionIvaSugerida || prev.condicionIva,
+      tipo: data.tipoClienteSugerido || prev.tipo,
+      ...(mapFiscal
+        ? {
+            direccion: data.domicilioFiscal.direccion
+              ? [data.domicilioFiscal.direccion, data.domicilioFiscal.numero]
+                  .filter(Boolean)
+                  .join(' ')
+              : data.domicilioFiscal.completo || prev.direccion,
+            ciudad: data.domicilioFiscal.ciudad || prev.ciudad,
+          }
+        : {}),
+    }))
+
+    if (mapSucursal && data.domicilioFiscal.completo) {
+      setSucursales((prev) => {
+        const base = prev.length > 0 ? [...prev] : [sucursalDraftVacia()]
+        const actual = { ...base[0]! }
+        if (!actual.nombre.trim() && data.nombre.trim()) {
+          actual.nombre = data.nombre.trim()
+        }
+        actual.direccion = data.domicilioFiscal.direccion || actual.direccion
+        actual.numero = data.domicilioFiscal.numero || actual.numero
+        actual.ciudad = data.domicilioFiscal.ciudad || actual.ciudad
+        actual.lat = null
+        actual.lng = null
+        actual.geoStatus = 'idle'
+        actual.geoError = null
+        base[0] = actual
+        return base
+      })
+    }
+
+    toast.success('Datos de ARCA aplicados al formulario')
   }
 
   async function guardar(e: React.FormEvent) {
@@ -93,7 +140,7 @@ export function NuevoClienteForm() {
         'No se pudo crear el cliente',
       )
       toast.success(`Cliente ${cliente.nombre} creado`)
-      router.push(`/crm/${cliente.id}`)
+      router.push(`/clientes/${cliente.id}`)
       router.refresh()
     } catch (err) {
       toast.error(mensajeErrorDesconocido(err, 'No se pudo crear el cliente'))
@@ -104,7 +151,7 @@ export function NuevoClienteForm() {
 
   return (
     <form onSubmit={guardar} className="max-w-3xl flex flex-col gap-4">
-      <Link href="/crm" className="text-[12px] font-semibold text-[#6b7280] hover:text-[#E8650A] w-fit">
+      <Link href="/clientes" className="text-[12px] font-semibold text-[#6b7280] hover:text-[#E8650A] w-fit">
         ← Volver a clientes
       </Link>
 
@@ -128,13 +175,24 @@ export function NuevoClienteForm() {
             onChange={(e) => setF('tipo', e.target.value)}
             options={TIPO_CLIENTE}
           />
-          <Input
-            label="CUIT"
-            value={form.cuit}
-            onChange={(e) => setF('cuit', e.target.value)}
-            placeholder="30-12345678-9"
-            autoComplete="off"
-          />
+          <div className="flex flex-col gap-2">
+            <Input
+              label="CUIT"
+              value={form.cuit}
+              onChange={(e) => setF('cuit', e.target.value)}
+              placeholder="30-12345678-9"
+              autoComplete="off"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="self-start"
+              onClick={() => setArcaOpen(true)}
+            >
+              Cargar desde ARCA
+            </Button>
+          </div>
           <Select
             label="Condición IVA"
             value={form.condicionIva}
@@ -188,13 +246,20 @@ export function NuevoClienteForm() {
       </Card>
 
       <div className="flex justify-end gap-2">
-        <Button type="button" variant="secondary" onClick={() => router.push('/crm')} disabled={loading}>
+        <Button type="button" variant="secondary" onClick={() => router.push('/clientes')} disabled={loading}>
           Cancelar
         </Button>
         <Button type="submit" loading={loading}>
           Crear cliente
         </Button>
       </div>
+
+      <CargarDatosArcaModal
+        open={arcaOpen}
+        cuitInicial={form.cuit}
+        onClose={() => setArcaOpen(false)}
+        onConfirm={aplicarDatosArca}
+      />
     </form>
   )
 }

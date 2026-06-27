@@ -175,7 +175,7 @@ export async function buscarEnErp(q: string, permisos: string[] = []): Promise<R
       tipo: 'cliente',
       titulo: c.nombre,
       subtitulo: [c.cuit, c.ciudad].filter(Boolean).join(' · ') || 'Cliente',
-      href: `/crm/${c.id}`,
+      href: `/clientes/${c.id}`,
     })
   }
   for (const f of facturas) {

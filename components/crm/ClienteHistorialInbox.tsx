@@ -172,7 +172,7 @@ export function ClienteHistorialInbox({ clienteId }: { clienteId: string }) {
       )}
 
       <Link
-        href={`/crm/${clienteId}`}
+        href={`/clientes/${clienteId}`}
         className="inline-block text-[11px] font-bold text-[#E8650A] hover:underline"
       >
         Ver ficha completa del cliente →

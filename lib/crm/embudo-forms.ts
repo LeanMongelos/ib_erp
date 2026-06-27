@@ -66,16 +66,15 @@ export const TRANSITION_FORMS: Record<string, TransitionFormDef> = {
   [transitionKey('ENTRADA', 'CONTACTO')]: {
     title: 'Registrar primer contacto',
     fields: [
-      { name: 'contactoNombre', label: 'Nombre completo del contacto', type: 'text', required: true, autoComplete: 'name' },
-      { name: 'contactoCargo', label: 'Cargo/Rol del contacto', type: 'text', required: true, autoComplete: 'organization-title' },
-      { name: 'telefono', label: 'Teléfono', type: 'text', required: true, autoComplete: 'tel' },
-      { name: 'email', label: 'Email', type: 'email', required: true, autoComplete: 'email' },
-      { name: 'organismo', label: 'Organismo / Institución', type: 'cliente', required: true },
+      { name: 'contactoNombre', label: 'Nombre completo del contacto', type: 'text', autoComplete: 'name' },
+      { name: 'contactoCargo', label: 'Cargo/Rol del contacto', type: 'text', autoComplete: 'organization-title' },
+      { name: 'telefono', label: 'Teléfono', type: 'text', autoComplete: 'tel' },
+      { name: 'email', label: 'Email', type: 'email', autoComplete: 'email' },
+      { name: 'organismo', label: 'Organismo / Institución', type: 'cliente' },
       {
         name: 'tipoOrganismo',
         label: 'Tipo de organismo',
         type: 'select',
-        required: true,
         options: [
           { value: 'HOSPITAL_PUBLICO', label: 'Hospital Público' },
           { value: 'CLINICA_PRIVADA', label: 'Clínica Privada' },
@@ -88,7 +87,6 @@ export const TRANSITION_FORMS: Record<string, TransitionFormDef> = {
         name: 'origenLead',
         label: 'Cómo llegó el lead',
         type: 'select',
-        required: true,
         options: [
           { value: 'LICITACION', label: 'Licitación pública' },
           { value: 'LLAMADO', label: 'Llamado entrante' },
@@ -100,7 +98,7 @@ export const TRANSITION_FORMS: Record<string, TransitionFormDef> = {
       },
       { name: 'notasContacto', label: 'Notas del primer contacto', type: 'textarea' },
       { name: 'proximaAccion', label: 'Próxima acción', type: 'select', options: PROXIMA_ACCION_OPTS },
-      { name: 'proximaAccionFecha', label: 'Fecha de próxima acción', type: 'date', required: true, defaultToday: true },
+      { name: 'proximaAccionFecha', label: 'Fecha de próxima acción', type: 'date', defaultToday: true },
     ],
   },
   [transitionKey('CONTACTO', 'DOCUMENTACION')]: {
@@ -123,7 +121,6 @@ export const TRANSITION_FORMS: Record<string, TransitionFormDef> = {
         name: 'medioEntrega',
         label: 'Medio de entrega',
         type: 'select',
-        required: true,
         options: [
           { value: 'EMAIL', label: 'Email' },
           { value: 'PRESENCIAL', label: 'Reunión presencial' },
@@ -502,7 +499,12 @@ export const RETROCESO_FORM: TransitionFormDef = {
 export const NUEVO_NEGOCIO_FIELDS: FormField[] = [
   { name: 'nombre', label: 'Nombre del negocio', type: 'text', required: true, autoComplete: 'off' },
   { name: 'cliente', label: 'Cliente/Organismo', type: 'cliente', required: true },
-  { name: 'productoServicio', label: 'Producto/Servicio', type: 'inventario', required: true },
+  {
+    name: 'productoServicio',
+    label: 'Producto/Servicio',
+    type: 'text',
+    placeholder: 'Ej. monitor multiparamétrico, servicio técnico, consulta…',
+  },
   { name: 'monto', label: 'Monto estimado en ARS', type: 'number', updatesMonto: true },
   { name: 'vendedor', label: 'Vendedor asignado', type: 'usuario', required: true },
   {

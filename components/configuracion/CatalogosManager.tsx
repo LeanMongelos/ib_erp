@@ -255,7 +255,7 @@ function CatalogoModal({
   const cp = item as CondicionPago | undefined
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" data-modal-overlay>
       <form className="bg-white rounded-[14px] w-full max-w-md shadow-xl" onClick={(e) => e.stopPropagation()} onSubmit={guardar}>
         <div className="px-5 py-4 border-b">
           <h3 className="text-[14px] font-bold">{isEdit ? 'Editar' : 'Nuevo'} — {TABS.find((t) => t.id === tipo)?.label}</h3>

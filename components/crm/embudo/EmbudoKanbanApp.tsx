@@ -217,7 +217,10 @@ export function EmbudoKanbanApp() {
           nombre: datos.nombre,
           cliente: datos.cliente,
           clienteId: datos.clienteId || null,
-          productoServicio: datos.productoServicio,
+          productoServicio:
+            typeof datos.productoServicio === 'string' && datos.productoServicio.trim()
+              ? datos.productoServicio.trim()
+              : null,
           inventarioId: datos.inventarioId || null,
           monto: datos.monto ? Number(datos.monto) : 0,
           vendedor: datos.vendedor,

@@ -61,10 +61,12 @@ export function Combobox({
 }: ComboboxProps) {
   const listId = useId()
   const wrapRef = useRef<HTMLDivElement>(null)
+  const optionRefs = useRef<(HTMLButtonElement | null)[]>([])
   const [open, setOpen] = useState(false)
   const [q, setQ] = useState('')
   const [remote, setRemote] = useState<ComboboxOption[]>([])
   const [loading, setLoading] = useState(false)
+  const [highlightIndex, setHighlightIndex] = useState(-1)
 
   const selectedStatic = staticOptions.find((o) => o.value === value)
   const selectedRemote = remote.find((o) => o.value === value)
@@ -72,7 +74,10 @@ export function Combobox({
 
   useEffect(() => {
     function onDoc(e: MouseEvent) {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false)
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+        setOpen(false)
+        setHighlightIndex(-1)
+      }
     }
     document.addEventListener('mousedown', onDoc)
     return () => document.removeEventListener('mousedown', onDoc)
@@ -124,10 +129,21 @@ export function Combobox({
       ? filteredStatic
       : staticOptions
 
+  useEffect(() => {
+    setHighlightIndex(-1)
+  }, [q, listOptions.length, loading])
+
+  useEffect(() => {
+    if (highlightIndex >= 0) {
+      optionRefs.current[highlightIndex]?.scrollIntoView({ block: 'nearest' })
+    }
+  }, [highlightIndex])
+
   function elegir(opt: ComboboxOption) {
     onChange(opt.value, opt)
     setQ('')
     setOpen(false)
+    setHighlightIndex(-1)
   }
 
   function handleInputChange(text: string) {
@@ -145,7 +161,83 @@ export function Combobox({
     window.setTimeout(() => {
       if (allowCustom && q.trim()) onChange(q.trim())
       setQ('')
+      setHighlightIndex(-1)
     }, 150)
+  }
+
+  function moveHighlight(delta: number) {
+    if (listOptions.length === 0) return
+    setHighlightIndex((prev) => {
+      if (prev < 0) return delta > 0 ? 0 : listOptions.length - 1
+      const next = prev + delta
+      if (next < 0) return listOptions.length - 1
+      if (next >= listOptions.length) return 0
+      return next
+    })
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (disabled) return
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      if (!open) setOpen(true)
+      moveHighlight(1)
+      return
+    }
+
+    if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      if (!open) setOpen(true)
+      moveHighlight(-1)
+      return
+    }
+
+    if (e.key === 'Enter') {
+      if (open && highlightIndex >= 0 && listOptions[highlightIndex]) {
+        e.preventDefault()
+        elegir(listOptions[highlightIndex])
+      }
+      return
+    }
+
+    if (e.key === 'Escape') {
+      if (open) {
+        e.preventDefault()
+        e.stopPropagation()
+        setOpen(false)
+        setHighlightIndex(-1)
+        setQ('')
+      }
+      return
+    }
+
+    if (e.key === 'Home') {
+      if (listOptions.length > 0) {
+        e.preventDefault()
+        if (!open) setOpen(true)
+        setHighlightIndex(0)
+      }
+      return
+    }
+
+    if (e.key === 'End') {
+      if (listOptions.length > 0) {
+        e.preventDefault()
+        if (!open) setOpen(true)
+        setHighlightIndex(listOptions.length - 1)
+      }
+      return
+    }
+
+    if (e.key === 'Tab') {
+      if (open && highlightIndex >= 0 && listOptions[highlightIndex]) {
+        elegir(listOptions[highlightIndex])
+      } else {
+        setOpen(false)
+        setHighlightIndex(-1)
+      }
+    }
   }
 
   return (
@@ -166,19 +258,31 @@ export function Combobox({
           <input
             id={listId}
             type="text"
+            role="combobox"
+            aria-expanded={showDropdown}
+            aria-autocomplete="list"
+            aria-controls={`${listId}-listbox`}
+            aria-activedescendant={
+              highlightIndex >= 0 ? `${listId}-opt-${highlightIndex}` : undefined
+            }
             autoComplete="off"
             disabled={disabled}
             value={open ? q : displayLabel}
             onChange={(e) => handleInputChange(e.target.value)}
             onFocus={handleFocus}
             onBlur={handleBlur}
+            onKeyDown={handleKeyDown}
             placeholder={placeholder}
             className="flex-1 text-[13.5px] text-[#1f242c] bg-transparent outline-none placeholder:text-gray-400 min-w-0"
           />
           <ChevronDown size={14} className="text-[#9aa1ab] shrink-0" />
         </div>
         {showDropdown && (
-          <div className="absolute z-30 top-full left-0 right-0 mt-1 bg-white border border-[#e4e7eb] rounded-[9px] shadow-lg max-h-52 overflow-y-auto">
+          <div
+            id={`${listId}-listbox`}
+            role="listbox"
+            className="absolute z-30 top-full left-0 right-0 mt-1 bg-white border border-[#e4e7eb] rounded-[9px] shadow-lg max-h-52 overflow-y-auto"
+          >
             {loading && (
               <p className="px-3 py-2 text-[11px] text-[#9aa1ab]">Buscando…</p>
             )}
@@ -188,21 +292,30 @@ export function Combobox({
             {!loading && listOptions.length === 0 && (remoteMode ? q.trim().length >= minSearchLength : true) && (
               <p className="px-3 py-2 text-[11px] text-[#9aa1ab]">Sin resultados</p>
             )}
-            {listOptions.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => elegir(opt)}
-                className={cn(
-                  'w-full text-left px-3 py-2 hover:bg-[#FFF7ED] border-b border-[#f4f5f7] last:border-0',
-                  opt.value === value && 'bg-[#FFF7ED]',
-                )}
-              >
-                <p className="text-[12.5px] font-semibold text-[#1f242c] truncate">{opt.label}</p>
-                {opt.hint && <p className="text-[10.5px] text-[#6b7280] truncate">{opt.hint}</p>}
-              </button>
-            ))}
+            {listOptions.map((opt, idx) => {
+              const highlighted = idx === highlightIndex
+              const selected = opt.value === value
+              return (
+                <button
+                  key={opt.value}
+                  id={`${listId}-opt-${idx}`}
+                  ref={(el) => { optionRefs.current[idx] = el }}
+                  type="button"
+                  role="option"
+                  aria-selected={highlighted || selected}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onMouseEnter={() => setHighlightIndex(idx)}
+                  onClick={() => elegir(opt)}
+                  className={cn(
+                    'w-full text-left px-3 py-2 border-b border-[#f4f5f7] last:border-0',
+                    (highlighted || selected) ? 'bg-[#FFF7ED]' : 'hover:bg-[#FFF7ED]',
+                  )}
+                >
+                  <p className="text-[12.5px] font-semibold text-[#1f242c] truncate">{opt.label}</p>
+                  {opt.hint && <p className="text-[10.5px] text-[#6b7280] truncate">{opt.hint}</p>}
+                </button>
+              )
+            })}
           </div>
         )}
       </div>

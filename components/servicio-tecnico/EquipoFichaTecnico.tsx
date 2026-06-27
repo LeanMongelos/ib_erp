@@ -152,7 +152,7 @@ export function EquipoFichaContent({ data, compact }: { data: EquipoFichaData; c
         <FichaRow label="Email" value={eq.cliente.email} />
         <FichaRow label="Dirección sede" value={[eq.cliente.direccion, eq.cliente.ciudad].filter(Boolean).join(', ') || null} />
         <FichaRow label="Condición de pago habitual" value={eq.cliente.condicionPago} />
-        <Link href={`/crm/${eq.cliente.id}`} className="text-[12px] text-[#E8650A] font-semibold hover:underline inline-flex items-center gap-1">
+        <Link href={`/clientes/${eq.cliente.id}`} className="text-[12px] text-[#E8650A] font-semibold hover:underline inline-flex items-center gap-1">
           Ver ficha del cliente <ExternalLink size={12} />
         </Link>
       </FichaSection>
@@ -335,8 +335,8 @@ export function EquipoFichaDrawer({
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end">
-      <div className="absolute inset-0 bg-black/35" onClick={onClose} aria-hidden />
+    <div className="fixed inset-0 z-50 flex justify-end" data-modal-overlay>
+      <div className="absolute inset-0 bg-black/35" aria-hidden />
       <aside
         className="relative w-full max-w-md bg-[#F4F6F9] shadow-2xl flex flex-col max-h-full animate-in slide-in-from-right duration-200"
         role="dialog"

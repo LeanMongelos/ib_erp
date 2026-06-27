@@ -135,6 +135,7 @@
       letter-spacing: 0.3px;
     }
     table.productos thead th.right { text-align: right; }
+    table.productos thead th.center { text-align: center; }
 
     table.productos tbody tr:nth-child(even) { background: var(--color-row-alt); }
     table.productos tbody td {
@@ -143,6 +144,52 @@
       border-bottom: 1px solid var(--color-border);
     }
     table.productos tbody td.right { text-align: right; white-space: nowrap; }
+    table.productos tbody td.center { text-align: center; white-space: nowrap; }
+
+    .fiscal-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 7pt;
+      margin-bottom: 3mm;
+    }
+    .fiscal-table td {
+      border: 1px solid #000;
+      padding: 1.5mm 2mm;
+      text-align: center;
+      width: 25%;
+    }
+    .doc-meta {
+      font-size: 8pt;
+      margin-bottom: 2mm;
+    }
+    .doc-numero-centro {
+      text-align: center;
+      font-size: 13pt;
+      font-weight: bold;
+      margin-bottom: 4mm;
+    }
+    .empresa-centro {
+      text-align: center;
+      margin-bottom: 6mm;
+    }
+    .empresa-centro img {
+      height: 18mm;
+      width: auto;
+      display: block;
+      margin: 0 auto 3mm;
+    }
+    .empresa-centro .empresa-nombre {
+      font-size: 14pt;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .empresa-centro .empresa-datos {
+      font-size: 8pt;
+      color: var(--color-muted);
+      line-height: 1.6;
+      margin-top: 2mm;
+    }
 
     .producto-codigo { font-weight: bold; white-space: nowrap; }
     .producto-descripcion-main { font-weight: bold; }
@@ -248,47 +295,27 @@
 <div class="page">
 
   <!-- ══ ENCABEZADO ══ -->
-  <header class="header">
-    <!-- Logo + datos empresa -->
-    <div class="header-logo-area">
-      <img src="/logo.png" alt="Logo Ingeniería Biomédica" style="height:22mm; width:auto;" />
-      <div>
-        <div class="empresa-nombre">{{empresa_nombre}}</div>
-        <div class="empresa-datos">
-          {{empresa_direccion}}<br>
-          Cel: {{empresa_telefono}}<br>
-          Mail: {{empresa_email}}
-        </div>
-      </div>
-    </div>
+  <table class="fiscal-table">
+    <tr>
+      <td>CUIT {{empresa_cuit}}</td>
+      <td>Ingresos Brutos {{empresa_ingresos_brutos}}</td>
+      <td>Inicio de Actividades {{empresa_inicio_actividades}}</td>
+      <td>{{empresa_condicion_iva}}</td>
+    </tr>
+  </table>
 
-    <!-- Datos fiscales -->
-    <div class="header-fiscal">
-      <div class="doc-invalido" style="display:none">documento no válido como factura</div>
-      <div class="presupuesto-numero">Factura {{factura_numero}}</div>
-      <br>
-      <div class="fiscal-row">
-        <span class="fiscal-label">Fecha:</span>
-        <span class="fiscal-value">{{factura_fecha}}</span>
-      </div>
-      <div class="fiscal-row">
-        <span class="fiscal-label">Cuit</span>
-        <span class="fiscal-value">{{empresa_cuit}}</span>
-      </div>
-      <div class="fiscal-row">
-        <span class="fiscal-label">Ingresos Brutos</span>
-        <span class="fiscal-value">{{empresa_ingresos_brutos}}</span>
-      </div>
-      <div class="fiscal-row">
-        <span class="fiscal-label">Inicio de Actividades</span>
-        <span class="fiscal-value">{{empresa_inicio_actividades}}</span>
-      </div>
-      <div class="fiscal-row">
-        <span class="fiscal-label">IVA</span>
-        <span class="fiscal-value">{{empresa_condicion_iva}}</span>
-      </div>
+  <div class="doc-meta">Fecha: {{factura_fecha}}</div>
+  <div class="doc-numero-centro">Factura {{factura_numero}}</div>
+
+  <section class="empresa-centro">
+    <img src="/logo.png" alt="Logo Ingeniería Biomédica" />
+    <div class="empresa-nombre">{{empresa_nombre}}</div>
+    <div class="empresa-datos">
+      {{empresa_direccion}}<br>
+      Cel: {{empresa_telefono}}<br>
+      Mail: {{empresa_email}}
     </div>
-  </header>
+  </section>
 
   <hr class="divider">
 
@@ -338,9 +365,9 @@
       <tr>
         <th style="width:12%">Producto</th>
         <th style="width:54%">Descripción</th>
-        <th class="right" style="width:10%">Cantidad</th>
-        <th class="right" style="width:12%">Precio</th>
-        <th class="right" style="width:12%">Sub total</th>
+        <th class="center" style="width:10%">Cantidad</th>
+        <th class="center" style="width:12%">Precio</th>
+        <th class="center" style="width:12%">Sub total</th>
       </tr>
     </thead>
     <tbody>
@@ -353,9 +380,9 @@
             {{item1_descripcion_larga}}
           </div>
         </td>
-        <td class="right">{{item1_cantidad}}</td>
-        <td class="right">{{item1_precio}}</td>
-        <td class="right">{{item1_subtotal}}</td>
+        <td class="center">{{item1_cantidad}}</td>
+        <td class="center">{{item1_precio}}</td>
+        <td class="center">{{item1_subtotal}}</td>
       </tr>
 
       <!-- ── ÍTEM 2 ── -->
@@ -365,9 +392,9 @@
           <div class="producto-descripcion-main">{{item2_descripcion_corta}}</div>
           <div class="producto-descripcion-detalle">{{item2_descripcion_larga}}</div>
         </td>
-        <td class="right">{{item2_cantidad}}</td>
-        <td class="right">{{item2_precio}}</td>
-        <td class="right">{{item2_subtotal}}</td>
+        <td class="center">{{item2_cantidad}}</td>
+        <td class="center">{{item2_precio}}</td>
+        <td class="center">{{item2_subtotal}}</td>
       </tr>
 
       <!-- ── ÍTEM 3 ── -->
@@ -377,9 +404,9 @@
           <div class="producto-descripcion-main">{{item3_descripcion_corta}}</div>
           <div class="producto-descripcion-detalle">{{item3_descripcion_larga}}</div>
         </td>
-        <td class="right">{{item3_cantidad}}</td>
-        <td class="right">{{item3_precio}}</td>
-        <td class="right">{{item3_subtotal}}</td>
+        <td class="center">{{item3_cantidad}}</td>
+        <td class="center">{{item3_precio}}</td>
+        <td class="center">{{item3_subtotal}}</td>
       </tr>
 
       <!-- Agregar más ítems repitiendo el bloque <tr> de arriba -->

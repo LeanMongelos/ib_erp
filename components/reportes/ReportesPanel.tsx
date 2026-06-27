@@ -74,7 +74,6 @@ export function ReportesPanel() {
 
   return (
     <div className="flex flex-col gap-5">
-      <ReportesCsvCentro />
       <div className="flex gap-2 flex-wrap">
         {tabsVisibles.map(({ id, label, icon: Icon }) => (
           <button
@@ -307,6 +306,8 @@ export function ReportesPanel() {
           )}
         </div>
       )}
+
+      <ReportesCsvCentro />
     </div>
   )
 }

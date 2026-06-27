@@ -1,11 +1,13 @@
 'use client'
 
+import { useState } from 'react'
 import { format, startOfMonth } from 'date-fns'
-import { Download, FileSpreadsheet } from 'lucide-react'
+import { ChevronDown, Download, FileSpreadsheet } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card } from '@/components/ui/card'
 import { usePermisos } from '@/components/auth/useCan'
 import { AUDITORIA_EXPORT_PERMISSIONS } from '@/lib/page-permissions'
+import { cn } from '@/lib/utils'
 
 type ExportDef = {
   id: string
@@ -95,6 +97,7 @@ function puedeExportar(userPermisos: string[], requeridos: string[]): boolean {
 
 export function ReportesCsvCentro() {
   const userPermisos = usePermisos()
+  const [abierto, setAbierto] = useState(false)
   const desde = format(startOfMonth(new Date()), 'yyyy-MM-dd')
   const hasta = format(new Date(), 'yyyy-MM-dd')
 
@@ -102,45 +105,67 @@ export function ReportesCsvCentro() {
 
   if (visibles.length === 0) return null
 
+  function hrefExport(exp: ExportDef) {
+    if (exp.id === 'movimientos-stock') {
+      return `/api/reportes/movimientos-stock?desde=${desde}&hasta=${hasta}`
+    }
+    if (exp.id === 'auditoria') {
+      return `/api/reportes/auditoria?desde=${desde}&hasta=${hasta}`
+    }
+    return exp.href
+  }
+
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <FileSpreadsheet size={18} className="text-[#E8650A]" />
-          Centro de exportaciones CSV
-        </CardTitle>
-      </CardHeader>
-      <ul className="px-5 pb-5 space-y-3">
-        {visibles.map((exp) => {
-          const href =
-            exp.id === 'movimientos-stock'
-              ? `/api/reportes/movimientos-stock?desde=${desde}&hasta=${hasta}`
-              : exp.id === 'auditoria'
-                ? `/api/reportes/auditoria?desde=${desde}&hasta=${hasta}`
-                : exp.href
+      <button
+        type="button"
+        onClick={() => setAbierto((v) => !v)}
+        className="w-full text-left px-5 py-4 flex items-center justify-between gap-3 hover:bg-[#fafbfc] transition-colors rounded-[inherit]"
+        aria-expanded={abierto}
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          <FileSpreadsheet size={18} className="text-[#E8650A] shrink-0" />
+          <div className="min-w-0">
+            <p className="text-[13px] font-bold text-[#16181d]">Exportaciones CSV</p>
+            <p className="text-[12px] text-[#7c828c] truncate">
+              {visibles.length} reporte{visibles.length !== 1 ? 's' : ''} disponible
+              {visibles.length !== 1 ? 's' : ''} · mes en curso
+            </p>
+          </div>
+        </div>
+        <ChevronDown
+          size={18}
+          className={cn('text-[#9aa1ab] shrink-0 transition-transform', abierto && 'rotate-180')}
+        />
+      </button>
 
-          return (
-            <li
-              key={exp.id}
-              className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded-[9px] bg-[#F4F6F9] border border-[#edeef1]"
-            >
-              <div>
-                <p className="text-[13px] font-semibold text-[#16181d]">{exp.titulo}</p>
-                <p className="text-[12px] text-[#7c828c] mt-0.5">{exp.descripcion}</p>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="shrink-0"
-                onClick={() => window.open(href, '_blank')}
+      {abierto && (
+        <div className="px-5 pb-5 pt-0 border-t border-[#edeef1]">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2 mt-4">
+            {visibles.map((exp) => (
+              <div
+                key={exp.id}
+                className="flex items-start justify-between gap-2 p-2.5 rounded-[8px] bg-[#F4F6F9] border border-[#edeef1]"
+                title={exp.descripcion}
               >
-                <Download size={14} className="mr-1.5" />
-                Descargar CSV
-              </Button>
-            </li>
-          )
-        })}
-      </ul>
+                <p className="text-[12px] font-semibold text-[#16181d] leading-snug line-clamp-2 min-w-0">
+                  {exp.titulo}
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0 h-8 px-2.5"
+                  onClick={() => window.open(hrefExport(exp), '_blank')}
+                  title={exp.descripcion}
+                >
+                  <Download size={14} />
+                  <span className="sr-only">Descargar {exp.titulo}</span>
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </Card>
   )
 }

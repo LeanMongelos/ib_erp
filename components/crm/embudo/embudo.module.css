@@ -481,6 +481,12 @@
   font-size: 13px;
 }
 
+.formInput:focus-visible {
+  outline: none;
+  border-color: #E8650A;
+  box-shadow: 0 0 0 2px rgba(232, 101, 10, 0.35);
+}
+
 .checkboxGroup {
   display: flex;
   flex-direction: column;

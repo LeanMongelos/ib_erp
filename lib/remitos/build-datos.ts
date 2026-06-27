@@ -1,8 +1,4 @@
-/**
- * Datos de remito PDF desde OT o factura (emisión mínima M2).
- */
-
-import type { DatosDocumentoRender } from '@/lib/plantillas/types'
+import { formatFecha } from '@/lib/utils'
 
 type EmisorRow = {
   razonSocial: string
@@ -28,7 +24,7 @@ function mapEmisor(e: EmisorRow) {
     cuit: e.cuit,
     condicionIva: e.condicionIva,
     ingresosBrutos: e.ingresosBrutos,
-    inicioActividades: e.inicioActividades?.toISOString() ?? null,
+    inicioActividades: e.inicioActividades ? formatFecha(e.inicioActividades) : null,
     domicilio: e.domicilio,
     telefono: e.telefono,
     email: e.email,

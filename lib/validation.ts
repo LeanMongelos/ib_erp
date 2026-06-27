@@ -212,7 +212,14 @@ export const embudoNegocioCreateSchema = z.object({
   nombre: z.string().min(1),
   cliente: z.string().min(1),
   clienteId: z.string().min(1).optional().nullable(),
-  productoServicio: z.string().min(1).optional().default('Consulta comercial'),
+  productoServicio: z
+    .string()
+    .optional()
+    .nullable()
+    .transform((v) => {
+      const t = v?.trim() ?? ''
+      return t === '' ? null : t
+    }),
   inventarioId: z.string().min(1).optional().nullable(),
   conversacionId: z.string().min(1).optional().nullable(),
   monto: z.number().optional(),

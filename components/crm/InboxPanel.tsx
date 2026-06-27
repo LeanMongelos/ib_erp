@@ -526,7 +526,7 @@ export function InboxPanel({
               <div>
                 <p className="text-[10.5px] font-bold text-[#8a909a] uppercase mb-2">Cliente</p>
                 {detalle.cliente ? (
-                  <Link href={`/crm/${detalle.cliente.id}`} className="text-[13px] font-bold text-[#E8650A] hover:underline flex items-center gap-1">
+                  <Link href={`/clientes/${detalle.cliente.id}`} className="text-[13px] font-bold text-[#E8650A] hover:underline flex items-center gap-1">
                     {detalle.cliente.nombre} <ChevronRight size={14} />
                   </Link>
                 ) : (

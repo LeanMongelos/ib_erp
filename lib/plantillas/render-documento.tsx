@@ -64,9 +64,9 @@ const ib = StyleSheet.create({
   },
   colProd: { width: '12%' },
   colDesc: { width: '43%' },
-  colCant: { width: '10%', textAlign: 'right' },
-  colPrecio: { width: '17%', textAlign: 'right' },
-  colSub: { width: '18%', textAlign: 'right' },
+  colCant: { width: '10%', textAlign: 'center' },
+  colPrecio: { width: '17%', textAlign: 'center' },
+  colSub: { width: '18%', textAlign: 'center' },
   totalsBox: { marginTop: 8, alignSelf: 'flex-end', width: 240 },
   totalLine: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2 },
   letras: { marginTop: 8, fontSize: 7, fontStyle: 'italic' },
@@ -101,9 +101,8 @@ function PresupuestoIB({ cfg, datos }: { cfg: PlantillaConfig; datos: DatosDocum
 
       <Text style={ib.marca}>{cfg.encabezado.leyenda ?? e.razonSocial}</Text>
       {e.domicilio && <Text style={ib.contacto}>{e.domicilio}</Text>}
-      <Text style={ib.contacto}>
-        {[e.telefono && `Cel: ${e.telefono}`, e.email && `Mail: ${e.email}`].filter(Boolean).join(' · ')}
-      </Text>
+      {e.telefono && <Text style={ib.contacto}>Cel: {e.telefono}</Text>}
+      {e.email && <Text style={ib.contacto}>Mail: {e.email}</Text>}
 
       <View style={ib.clienteBox}>
         <View style={ib.clienteCol}>
@@ -211,9 +210,12 @@ function DocumentoSimple({ cfg, datos }: { cfg: PlantillaConfig; datos: DatosDoc
       </View>
 
       <View style={[ib.tableHead, { marginTop: 10 }]}>
-        {cols.map((col) => (
-          <Text key={col.key} style={{ width: `${col.anchoPct}%` }}>{col.label}</Text>
-        ))}
+        {cols.map((col) => {
+          const align = ['cantidad', 'precioUnit', 'subtotal'].includes(col.key) ? 'center' : 'left'
+          return (
+            <Text key={col.key} style={{ width: `${col.anchoPct}%`, textAlign: align as 'left' | 'center' }}>{col.label}</Text>
+          )
+        })}
       </View>
 
       {datos.items.map((item, idx) => (
@@ -221,9 +223,9 @@ function DocumentoSimple({ cfg, datos }: { cfg: PlantillaConfig; datos: DatosDoc
           {cols.map((col) => {
             if (col.key === 'codigo') return <Text key={col.key} style={{ width: `${col.anchoPct}%` }}>{item.codigo ?? '—'}</Text>
             if (col.key === 'descripcion') return <Text key={col.key} style={{ width: `${col.anchoPct}%` }}>{item.descripcion}</Text>
-            if (col.key === 'cantidad') return <Text key={col.key} style={{ width: `${col.anchoPct}%` }}>{item.cantidad}</Text>
-            if (col.key === 'precioUnit') return <Text key={col.key} style={{ width: `${col.anchoPct}%` }}>{formatImporteDoc(item.precioUnit, datos)}</Text>
-            if (col.key === 'subtotal') return <Text key={col.key} style={{ width: `${col.anchoPct}%` }}>{formatImporteDoc(item.subtotal, datos)}</Text>
+            if (col.key === 'cantidad') return <Text key={col.key} style={{ width: `${col.anchoPct}%`, textAlign: 'center' }}>{formatCantidadAr(item.cantidad)}</Text>
+            if (col.key === 'precioUnit') return <Text key={col.key} style={{ width: `${col.anchoPct}%`, textAlign: 'center' }}>{formatImporteDoc(item.precioUnit, datos)}</Text>
+            if (col.key === 'subtotal') return <Text key={col.key} style={{ width: `${col.anchoPct}%`, textAlign: 'center' }}>{formatImporteDoc(item.subtotal, datos)}</Text>
             if (col.key === 'foto' && item.fotoUrl) {
               return (
                 <View key={col.key} style={{ width: `${col.anchoPct}%` }}>

@@ -11,6 +11,12 @@ import { formatFieldValue, resolveBinding } from './binding-resolver'
 import { resolveImageSrc } from './resolve-image-src.server'
 import { limitarTexto, textoColumnaItem } from './text-campo'
 
+const COLS_NUMERICAS = new Set(['cantidad', 'precioUnit', 'subtotal'])
+
+function alinearColumna(key: string): 'left' | 'center' | 'right' {
+  return COLS_NUMERICAS.has(key) ? 'center' : 'left'
+}
+
 function estiloElemento(el: LayoutElement, cfg: PlantillaConfig) {
   const s = el.style ?? {}
   return {
@@ -93,7 +99,16 @@ function ItemsTableBlock({ el, datos, cfg }: { el: LayoutElement; datos: DatosDo
     <View style={[layoutRectPt(el, { autoHeight: true })]}>
       <View style={[comp.tableHead, { backgroundColor: headBg, borderWidth: 1, borderColor: '#000' }]}>
         {cols.map((col) => (
-          <Text key={col.key} style={{ width: `${col.anchoPct}%`, color: headColor, fontWeight: 'bold', fontSize: col.fontSize ?? st.fontSize }}>
+          <Text
+            key={col.key}
+            style={{
+              width: `${col.anchoPct}%`,
+              color: headColor,
+              fontWeight: 'bold',
+              fontSize: col.fontSize ?? st.fontSize,
+              textAlign: alinearColumna(col.key),
+            }}
+          >
             {col.label}
           </Text>
         ))}
@@ -133,21 +148,21 @@ function ItemsTableBlock({ el, datos, cfg }: { el: LayoutElement; datos: DatosDo
             }
             if (col.key === 'cantidad') {
               return (
-                <Text key={col.key} style={{ ...w, textAlign: 'right', fontSize: col.fontSize ?? st.fontSize }}>
+                <Text key={col.key} style={{ ...w, textAlign: 'center', fontSize: col.fontSize ?? st.fontSize }}>
                   {formatCantidadAr(item.cantidad)}
                 </Text>
               )
             }
             if (col.key === 'precioUnit') {
               return (
-                <Text key={col.key} style={{ ...w, textAlign: 'right', fontSize: col.fontSize ?? st.fontSize }}>
+                <Text key={col.key} style={{ ...w, textAlign: 'center', fontSize: col.fontSize ?? st.fontSize }}>
                   {formatImporteDoc(item.precioUnit, datos)}
                 </Text>
               )
             }
             if (col.key === 'subtotal') {
               return (
-                <Text key={col.key} style={{ ...w, textAlign: 'right', fontSize: col.fontSize ?? st.fontSize }}>
+                <Text key={col.key} style={{ ...w, textAlign: 'center', fontSize: col.fontSize ?? st.fontSize }}>
                   {formatImporteDoc(item.subtotal, datos)}
                 </Text>
               )

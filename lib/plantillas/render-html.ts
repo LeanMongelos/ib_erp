@@ -51,9 +51,9 @@ function filaItemHtml(item: ItemDocumentoRender, datos: DatosDocumentoRender): s
           <div class="producto-descripcion-main">${esc(item.descripcion)}</div>
           <div class="producto-descripcion-detalle">${esc(item.descripcionLarga ?? '')}</div>
         </td>
-        <td class="right">${formatCantidadAr(item.cantidad)}</td>
-        <td class="right">${formatImporteDoc(item.precioUnit, datos)}</td>
-        <td class="right">${formatImporteDoc(item.subtotal, datos)}</td>
+        <td class="center">${formatCantidadAr(item.cantidad)}</td>
+        <td class="center">${formatImporteDoc(item.precioUnit, datos)}</td>
+        <td class="center">${formatImporteDoc(item.subtotal, datos)}</td>
       </tr>`
 }
 

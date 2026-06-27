@@ -6,7 +6,7 @@ import { Card, CardTitle } from '@/components/ui/card'
 
 const RUTAS_POR_ROL = [
   { rol: 'Admin / Gerente', rutas: ['/configuracion/usuarios', '/configuracion/emisores', '/configuracion/integraciones', '/configuracion/logs'] },
-  { rol: 'Vendedor / Comercial', rutas: ['/crm', '/presupuestos', '/crm/embudo'] },
+  { rol: 'Vendedor / Comercial', rutas: ['/clientes', '/presupuestos', '/crm/embudo', '/crm/inbox'] },
   { rol: 'Técnico ST', rutas: ['/servicio-tecnico', '/servicio-tecnico/mapa', '/inventario'] },
   { rol: 'Compras / Cobranzas', rutas: ['/proveedores', '/compras', '/cobranzas', '/inventario?bajo=1'] },
 ] as const

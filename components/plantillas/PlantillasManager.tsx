@@ -82,7 +82,7 @@ function ModalVistaPrevia({
   onClose: () => void
 }) {
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" data-modal-overlay>
       <div
         className="bg-white rounded-[14px] w-full max-w-4xl shadow-2xl flex flex-col max-h-[92vh]"
         onClick={(e) => e.stopPropagation()}
@@ -531,7 +531,7 @@ function HtmlEditorModal({ plantilla, onClose, onSaved }: { plantilla: Plantilla
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" data-modal-overlay>
       <div className="bg-white rounded-[14px] w-full max-w-4xl shadow-xl max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="px-5 py-4 border-b border-[#eef0f2]">
           <h3 className="text-[14px] font-bold">{plantilla.nombre}</h3>

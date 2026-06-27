@@ -644,7 +644,7 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
       )}
 
       {ajustando && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setAjustando(null)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" data-modal-overlay>
           <div className="bg-white rounded-[14px] w-full max-w-sm shadow-xl p-5" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-[14px] font-bold mb-1">Ajustar stock</h3>
             <p className="text-[12px] text-[#6b7280] mb-4">{ajustando.nombre} · actual: {ajustando.stock}</p>
@@ -743,7 +743,7 @@ function ModalForm({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" data-modal-overlay>
       <div className="bg-white rounded-[14px] w-full max-w-2xl shadow-xl max-h-[92vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="px-5 py-4 border-b border-[#eef0f2]">
           <h3 className="text-[14px] font-bold">{titulo}</h3>

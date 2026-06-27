@@ -43,7 +43,8 @@ export function puedeAccederReportes(permisos: string[] | undefined): boolean {
 /** Permiso mínimo por ruta del menú lateral (OR dentro del array). */
 export const NAV_ITEM_PERMISSIONS: Record<string, readonly string[]> = {
   '/dashboard': DASHBOARD_ACCESS_PERMISSIONS,
-  '/crm': ['clientes.read', 'crm.read'],
+  '/crm': ['crm.read'],
+  '/clientes': ['clientes.read'],
   '/reportes': REPORTES_NAV_PERMISSIONS,
   '/servicio-tecnico': ['servicio.read'],
   '/servicio-tecnico/preventivo': ['preventivo.read'],

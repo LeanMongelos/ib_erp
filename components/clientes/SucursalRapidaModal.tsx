@@ -110,7 +110,7 @@ export function SucursalRapidaModal({
   return (
     <div
       className="fixed inset-0 z-[130] flex items-center justify-center bg-black/50 p-4"
-      onClick={(e) => { if (e.target === e.currentTarget && !guardando) onClose() }}
+      data-modal-overlay
     >
       <form
         onSubmit={guardar}

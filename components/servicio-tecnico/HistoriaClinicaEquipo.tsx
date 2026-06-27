@@ -160,7 +160,7 @@ export function HistoriaClinicaEquipo({ inicial }: { inicial: any }) {
             </p>
             <p className="text-[12px] text-[#6B7280] mt-1">
               Cliente:{' '}
-              <Link href={`/crm/${eq.cliente.id}`} className="text-[#E8650A] font-semibold hover:underline">
+              <Link href={`/clientes/${eq.cliente.id}`} className="text-[#E8650A] font-semibold hover:underline">
                 {eq.cliente.nombre}
               </Link>
               {eq.cliente.ciudad ? ` · ${eq.cliente.ciudad}` : ''}

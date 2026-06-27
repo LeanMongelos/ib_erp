@@ -178,7 +178,7 @@ export function ClientesTable({ clientes }: { clientes: ClienteRow[] }) {
         )}
 
         <Button
-          onClick={() => router.push('/crm/nuevo')}
+          onClick={() => router.push('/clientes/nuevo')}
           size="md"
           className="gap-2"
         >
@@ -240,7 +240,7 @@ export function ClientesTable({ clientes }: { clientes: ClienteRow[] }) {
                     </td>
                     <td className="px-5 py-[13px] text-right border-b border-[#f4f5f7]">
                       <Link
-                        href={`/crm/${c.id}`}
+                        href={`/clientes/${c.id}`}
                         className="inline-flex items-center gap-1 text-[#E8650A] text-[12px] font-bold hover:underline"
                       >
                         Ver ficha

@@ -197,7 +197,7 @@ function EmisorModal({ emisor, onClose, onSaved }: { emisor?: Emisor; onClose: (
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" data-modal-overlay>
       <div className="bg-white rounded-[14px] w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-[#eef0f2] sticky top-0 bg-white">
           <h3 className="text-[14px] font-bold text-[#16181d]">{esEdicion ? 'Editar emisor' : 'Nuevo emisor'}</h3>

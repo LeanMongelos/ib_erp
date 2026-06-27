@@ -198,7 +198,7 @@ async function main() {
   // --- HTTP routes (requiere dev server) ---
   console.log(`\n--- HTTP (${BASE}) ---\n`)
 
-  const pages = ['/crm/nuevo', '/crm/inbox', '/facturacion/nueva']
+  const pages = ['/clientes/nuevo', '/crm/inbox', '/facturacion/nueva']
   for (const p of pages) {
     const r = await httpJson(p)
     if (r.status === 200 && r.html) pass(`GET ${p} → 200 HTML`)

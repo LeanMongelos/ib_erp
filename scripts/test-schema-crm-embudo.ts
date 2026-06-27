@@ -49,6 +49,29 @@ function main() {
   })
   pass('embudoNegocioCreateSchema acepta campos mínimos')
 
+  const sinProducto = embudoNegocioCreateSchema.parse({
+    nombre: 'Lead sin producto',
+    cliente: 'Clínica Sur',
+    vendedor: 'GA',
+  })
+  if (sinProducto.productoServicio !== null) {
+    fail('embudoNegocioCreateSchema debe permitir productoServicio vacío (null)')
+  } else {
+    pass('embudoNegocioCreateSchema acepta productoServicio omitido')
+  }
+
+  const productoVacio = embudoNegocioCreateSchema.parse({
+    nombre: 'Lead producto vacío',
+    cliente: 'Clínica Este',
+    productoServicio: '   ',
+    vendedor: 'LB',
+  })
+  if (productoVacio.productoServicio !== null) {
+    fail('embudoNegocioCreateSchema debe normalizar productoServicio en blanco a null')
+  } else {
+    pass('embudoNegocioCreateSchema normaliza productoServicio en blanco')
+  }
+
   try {
     embudoNegocioCreateSchema.parse({
       nombre: 'X',
