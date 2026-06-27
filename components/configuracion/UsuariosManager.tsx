@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { useCan } from '@/components/auth/useCan'
 import { cn, formatFechaHora } from '@/lib/utils'
 import { mensajeErrorDesconocido, mensajeErrorJson, mensajeErrorRespuesta } from '@/lib/errores'
-import { validarEmailRequerido } from '@/lib/form-validation'
+import { validarEmailRequerido, validarTelefonoOpcional } from '@/lib/form-validation'
 import { RolesPermisosPanel } from '@/components/configuracion/RolesPermisosPanel'
 
 interface RolOpt { clave: string; nombre: string }
@@ -234,6 +234,8 @@ function UsuarioModal({
       if (errEmail) { toast.error(errEmail); return }
     }
     if (puedeAsignarRoles && seleccion.length === 0) { toast.error('Asigná al menos un rol'); return }
+    const errTel = validarTelefonoOpcional(telefono)
+    if (errTel) { toast.error(errTel); return }
     if (hayPasswordManual) {
       if (!nuevaPassword) { toast.error('Ingresá la nueva contraseña'); return }
       if (nuevaPassword !== confirmarPassword) { toast.error('Las contraseñas no coinciden'); return }
@@ -308,7 +310,7 @@ function UsuarioModal({
           <div className="p-5 flex flex-col gap-3.5">
             <Input label="Nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Nombre y apellido" autoComplete="name" />
             <Input label="Email" type="email" value={email} disabled={esEdicion} onChange={(e) => setEmail(e.target.value)} placeholder="usuario@ib.com" autoComplete="email" />
-            <Input label="Teléfono" value={telefono} onChange={(e) => setTelefono(e.target.value)} placeholder="Opcional" autoComplete="tel" />
+            <Input label="Teléfono" telefono value={telefono} onChange={(e) => setTelefono(e.target.value)} placeholder="Ej. 3704 123456 o +54 9 …" />
 
             <div>
               <label className="text-[11.5px] font-semibold text-[#5b626d] tracking-wide uppercase">Roles</label>

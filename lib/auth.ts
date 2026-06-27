@@ -14,8 +14,9 @@
  * 4. Si todo es válido, devolvemos el objeto usuario → NextAuth genera el JWT
  * 5. En cada request, los callbacks jwt() y session() enriquecen la sesión con el rol
  *
- * Duración de sesión: leída de PoliticaSeguridad.sesionMaxHoras (default 8 h).
- * updateAge > maxAge evita renovación deslizante — expira de forma absoluta desde el login.
+ * Duración de sesión: PoliticaSeguridad.sesionMaxHoras (default 5 h).
+ * Inactividad: si no hay uso del sistema durante ese tiempo, pide login de nuevo.
+ * Con actividad, la sesión se renueva (ventana deslizante).
  */
 
 import { NextAuthOptions } from 'next-auth'
@@ -33,8 +34,13 @@ import {
 import { registrarAuditoria } from '@/lib/audit'
 import { notifyAdminLoginLockout } from '@/lib/auth/login-lock-notify'
 import { obtenerPoliticaSeguridad, obtenerSesionEpoch } from '@/lib/config/politica-seguridad'
-
-const DEFAULT_SESION_MAX_HORAS = 8
+import {
+  DEFAULT_SESION_MAX_HORAS,
+  SESION_UPDATE_AGE_SEC,
+  invalidarClaimsSesion,
+  sesionIdleExpirada,
+  sesionMaxSecDesdeHoras,
+} from '@/lib/auth/sesion-idle'
 
 // Fallback: si un usuario todavía no tiene roles RBAC asignados, mapeamos su
 // rol legado (columna `rol`) a un rol del nuevo sistema.
@@ -50,7 +56,7 @@ function buildAuthOptions(maxAge: number): NextAuthOptions {
     session: {
       strategy: 'jwt',
       maxAge,
-      updateAge: maxAge + 1, // sin extensión deslizante — expira desde el login
+      updateAge: SESION_UPDATE_AGE_SEC,
     },
     jwt: {
       maxAge,
@@ -158,23 +164,32 @@ function buildAuthOptions(maxAge: number): NextAuthOptions {
     callbacks: {
       async jwt({ token, user, trigger, session }) {
         const sesionEpochActual = await obtenerSesionEpoch()
+        const politica = await obtenerPoliticaSeguridad()
+        const sessionMaxSec = sesionMaxSecDesdeHoras(politica.sesionMaxHoras)
+        const now = Math.floor(Date.now() / 1000)
 
         if (user) {
           token.sesionEpoch = sesionEpochActual
+          token.lastActivity = now
+          token.sessionMaxSec = sessionMaxSec
           token.role        = user.role
           token.id          = user.id
           token.roles       = (user as { roles?: string[] }).roles ?? []
           token.permissions = (user as { permissions?: string[] }).permissions ?? []
           token.avatarUrl   = (user as { avatarUrl?: string | null }).avatarUrl ?? null
           token.exigirCambioPassword = (user as { exigirCambioPassword?: boolean }).exigirCambioPassword ?? false
+        } else if (token.id) {
+          token.sessionMaxSec = sessionMaxSec
+
+          if ((token.sesionEpoch as number | undefined) !== sesionEpochActual) {
+            invalidarClaimsSesion(token as Record<string, unknown>)
+            token.sesionEpoch = sesionEpochActual
+          } else if (sesionIdleExpirada(token)) {
+            invalidarClaimsSesion(token as Record<string, unknown>)
+          } else {
+            token.lastActivity = now
+          }
         } else if ((token.sesionEpoch as number | undefined) !== sesionEpochActual) {
-          delete token.id
-          delete token.sub
-          delete token.role
-          delete token.roles
-          delete token.permissions
-          delete token.avatarUrl
-          delete token.exigirCambioPassword
           token.sesionEpoch = sesionEpochActual
         }
         if (trigger === 'update' && session) {
@@ -195,7 +210,7 @@ function buildAuthOptions(maxAge: number): NextAuthOptions {
       },
 
       async session({ session, token }) {
-        if (!token?.id) {
+        if (!token?.id || sesionIdleExpirada(token)) {
           return { ...session, user: undefined, expires: new Date(0).toISOString() }
         }
         if (token && session.user) {
@@ -221,5 +236,5 @@ export async function getAuthOptions(): Promise<NextAuthOptions> {
   return buildAuthOptions(maxAge)
 }
 
-/** Fallback estático (8 h) cuando no se puede leer la política de forma async. */
+/** Fallback estático (5 h) cuando no se puede leer la política de forma async. */
 export const authOptions: NextAuthOptions = buildAuthOptions(DEFAULT_SESION_MAX_HORAS * 3600)

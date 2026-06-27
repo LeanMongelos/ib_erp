@@ -206,7 +206,7 @@ export function ClienteProspectoModal({ open, prefill, onClose, onVinculado }: P
               />
               <Input label="Persona de contacto" value={form.contacto} onChange={(e) => setF('contacto', e.target.value)} />
               <Input label="Email" type="email" value={form.email} onChange={(e) => setF('email', e.target.value)} />
-              <Input label="Teléfono" value={form.telefono} onChange={(e) => setF('telefono', e.target.value)} />
+          <Input label="Teléfono" telefono value={form.telefono} onChange={(e) => setF('telefono', e.target.value)} />
               <Input
                 label="Dirección fiscal (opcional)"
                 value={form.direccion}

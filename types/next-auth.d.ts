@@ -40,5 +40,7 @@ declare module 'next-auth/jwt' {
     exigirCambioPassword?: boolean
     devAlertasUi?: boolean
     sesionEpoch?: number
+    lastActivity?: number
+    sessionMaxSec?: number
   }
 }

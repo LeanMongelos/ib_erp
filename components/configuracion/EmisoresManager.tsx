@@ -211,7 +211,7 @@ function EmisorModal({ emisor, onClose, onSaved }: { emisor?: Emisor; onClose: (
           <Input label="Punto de venta" type="number" value={form.puntoVenta} onChange={(e) => set('puntoVenta', e.target.value)} autoComplete="off" />
           <div className="col-span-2"><Input label="Domicilio" value={form.domicilio} onChange={(e) => set('domicilio', e.target.value)} autoComplete="street-address" /></div>
           <Input label="Ciudad" value={form.ciudad} onChange={(e) => set('ciudad', e.target.value)} autoComplete="address-level2" />
-          <Input label="Teléfono" value={form.telefono} onChange={(e) => set('telefono', e.target.value)} autoComplete="tel" />
+          <Input label="Teléfono" telefono value={form.telefono} onChange={(e) => set('telefono', e.target.value)} />
           <Input label="Email" type="email" value={form.email} onChange={(e) => set('email', e.target.value)} autoComplete="email" />
           <Input label="Alias certificado AFIP" value={form.certificadoAlias} onChange={(e) => set('certificadoAlias', e.target.value)} autoComplete="off" />
           <Select

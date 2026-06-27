@@ -16,9 +16,16 @@ import { NextResponse } from 'next/server'
 import { withAuth } from 'next-auth/middleware'
 import type { NextRequestWithAuth } from 'next-auth/middleware'
 import { applySecurityHeaders } from '@/lib/security/headers'
+import { sesionIdleExpirada } from '@/lib/auth/sesion-idle'
 
 export default withAuth(
   function middleware(req: NextRequestWithAuth) {
+    if (req.nextauth.token?.id && sesionIdleExpirada(req.nextauth.token)) {
+      const destino = new URL('/login', req.url)
+      destino.searchParams.set('sesion', 'expirada')
+      return applySecurityHeaders(NextResponse.redirect(destino))
+    }
+
     const exigirCambio = req.nextauth.token?.exigirCambioPassword === true
     const enPerfil = req.nextUrl.pathname.startsWith('/perfil')
     if (exigirCambio && !enPerfil) {
@@ -28,7 +35,12 @@ export default withAuth(
     }
     return applySecurityHeaders(NextResponse.next())
   },
-  { pages: { signIn: '/login' } },
+  {
+    pages: { signIn: '/login' },
+    callbacks: {
+      authorized: ({ token }) => Boolean(token?.id),
+    },
+  },
 )
 
 export const config = {

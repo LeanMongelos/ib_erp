@@ -34,6 +34,17 @@ export function invalidarCachePolitica() {
   cache = null
 }
 
+/** Incrementa sesionEpoch → todos los JWT emitidos antes quedan inválidos en el próximo refresh. */
+export async function invalidarTodasLasSesiones(): Promise<number> {
+  const politica = await prisma.politicaSeguridad.upsert({
+    where: { id: 'default' },
+    update: { sesionEpoch: { increment: 1 } },
+    create: { id: 'default', sesionEpoch: 2 },
+  })
+  invalidarCachePolitica()
+  return politica.sesionEpoch
+}
+
 /** Lectura directa (sin cache) para invalidación inmediata de sesiones JWT. */
 export async function obtenerSesionEpoch(): Promise<number> {
   const row = await prisma.politicaSeguridad.findUnique({

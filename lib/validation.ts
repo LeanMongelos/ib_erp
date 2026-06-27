@@ -11,6 +11,7 @@ import { codigoInternoOpcionalSchema, codigoInternoSchema } from '@/lib/inventar
 import '@/lib/zod-es'
 import { monedaDocumentoEnum } from '@/lib/moneda'
 import { validarListaSucursales } from '@/lib/clientes/validar-sucursales'
+import { telefonoEsValido } from '@/lib/telefono'
 
 // ============ ENUMS ============
 
@@ -60,6 +61,21 @@ const emailOpcional = z
     message: 'Email inválido',
   })
 
+const telefonoOpcional = z
+  .string()
+  .trim()
+  .max(40)
+  .optional()
+  .refine((v) => telefonoEsValido(v), { message: 'Teléfono inválido' })
+
+const telefonoNullable = z
+  .string()
+  .trim()
+  .max(40)
+  .optional()
+  .nullable()
+  .refine((v) => telefonoEsValido(v ?? ''), { message: 'Teléfono inválido' })
+
 // ============ CLIENTE ============
 
 const clienteFieldsSchema = z.object({
@@ -68,7 +84,7 @@ const clienteFieldsSchema = z.object({
   cuit:          z.string().trim().max(20).optional(),
   direccion:     z.string().trim().max(200).optional(),
   ciudad:        z.string().trim().max(100).optional(),
-  telefono:      z.string().trim().max(40).optional(),
+  telefono:      telefonoOpcional,
   email:         emailOpcional,
   contacto:      z.string().trim().max(120).optional(),
   // Ficha 360°: datos fiscales y comerciales
@@ -194,7 +210,7 @@ export const conversacionEtiquetasN8nSchema = z.object({
 export const leadN8nCreateSchema = z.object({
   nombre: z.string().trim().min(2),
   email: emailOpcional,
-  telefono: z.string().trim().max(40).optional(),
+  telefono: telefonoOpcional,
   notas: z.string().trim().max(1000).optional(),
   conversacionId: z.string().min(1).optional(),
 })
@@ -807,7 +823,7 @@ export const usuarioCreateSchema = z
   .object({
     nombre:   z.string().trim().min(2, 'El nombre debe tener al menos 2 caracteres'),
     email:    z.string().trim().email('Email inválido').toLowerCase(),
-    telefono: z.string().trim().max(40).optional(),
+    telefono: telefonoOpcional,
     roles:    z.array(z.string().min(1)).min(1, 'Asigná al menos un rol'),
   })
   .merge(usuarioPasswordFieldsSchema)
@@ -815,7 +831,7 @@ export const usuarioCreateSchema = z
 export const usuarioUpdateSchema = z
   .object({
     nombre:   z.string().trim().min(2).optional(),
-    telefono: z.string().trim().max(40).optional().nullable(),
+    telefono: telefonoNullable,
     roles:    z.array(z.string().min(1)).min(1).optional(),
     activo:   z.boolean().optional(),
   })
@@ -831,7 +847,7 @@ export const rolePermisosUpdateSchema = z.object({
 export const perfilUpdateSchema = z
   .object({
     nombre:    z.string().trim().min(2).optional(),
-    telefono:  z.string().trim().max(40).optional().nullable(),
+    telefono:  telefonoNullable,
     avatarUrl: z
       .string()
       .trim()
@@ -861,7 +877,7 @@ export const emisorCreateSchema = z.object({
   inicioActividades: z.coerce.date().optional(),
   domicilio:         z.string().trim().max(200).optional(),
   ciudad:            z.string().trim().max(100).optional(),
-  telefono:          z.string().trim().max(40).optional(),
+  telefono:          telefonoOpcional,
   email:             z.string().trim().email('Email inválido').optional().or(z.literal('')),
   certificadoAlias:  z.string().trim().max(120).optional(),
   ambiente:          z.enum(['HOMOLOGACION', 'PRODUCCION']).default('HOMOLOGACION'),
@@ -895,7 +911,7 @@ export const contactoProveedorSchema = z.object({
   nombre:    z.string().trim().min(2, 'El nombre del contacto es obligatorio'),
   cargo:     z.string().trim().max(80).optional(),
   email:     emailOpcional,
-  telefono:  z.string().trim().max(40).optional(),
+  telefono:  telefonoOpcional,
   whatsapp:  z.string().trim().max(40).optional(),
   principal: z.boolean().optional().default(false),
 })
@@ -927,7 +943,7 @@ export const proveedorCreateSchema = z.object({
   tipoCompra:       tipoCompraProveedorEnum.default('AMBOS'),
   moneda:           z.string().trim().max(6).default('ARS'),
   email:            emailOpcional,
-  telefono:         z.string().trim().max(40).optional(),
+  telefono:         telefonoOpcional,
   sitioWeb:         z.string().trim().max(200).optional(),
   direccion:        z.string().trim().max(200).optional(),
   ciudad:           z.string().trim().max(100).optional(),

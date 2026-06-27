@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { UserAvatar } from '@/components/perfil/UserAvatar'
 import { mensajeErrorDesconocido, mensajeErrorJson, mensajeErrorRespuesta } from '@/lib/errores'
+import { validarTelefonoOpcional } from '@/lib/form-validation'
 
 interface Me {
   id: string
@@ -84,6 +85,8 @@ export function PerfilForm({ me }: { me: Me }) {
 
   async function guardarPerfil() {
     if (nombre.trim().length < 2) { toast.error('El nombre es muy corto'); return }
+    const errTel = validarTelefonoOpcional(telefono)
+    if (errTel) { toast.error(errTel); return }
     setSavingPerfil(true)
     try {
       const res = await fetch('/api/perfil', {
@@ -181,7 +184,7 @@ export function PerfilForm({ me }: { me: Me }) {
         <div className="grid grid-cols-2 gap-3.5">
           <div className="col-span-2"><Input label="Nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} autoComplete="name" /></div>
           <Input label="Email" value={me.email} disabled autoComplete="email" />
-          <Input label="Teléfono" value={telefono} onChange={(e) => setTelefono(e.target.value)} placeholder="Opcional" autoComplete="tel" />
+          <Input label="Teléfono" telefono value={telefono} onChange={(e) => setTelefono(e.target.value)} placeholder="Ej. 3704 123456" />
         </div>
         <div className="flex justify-end mt-4">
           <Button variant="primary" onClick={guardarPerfil} loading={savingPerfil}>Guardar cambios</Button>

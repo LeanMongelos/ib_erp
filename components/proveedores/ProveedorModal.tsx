@@ -148,7 +148,7 @@ export function ProveedorModal({
               <Select label="Tipo de compra" value={base.tipoCompra} onChange={(e) => setB('tipoCompra', e.target.value)} options={[...TIPO_COMPRA_PROVEEDOR]} />
               <Input label="Marcas / líneas" value={base.marcas} onChange={(e) => setB('marcas', e.target.value)} placeholder="HAEMONETICS, ..." autoComplete="off" />
               <Input label="Email" type="email" value={base.email} onChange={(e) => setB('email', e.target.value)} autoComplete="email" />
-              <Input label="Teléfono" value={base.telefono} onChange={(e) => setB('telefono', e.target.value)} autoComplete="tel" />
+              <Input label="Teléfono" telefono value={base.telefono} onChange={(e) => setB('telefono', e.target.value)} />
               <Input label="Sitio web" value={base.sitioWeb} onChange={(e) => setB('sitioWeb', e.target.value)} autoComplete="url" />
               <Input label="Ciudad" value={base.ciudad} onChange={(e) => setB('ciudad', e.target.value)} autoComplete="address-level2" />
               <div className="col-span-2"><Input label="Dirección" value={base.direccion} onChange={(e) => setB('direccion', e.target.value)} autoComplete="street-address" /></div>

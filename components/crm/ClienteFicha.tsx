@@ -18,7 +18,7 @@ import { CONDICION_IVA, CONDICION_PAGO } from '@/lib/form-options'
 import { BadgeEstadoOT, BadgeEstadoFactura, BadgeEstadoPresupuesto } from '@/components/ui/badge'
 import { useCan } from '@/components/auth/useCan'
 import { mensajeErrorDesconocido, mensajeErrorJson } from '@/lib/errores'
-import { validarEmailOpcional } from '@/lib/form-validation'
+import { validarEmailOpcional, validarTelefonoOpcional } from '@/lib/form-validation'
 import { formatFecha, formatMonto } from '@/lib/utils'
 import {
   LABEL_SEGMENTO,
@@ -930,6 +930,11 @@ function ClienteEditModal({
       toast.error(errEmail)
       return
     }
+    const errTel = validarTelefonoOpcional(form.telefono)
+    if (errTel) {
+      toast.error(errTel)
+      return
+    }
     if (form.limiteCredito !== '') {
       const n = Number(form.limiteCredito)
       if (Number.isNaN(n) || n < 0) {
@@ -995,7 +1000,7 @@ function ClienteEditModal({
           <Combobox label="Condición de pago" value={form.condicionPago} onChange={(v) => set('condicionPago', v)} options={CONDICION_PAGO} placeholder="30 días" allowCustom />
           <Input label="Límite de crédito" type="number" value={form.limiteCredito} onChange={(e) => set('limiteCredito', e.target.value)} placeholder="0" autoComplete="off" />
           <Input label="Contacto" value={form.contacto} onChange={(e) => set('contacto', e.target.value)} autoComplete="name" />
-          <Input label="Teléfono" value={form.telefono} onChange={(e) => set('telefono', e.target.value)} autoComplete="tel" />
+          <Input label="Teléfono" telefono value={form.telefono} onChange={(e) => set('telefono', e.target.value)} />
           <Input label="Email" type="email" value={form.email} onChange={(e) => set('email', e.target.value)} autoComplete="email" />
           <Input label="Sitio web" value={form.sitioWeb} onChange={(e) => set('sitioWeb', e.target.value)} autoComplete="url" />
           <div className="col-span-2"><Input label="Dirección" value={form.direccion} onChange={(e) => set('direccion', e.target.value)} autoComplete="street-address" /></div>

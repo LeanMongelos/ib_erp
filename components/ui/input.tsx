@@ -1,14 +1,24 @@
 import { cn } from '@/lib/utils'
+import { normalizarEntradaTelefono } from '@/lib/telefono'
 import { InputHTMLAttributes, forwardRef } from 'react'
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string
   error?: string
   icon?: React.ReactNode
+  /** Filtra letras y símbolos inválidos; solo números y formato telefónico (+ - ( ) espacios). */
+  telefono?: boolean
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ className, label, error, icon, id, ...props }, ref) => {
+  ({ className, label, error, icon, id, telefono, onChange, inputMode, autoComplete, ...props }, ref) => {
+    function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+      if (telefono) {
+        e.target.value = normalizarEntradaTelefono(e.target.value)
+      }
+      onChange?.(e)
+    }
+
     return (
       <div className="flex flex-col gap-1.5">
         {label && (
@@ -25,6 +35,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           <input
             ref={ref}
             id={id}
+            inputMode={telefono ? 'tel' : inputMode}
+            autoComplete={telefono ? 'tel' : autoComplete}
+            onChange={handleChange}
             className={cn(
               'w-full bg-white border border-[#e4e7eb] rounded-[9px] px-3 py-2.5 text-[13.5px] text-[#1f242c]',
               'placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#E8650A]/40 focus:border-[#E8650A]',

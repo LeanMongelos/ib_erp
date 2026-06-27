@@ -1,12 +1,15 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { signOut } from 'next-auth/react'
 import { toast } from 'sonner'
-import { Shield, Users } from 'lucide-react'
+import { LogOut, Shield, Users } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ConfigPageShell } from '@/components/configuracion/ConfigPageShell'
+import { ModalOverlay } from '@/components/ui/modal-overlay'
+import { useIsSuperAdmin } from '@/components/auth/useCan'
 import { etiquetaAccion } from '@/lib/config/config-labels'
 import { formatFechaHora } from '@/lib/utils'
 import { mensajeErrorDesconocido, mensajeErrorRespuesta } from '@/lib/errores'
@@ -21,6 +24,7 @@ interface Politica {
   bloqueoMinutos: number
   maxIntentosIpHora: number
   sesionMaxHoras: number
+  sesionEpoch: number
   totpHabilitado: boolean
 }
 
@@ -41,11 +45,15 @@ interface EventoLogin {
 }
 
 export function SeguridadManager() {
+  const esSuperAdmin = useIsSuperAdmin()
   const [politica, setPolitica] = useState<Politica | null>(null)
   const [usuarios, setUsuarios] = useState<UsuarioRow[]>([])
   const [eventos, setEventos] = useState<EventoLogin[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [modalCerrarSesiones, setModalCerrarSesiones] = useState(false)
+  const [confirmacionCerrar, setConfirmacionCerrar] = useState('')
+  const [cerrandoSesiones, setCerrandoSesiones] = useState(false)
 
   const cargar = useCallback(async () => {
     setLoading(true)
@@ -82,6 +90,30 @@ export function SeguridadManager() {
       toast.error(mensajeErrorDesconocido(err, 'Error'))
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function cerrarTodasLasSesiones() {
+    if (confirmacionCerrar.trim().toUpperCase() !== 'CERRAR TODAS') {
+      toast.error('Escribí CERRAR TODAS para confirmar')
+      return
+    }
+    setCerrandoSesiones(true)
+    try {
+      const res = await fetch('/api/config/seguridad/invalidar-sesiones', {
+        method: 'POST',
+        credentials: 'include',
+      })
+      if (!res.ok) throw new Error(await mensajeErrorRespuesta(res, 'No se pudo cerrar las sesiones'))
+      const data = await res.json()
+      toast.success(data.mensaje ?? 'Sesiones cerradas')
+      setModalCerrarSesiones(false)
+      setConfirmacionCerrar('')
+      await signOut({ callbackUrl: '/login?sesiones=cerradas' })
+    } catch (err) {
+      toast.error(mensajeErrorDesconocido(err, 'Error'))
+    } finally {
+      setCerrandoSesiones(false)
     }
   }
 
@@ -124,6 +156,9 @@ export function SeguridadManager() {
               onChange={(e) => setPolitica({ ...politica, maxIntentosIpHora: Number(e.target.value) })} />
             <Input label="Duración de sesión (horas)" type="number" value={politica.sesionMaxHoras}
               onChange={(e) => setPolitica({ ...politica, sesionMaxHoras: Number(e.target.value) })} />
+            <p className="text-[11px] text-[#9aa1ab] -mt-1">
+              Tras ese tiempo sin usar el sistema, el usuario debe volver a iniciar sesión. Con actividad, la sesión se renueva.
+            </p>
             <label className="flex items-center gap-2 text-[12.5px] opacity-60">
               <input type="checkbox" checked={politica.totpHabilitado} disabled onChange={(e) => setPolitica({ ...politica, totpHabilitado: e.target.checked })} />
               Autenticación 2FA (próximamente)
@@ -165,6 +200,38 @@ export function SeguridadManager() {
         </Card>
       </div>
 
+      {esSuperAdmin && (
+        <Card>
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-600">
+              <LogOut size={18} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-[13.5px] font-bold text-[#1f242c]">Cerrar sesión a todos los usuarios</h3>
+              <p className="mt-1 text-[12px] text-[#7c828c] leading-relaxed">
+                Invalida todas las sesiones activas de inmediato. Útil antes de un deploy, cuando alguien quedó
+                logueado en un equipo compartido o sospechás accesos abiertos. También cerrará tu sesión actual.
+              </p>
+              <p className="mt-2 text-[11px] text-[#9aa1ab]">
+                Revocación global #{politica.sesionEpoch} · cada usuario deberá volver a ingresar email y contraseña.
+              </p>
+              <Button
+                type="button"
+                variant="danger"
+                size="sm"
+                className="mt-3"
+                onClick={() => {
+                  setConfirmacionCerrar('')
+                  setModalCerrarSesiones(true)
+                }}
+              >
+                <LogOut size={15} /> Cerrar sesión a todos
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
+
       <Card padding={false}>
         <div className="px-5 py-3 border-b">
           <h3 className="text-[13px] font-bold">Eventos de autenticación</h3>
@@ -193,6 +260,56 @@ export function SeguridadManager() {
           </tbody>
         </table>
       </Card>
+
+      {modalCerrarSesiones && (
+        <ModalOverlay zClass="z-[120]">
+          <div
+            className="w-full max-w-md rounded-xl bg-white shadow-xl border border-[#eef0f2] p-5 flex flex-col gap-4"
+            data-modal-panel
+            role="dialog"
+            aria-labelledby="cerrar-sesiones-title"
+          >
+            <div>
+              <h2 id="cerrar-sesiones-title" className="text-[15px] font-bold text-[#1f242c]">
+                ¿Cerrar sesión a todos los usuarios?
+              </h2>
+              <p className="mt-2 text-[12.5px] text-[#6b7280] leading-relaxed">
+                Se desconectarán todas las cuentas del ERP, incluida la tuya. Nadie podrá seguir usando el sistema
+                hasta volver a iniciar sesión.
+              </p>
+            </div>
+            <Input
+              label='Escribí "CERRAR TODAS" para confirmar'
+              value={confirmacionCerrar}
+              onChange={(e) => setConfirmacionCerrar(e.target.value)}
+              autoComplete="off"
+              autoFocus
+            />
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  setModalCerrarSesiones(false)
+                  setConfirmacionCerrar('')
+                }}
+                disabled={cerrandoSesiones}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                loading={cerrandoSesiones}
+                disabled={confirmacionCerrar.trim().toUpperCase() !== 'CERRAR TODAS'}
+                onClick={() => void cerrarTodasLasSesiones()}
+              >
+                Confirmar cierre global
+              </Button>
+            </div>
+          </div>
+        </ModalOverlay>
+      )}
     </ConfigPageShell>
   )
 }

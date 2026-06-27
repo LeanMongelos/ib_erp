@@ -11,7 +11,7 @@ import { Select } from '@/components/ui/select'
 import { TIPO_CLIENTE, CONDICION_IVA } from '@/lib/form-options'
 import { useCan } from '@/components/auth/useCan'
 import { mensajeErrorDesconocido, parsearRespuestaApi } from '@/lib/errores'
-import { validarEmailOpcional } from '@/lib/form-validation'
+import { validarEmailOpcional, validarTelefonoOpcional } from '@/lib/form-validation'
 import {
   SucursalesEditor,
   sucursalDraftVacia,
@@ -101,6 +101,12 @@ export function NuevoClienteForm() {
     const errEmail = validarEmailOpcional(form.email)
     if (errEmail) {
       toast.error(errEmail)
+      return
+    }
+
+    const errTel = validarTelefonoOpcional(form.telefono)
+    if (errTel) {
+      toast.error(errTel)
       return
     }
 
@@ -213,12 +219,7 @@ export function NuevoClienteForm() {
             onChange={(e) => setF('email', e.target.value)}
             autoComplete="email"
           />
-          <Input
-            label="Teléfono"
-            value={form.telefono}
-            onChange={(e) => setF('telefono', e.target.value)}
-            autoComplete="tel"
-          />
+          <Input label="Teléfono" telefono value={form.telefono} onChange={(e) => setF('telefono', e.target.value)} />
           <Input
             label="Dirección fiscal / administrativa"
             value={form.direccion}

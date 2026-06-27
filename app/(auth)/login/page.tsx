@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
@@ -33,6 +33,16 @@ export default function LoginPage() {
   const router = useRouter()
   const [showPass, setShowPass] = useState(false)
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('sesiones') === 'cerradas') {
+      toast.info('Las sesiones del sistema fueron cerradas. Iniciá sesión nuevamente.')
+    }
+    if (params.get('sesion') === 'expirada') {
+      toast.info('Tu sesión expiró por inactividad. Volvé a iniciar sesión.')
+    }
+  }, [])
 
   const {
     register,

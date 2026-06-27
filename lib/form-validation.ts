@@ -16,6 +16,8 @@ export function validarEmailRequerido(valor: string): string | null {
   return null
 }
 
+export { validarTelefonoOpcional, normalizarEntradaTelefono } from '@/lib/telefono'
+
 export function validarEnteroPositivo(valor: string, etiqueta = 'El valor'): string | null {
   const v = valor.trim()
   if (!v) return `${etiqueta} es obligatorio`

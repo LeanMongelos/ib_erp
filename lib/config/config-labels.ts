@@ -15,6 +15,7 @@ export const ACCION_AUDITORIA_LABEL: Record<string, string> = {
   'cobranza.create': 'Cobranza registrada',
   'inventario.create': 'Producto de inventario creado',
   'config.seguridad.update': 'Política de seguridad actualizada',
+  'config.seguridad.invalidar_sesiones': 'Cierre de sesión global',
   'config.catalogos.update': 'Catálogo maestro actualizado',
   'config.notificaciones.update': 'Notificación actualizada',
 }
