@@ -1,4 +1,5 @@
 import { formatFecha } from '@/lib/utils'
+import type { DatosDocumentoRender } from '@/lib/plantillas/types'
 
 type EmisorRow = {
   razonSocial: string
