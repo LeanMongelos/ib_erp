@@ -45,22 +45,27 @@ else
 fi
 
 echo "==> Docker Compose producción (solo localhost)..."
-cat > docker-compose.prod.yml <<'EOF'
+if [[ -f docker-compose.prod.yml ]]; then
+  docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d postgres redis minio
+else
+  cat > docker-compose.prod.yml <<'EOF'
 services:
   postgres:
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:5433:5432"
   redis:
     ports:
-      - "127.0.0.1:6379:6379"
+      - "127.0.0.1:6380:6379"
   minio:
     ports:
-      - "127.0.0.1:9000:9000"
-      - "127.0.0.1:9001:9001"
+      - "127.0.0.1:9002:9000"
+      - "127.0.0.1:9003:9001"
   n8n:
     ports:
       - "127.0.0.1:5678:5678"
 EOF
+  docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d postgres redis minio
+fi
 
 if [[ ! -f .env ]]; then
   echo "==> Generando .env de producción..."
@@ -69,21 +74,22 @@ if [[ ! -f .env ]]; then
   CRON_SECRET="$(openssl rand -base64 32)"
   N8N_API_KEY="$(openssl rand -base64 32)"
   cat > .env <<ENV
-DATABASE_URL="postgresql://admin:admin123@127.0.0.1:5432/ibiomedica_db"
+DATABASE_URL="postgresql://admin:admin123@127.0.0.1:5433/ibiomedica_db"
 NEXTAUTH_SECRET="${NEXTAUTH_SECRET}"
 NEXTAUTH_URL="${PUBLIC_URL}"
+APP_URL="${PUBLIC_URL}"
 PORT=3000
 
 STORAGE_DRIVER="s3"
 STORAGE_DIR="./storage"
-S3_ENDPOINT="http://127.0.0.1:9000"
+S3_ENDPOINT="http://127.0.0.1:9002"
 S3_REGION="us-east-1"
 S3_BUCKET="ibiomedica"
 S3_ACCESS_KEY_ID="admin"
 S3_SECRET_ACCESS_KEY="admin123456"
 S3_FORCE_PATH_STYLE="true"
 
-REDIS_URL="redis://127.0.0.1:6379"
+REDIS_URL="redis://127.0.0.1:6380"
 INTEGRATION_SECRET="${INTEGRATION_SECRET}"
 META_VERIFY_TOKEN="$(openssl rand -hex 16)"
 N8N_API_KEY="${N8N_API_KEY}"

@@ -1,0 +1,16 @@
+# Override producción VPS: servicios internos solo en localhost (no exponer 5432/6379/9000 al internet).
+# Uso: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+services:
+  postgres:
+    ports:
+      - "127.0.0.1:5433:5432"
+  redis:
+    ports:
+      - "127.0.0.1:6380:6379"
+  minio:
+    ports:
+      - "127.0.0.1:9002:9000"
+      - "127.0.0.1:9003:9001"
+  n8n:
+    ports:
+      - "127.0.0.1:5678:5678"

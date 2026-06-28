@@ -4,8 +4,10 @@ import { parseCanalConfig, type MetaPageConfig } from '@/lib/crm/config'
 import { decryptCanalConfig } from '@/lib/integraciones/canal-config'
 import { procesarMetaWebhook } from '@/lib/crm/adapters/meta-messenger'
 import { resolveVerifyToken, verifyMetaChallenge, verifyMetaSignature } from '@/lib/crm/webhook-verify'
+import { assertWebhookRateLimit } from '@/lib/security/webhook-guard'
 
 export async function GET(req: NextRequest) {
+  await assertWebhookRateLimit(req.headers)
   const { searchParams } = new URL(req.url)
   const mode = searchParams.get('hub.mode')
   const token = searchParams.get('hub.verify_token')
@@ -18,6 +20,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  await assertWebhookRateLimit(req.headers)
   const rawBody = await req.text()
   let body: unknown
   try {

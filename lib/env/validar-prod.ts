@@ -39,10 +39,23 @@ export function validarEnvProd(env: NodeJS.ProcessEnv = process.env): EnvValidac
   const nextAuthUrl = env.NEXTAUTH_URL?.trim() ?? ''
   if (!nextAuthUrl) {
     push(checks, 'error', 'NEXTAUTH_URL ausente')
-  } else if (isProd && !nextAuthUrl.startsWith('https://')) {
+  } else   if (isProd && !nextAuthUrl.startsWith('https://')) {
     push(checks, 'error', 'NEXTAUTH_URL debe usar HTTPS en producción')
   } else {
     push(checks, 'ok', `NEXTAUTH_URL=${nextAuthUrl}`)
+  }
+
+  const appUrl = env.APP_URL?.trim() ?? ''
+  if (isProd) {
+    if (!appUrl) {
+      push(checks, 'warn', 'APP_URL ausente — anti-CSRF Origin desactivado en mutaciones API')
+    } else if (!appUrl.startsWith('https://')) {
+      push(checks, 'error', 'APP_URL debe usar HTTPS en producción')
+    } else if (appUrl !== nextAuthUrl && nextAuthUrl) {
+      push(checks, 'warn', 'APP_URL difiere de NEXTAUTH_URL — deben coincidir')
+    } else {
+      push(checks, 'ok', `APP_URL=${appUrl}`)
+    }
   }
 
   if (secretOk(env.CRON_SECRET)) {

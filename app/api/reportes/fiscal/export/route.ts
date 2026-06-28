@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server'
 import { requireAuth, handleApiError } from '@/lib/api-auth'
 import { tienePermiso } from '@/lib/rbac'
+import { auditarExportacion } from '@/lib/security/sensitive-access'
 import { generarReporteFiscal, reporteFiscalToCsv } from '@/lib/reportes-fiscales'
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const session = await requireAuth()
     if (!tienePermiso(session.permissions, 'reportes.read_fiscal')) {
@@ -12,6 +13,12 @@ export async function GET() {
 
     const data = await generarReporteFiscal()
     const csv = reporteFiscalToCsv(data)
+
+    void auditarExportacion({
+      usuarioId: session.id,
+      tipo: 'reporte-fiscal',
+      req,
+    })
 
     return new NextResponse(csv, {
       headers: {

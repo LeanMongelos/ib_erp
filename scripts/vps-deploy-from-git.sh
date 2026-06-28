@@ -92,21 +92,7 @@ if [[ "$OLD_HEAD" != "$NEW_HEAD" && "${DEPLOY_SELF_REEXEC:-1}" == "1" ]]; then
   exec bash "$0" "$@"
 fi
 
-echo "==> Docker Compose producción..."
-cat > docker-compose.prod.yml <<'EOF'
-services:
-  postgres:
-    ports:
-      - "127.0.0.1:5433:5432"
-  redis:
-    ports:
-      - "127.0.0.1:6380:6379"
-  minio:
-    ports:
-      - "127.0.0.1:9002:9000"
-      - "127.0.0.1:9003:9001"
-EOF
-
+echo "==> Docker Compose producción (127.0.0.1 — docker-compose.prod.yml)..."
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d postgres redis minio
 
 echo "==> Esperando PostgreSQL..."
@@ -211,6 +197,9 @@ run_optional_step "Reparación segura I2/Pr3 (idempotente)" \
 
 echo "==> Caddy (dominio + HTTPS, no sobrescribir con HTTP plano)..."
 bash scripts/vps-caddy-apply.sh
+
+run_optional_step "Hardening seguridad VPS (ufw, fail2ban, docker localhost)" \
+  bash scripts/vps-harden-security.sh
 
 sleep 2
 HEALTH_CODE="$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:3000/login)"

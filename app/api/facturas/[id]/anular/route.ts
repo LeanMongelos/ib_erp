@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requirePermission, handleApiError } from '@/lib/api-auth'
+import { requireSecureMutation } from '@/lib/security/secure-mutation'
 import { procesarAnulacionFactura } from '@/lib/facturas/anular'
 import { plain } from '@/lib/serialize'
 import { prisma } from '@/lib/prisma'
 
-export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const actor = await requirePermission('facturas.cancel')
+    const actor = await requireSecureMutation(req, 'facturas.cancel')
     const { id } = await params
 
     const previa = await prisma.factura.findUnique({

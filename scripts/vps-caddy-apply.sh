@@ -32,6 +32,15 @@ cat > /etc/caddy/Caddyfile <<CADDYEOF
 }
 
 ${DOMAIN} {
+	encode gzip zstd
+	header {
+		Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+		-Server
+	}
 	reverse_proxy 127.0.0.1:3000
 }
 

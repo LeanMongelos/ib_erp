@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requireAuth, requirePermission, handleApiError } from '@/lib/api-auth'
+import { requirePermission, handleApiError } from '@/lib/api-auth'
+import { auditarAccesoSensible } from '@/lib/security/sensitive-access'
 import { clienteUpdateSchema } from '@/lib/validation'
 import { registrarAuditoria, getIp } from '@/lib/audit'
 import { geocodificarCliente } from '@/lib/clientes/geocodificar-cliente'
 import { refrescarUbicacionEquiposCliente } from '@/lib/tracking-automation'
 
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireAuth()
+    const actor = await requirePermission('clientes.read')
     const { id } = await params
 
     const cliente = await prisma.cliente.findUnique({
@@ -21,6 +22,13 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       },
     })
     if (!cliente) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
+    void auditarAccesoSensible({
+      usuarioId: actor.id,
+      accion: 'cliente.read',
+      entidad: 'Cliente',
+      entidadId: id,
+      req,
+    })
     return NextResponse.json(cliente)
   } catch (error) {
     return handleApiError(error)

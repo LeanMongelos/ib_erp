@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requirePermission, handleApiError, ApiError } from '@/lib/api-auth'
+import { requireSecureMutation } from '@/lib/security/secure-mutation'
 import { usuarioUpdateSchema } from '@/lib/validation'
 import { registrarAuditoria, getIp } from '@/lib/audit'
 import {
@@ -29,7 +30,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const actor = await requirePermission('usuarios.update')
+    const actor = await requireSecureMutation(req, 'usuarios.update')
     const { id } = await params
 
     const body = await req.json()
@@ -40,6 +41,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     // Cambiar roles requiere permiso específico
     if (data.roles) {
       await requirePermission('usuarios.assign_roles')
+      const actorEsSuper = (actor.roles ?? []).includes('SUPERADMIN')
+      if (data.roles.includes('SUPERADMIN') && !actorEsSuper) {
+        throw new ApiError(403, 'Solo SUPERADMIN puede asignar ese rol')
+      }
+      if (actor.id === id && !actorEsSuper) {
+        throw new ApiError(400, 'No podés modificar tus propios roles')
+      }
     }
 
     const existente = await prisma.usuario.findUnique({
@@ -92,7 +100,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     await registrarAuditoria({
       usuarioId: actor.id,
-      accion: 'usuario.update',
+      accion: data.roles ? 'usuario.roles_update' : 'usuario.update',
       entidad: 'Usuario',
       entidadId: id,
       antes: { nombre: existente.nombre, activo: existente.activo, roles: existente.roles.map((r) => r.rol.clave) },

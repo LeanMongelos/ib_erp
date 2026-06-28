@@ -3,9 +3,10 @@ import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { requireAuth, handleApiError } from '@/lib/api-auth'
 import { tienePermiso } from '@/lib/rbac'
+import { auditarExportacion } from '@/lib/security/sensitive-access'
 import { cobranzasMesToCsv, obtenerCuotasCobranzasMesActual } from '@/lib/reportes-cobranzas-mes'
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const session = await requireAuth()
     if (
@@ -18,6 +19,13 @@ export async function GET() {
     const cuotas = await obtenerCuotasCobranzasMesActual()
     const csv = cobranzasMesToCsv(cuotas)
     const mes = format(new Date(), 'yyyy-MM', { locale: es })
+
+    void auditarExportacion({
+      usuarioId: session.id,
+      tipo: `cobranzas-${mes}`,
+      req,
+      meta: { filas: cuotas.length },
+    })
 
     return new NextResponse(csv, {
       headers: {

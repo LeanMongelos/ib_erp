@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { requireAuth, requirePermission, handleApiError, ApiError } from '@/lib/api-auth'
+import { requirePermission, handleApiError, ApiError } from '@/lib/api-auth'
+import { auditarAccesoSensible } from '@/lib/security/sensitive-access'
 import { getEquipoHistoriaCompleta } from '@/lib/equipos/historia-clinica'
 import { prisma } from '@/lib/prisma'
 import { plain } from '@/lib/serialize'
@@ -24,12 +25,19 @@ const equipoPatchSchema = z.object({
   sucursalId: z.string().min(1).optional().nullable(),
 }).refine((d) => Object.keys(d).length > 0, { message: 'Nada para actualizar' })
 
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireAuth()
+    const actor = await requirePermission('servicio.read')
     const { id } = await params
     const data = await getEquipoHistoriaCompleta(id)
     if (!data) throw new ApiError(404, 'Equipo no encontrado')
+    void auditarAccesoSensible({
+      usuarioId: actor.id,
+      accion: 'equipo.historia_clinica.read',
+      entidad: 'Equipo',
+      entidadId: id,
+      req,
+    })
     return NextResponse.json(plain(data))
   } catch (error) {
     return handleApiError(error)

@@ -87,6 +87,11 @@ export async function requirePermissionAny(...permisos: string[]): Promise<Sessi
   return requirePermission(...permisos)
 }
 
+/** Exige rol SUPERADMIN (operaciones destructivas globales). */
+export async function requireSuperAdmin(): Promise<SessionUser> {
+  return requireRole('SUPERADMIN')
+}
+
 /** Alertas WARN técnicas (campana dev) — solo SUPERADMIN en DEV_ALERTS_EMAILS. */
 export async function requireDevAlertas(): Promise<SessionUser> {
   const user = await requireAuth()

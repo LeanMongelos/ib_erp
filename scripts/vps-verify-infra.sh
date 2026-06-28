@@ -103,6 +103,46 @@ else
 fi
 
 echo ""
+echo "--- 5. Seguridad red (UFW / puertos / fail2ban) ---"
+if command -v ufw >/dev/null 2>&1; then
+  if ufw status 2>/dev/null | grep -qi 'Status: active'; then
+    pass "UFW activo"
+  else
+    warn "UFW inactivo — ejecutar: sudo bash scripts/vps-harden-security.sh"
+  fi
+else
+  warn "UFW no instalado"
+fi
+
+if command -v ss >/dev/null 2>&1; then
+  BAD_PORTS="$(ss -tlnH 2>/dev/null | awk '$4 ~ /0\.0\.0\.0:/ || $4 ~ /\[::\]:/ {print}' | grep -E ':5432|:5433|:6379|:6380|:9000|:9002|:3000' || true)"
+  if [[ -z "$BAD_PORTS" ]]; then
+    pass "Puertos internos no expuestos en 0.0.0.0"
+  else
+    fail "Servicios expuestos públicamente — ejecutar hardening"
+    echo "$BAD_PORTS" | sed 's/^/    /'
+  fi
+fi
+
+if command -v fail2ban-client >/dev/null 2>&1; then
+  if fail2ban-client status sshd >/dev/null 2>&1; then
+    pass "Fail2ban jail sshd activo"
+  else
+    warn "Fail2ban sin jail sshd — revisar scripts/vps/fail2ban-jail.local"
+  fi
+else
+  warn "Fail2ban no instalado (opcional pero recomendado)"
+fi
+
+if [[ -f "$ROOT/.env" ]]; then
+  if grep -q '^APP_URL=' "$ROOT/.env" 2>/dev/null; then
+    pass "APP_URL definido en .env"
+  else
+    warn "APP_URL ausente — anti-CSRF desactivado en prod"
+  fi
+fi
+
+echo ""
 echo "=== Resumen infra ==="
 echo "PASS: $PASS | WARN: $WARN | FAIL: $FAIL"
 echo ""

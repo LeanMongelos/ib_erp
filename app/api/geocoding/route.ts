@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireAuth, handleApiError } from '@/lib/api-auth'
+import { requirePermissionAny, handleApiError } from '@/lib/api-auth'
 import { geocodificarSucursal, geocodificarLineaAlquiler } from '@/lib/geocoding'
 
 export async function GET(req: NextRequest) {
   try {
-    await requireAuth()
+    await requirePermissionAny('clientes.read', 'servicio.read', 'alquiler.read')
     const direccion = req.nextUrl.searchParams.get('direccion')?.trim()
     const domicilio = req.nextUrl.searchParams.get('domicilio')?.trim()
     const numero = req.nextUrl.searchParams.get('numero')?.trim() ?? ''

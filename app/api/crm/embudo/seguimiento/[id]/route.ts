@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
-import { requireRole, handleApiError, ApiError } from '@/lib/api-auth'
+import { requireSuperAdmin, handleApiError, ApiError } from '@/lib/api-auth'
+import { assertSecureRequest } from '@/lib/security/secure-mutation'
 import { plain } from '@/lib/serialize'
 import { embudoSeguimientoPatchSchema } from '@/lib/validation'
 import { mapEventoEmbudoDTO } from '@/lib/crm/embudo-historial'
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireRole('SUPERADMIN')
+    assertSecureRequest(req)
+    await requireSuperAdmin()
     const { id } = await params
     const body = embudoSeguimientoPatchSchema.parse(await req.json())
 
@@ -44,9 +46,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await requireRole('SUPERADMIN')
+    assertSecureRequest(req)
+    await requireSuperAdmin()
     const { id } = await params
 
     const exists = await prisma.historialEmbudo.findUnique({ where: { id } })

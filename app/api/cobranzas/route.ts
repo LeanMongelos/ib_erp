@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requirePermission, handleApiError, ApiError } from '@/lib/api-auth'
+import { requireSecureMutation } from '@/lib/security/secure-mutation'
 import { pagoCreateSchema } from '@/lib/validation'
 import { plain } from '@/lib/serialize'
 import { registrarAuditoria, getIp } from '@/lib/audit'
@@ -32,7 +33,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   try {
-    const actor = await requirePermission('cobranzas.register_payment')
+    const actor = await requireSecureMutation(req, 'cobranzas.register_payment')
     const data = pagoCreateSchema.parse(await req.json())
 
     if (data.medio === 'CHEQUE') {
