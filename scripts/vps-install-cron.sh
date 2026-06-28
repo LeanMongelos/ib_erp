@@ -46,6 +46,9 @@ PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 # Vencimientos cobranza — diario 06:00
 0 6 * * * ${CRON_USER} bash -c 'set -a; source ${APP_DIR}/.env; set +a; curl -sf -X POST ${APP_URL}/api/cron/cobranzas-vencimientos -H "Authorization: Bearer \$CRON_SECRET"' >> /var/log/ibiomedica-cron.log 2>&1
 
+# Cuotas alquiler (generar mes + marcar vencidas) — diario 06:15
+15 6 * * * ${CRON_USER} bash -c 'set -a; source ${APP_DIR}/.env; set +a; curl -sf -X POST ${APP_URL}/api/cron/alquiler-cuotas -H "Authorization: Bearer \$CRON_SECRET"' >> /var/log/ibiomedica-cron.log 2>&1
+
 # Emails preventivo próximo — diario 06:30
 30 6 * * * ${CRON_USER} bash -c 'set -a; source ${APP_DIR}/.env; set +a; curl -sf -X POST ${APP_URL}/api/cron/notificaciones-operativas -H "Authorization: Bearer \$CRON_SECRET"' >> /var/log/ibiomedica-cron.log 2>&1
 
@@ -63,7 +66,7 @@ echo ""
 echo "Genera /etc/cron.d/ibiomedica-cron con:"
 echo "  - backup PostgreSQL (03:00) → scripts/vps-backup-postgres.sh"
 echo "  - backup off-site (03:30) → scripts/vps-backup-offsite.sh (BACKUP_OFFSITE_* en .env)"
-echo "  - logs:purge (04:00), OT SLA (cada hora), presupuestos (05:00), cobranzas (06:00), stock mínimo (07:00), resumen semanal (dom 08:00)"
+echo "  - logs:purge (04:00), OT SLA (cada hora), presupuestos (05:00), cobranzas (06:00), alquiler cuotas (06:15), notif. operativas (06:30), stock mínimo (07:00), resumen semanal (dom 08:00)"
 echo ""
 echo "Verificá CRON_SECRET en $APP_DIR/.env y probá manualmente:"
 echo "  curl -sf -X POST ${APP_URL}/api/cron/ots-vencidas -H \"Authorization: Bearer \$CRON_SECRET\""
@@ -71,3 +74,4 @@ echo ""
 echo "Alternativa local (sin HTTP):"
 echo "  cd ${APP_DIR} && npm run cron:ots-vencidas"
 echo "  cd ${APP_DIR} && npm run cron:presupuestos-vencidos"
+echo "  cd ${APP_DIR} && npm run cron:alquiler-cuotas"

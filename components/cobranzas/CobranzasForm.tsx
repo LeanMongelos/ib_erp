@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -27,6 +28,7 @@ interface Cliente {
 }
 
 export function CobranzasForm({ clientes }: { clientes: Cliente[] }) {
+  const searchParams = useSearchParams()
   const [clienteId, setClienteId] = useState('')
   const [facturas, setFacturas] = useState<FacturaPendiente[]>([])
   const [imputaciones, setImputaciones] = useState<Record<string, number>>({})
@@ -40,6 +42,18 @@ export function CobranzasForm({ clientes }: { clientes: Cliente[] }) {
   const [cuentasTesoreria, setCuentasTesoreria] = useState<Array<{ id: string; nombre: string; tipo: string }>>([])
   const [loading, setLoading] = useState(false)
   const puedeCheques = useCan('cobranzas.cheques.manage')
+
+  useEffect(() => {
+    const fromUrl = searchParams.get('cliente')
+    if (fromUrl) setClienteId(fromUrl)
+  }, [searchParams])
+
+  useEffect(() => {
+    if (searchParams.get('cliente') && typeof window !== 'undefined') {
+      const el = document.getElementById('registrar-cobranza')
+      el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }, [searchParams])
 
   useEffect(() => {
     if (medio === 'CHEQUE') return
@@ -127,7 +141,7 @@ export function CobranzasForm({ clientes }: { clientes: Cliente[] }) {
   }
 
   return (
-    <div className="max-w-3xl flex flex-col gap-4">
+    <div id="registrar-cobranza" className="max-w-3xl flex flex-col gap-4 scroll-mt-4">
       <Card>
         <h3 className="text-[13.5px] font-bold text-[#1f242c] mb-4">Registrar cobranza</h3>
         <div className="grid grid-cols-2 gap-4">

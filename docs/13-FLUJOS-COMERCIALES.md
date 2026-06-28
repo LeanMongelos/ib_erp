@@ -149,3 +149,19 @@ Acciones rápidas en tarjeta: ver/crear presupuesto, crear OT (`/servicio-tecnic
 **Seguimiento** (`/crm/embudo/seguimiento`): historial global de eventos por negocio (creación, movimientos, ganado, perdido, edición, eliminación, reactivación). Lectura para usuarios con `crm.read`. Solo **SUPERADMIN** puede editar o borrar registros y reactivar negocios eliminados.
 
 Reglas: nuevos negocios solo en **Entrada**; avance adyacente; retroceso con motivo. Invariantes E1–E3, E7.
+
+---
+
+## 9. Alquiler → cobranza fiscal
+
+Flujo recurrente mensual (no pasa por presupuesto/embudo):
+
+1. **Contrato** BORRADOR con líneas (unidad + monto mensual + beneficiario).
+2. **Activar** → unidades `EN_ALQUILER`, equipo en mapa.
+3. **Cron** genera `CuotaAlquiler` por línea y período.
+4. **Cobranzas** cronograma (`origen=ALQUILER`) → **Facturar** (`alquiler.bill`).
+5. **Emitir AFIP** → **Cobrar** → cuota `COBRADA`.
+
+Las cuotas sin factura emitida **no** se imputan en el formulario de pago (regla fiscal Al4).
+
+Doc canónico: [`24-alquiler-equipos.md`](24-alquiler-equipos.md).

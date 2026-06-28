@@ -181,7 +181,8 @@ Con Nginx: proxy_pass a `:3000`, headers `X-Forwarded-For`, `X-Forwarded-Proto`.
 | Tarea | Comando / endpoint | Frecuencia |
 |-------|-------------------|------------|
 | Purga logs sistema | `npm run logs:purge` | Diario 04:00 |
-| Vencimientos cobranza | `POST /api/cron/cobranzas-vencimientos` + header `Authorization: Bearer $CRON_SECRET` | Diario |
+| Vencimientos cobranza | `POST /api/cron/cobranzas-vencimientos` + header `Authorization: Bearer $CRON_SECRET` | Diario 06:00 |
+| Cuotas alquiler | `POST /api/cron/alquiler-cuotas` + header `Authorization: Bearer $CRON_SECRET` (o `npm run cron:alquiler-cuotas`) | Diario 06:15 |
 | OT SLA vencidas | `POST /api/cron/ots-vencidas` + header `Authorization: Bearer $CRON_SECRET` (o `npm run cron:ots-vencidas`) | Cada hora |
 | Presupuestos vencidos | `POST /api/cron/presupuestos-vencidos` + header `Authorization: Bearer $CRON_SECRET` (o `npm run cron:presupuestos-vencidos`) | Diario |
 | Integridad datos | `npm run integridad:prod` (post-deploy, WARN si falla — no bloquea deploy) | Post-deploy / manual |
@@ -195,7 +196,7 @@ cd /opt/ibiomedica
 sudo APP_URL=https://erp.tudominio.com bash scripts/vps-install-cron.sh
 ```
 
-Genera `/etc/cron.d/ibiomedica-cron` con: backup PostgreSQL (03:00), `logs:purge` (04:00), OT SLA (cada hora), presupuestos vencidos (05:00), cobranzas (06:00). Requiere `CRON_SECRET` en `/opt/ibiomedica/.env`.
+Genera `/etc/cron.d/ibiomedica-cron` con: backup PostgreSQL (03:00), `logs:purge` (04:00), OT SLA (cada hora), presupuestos vencidos (05:00), cobranzas (06:00), **cuotas alquiler (06:15)**, notificaciones operativas (06:30), stock mínimo (07:00), resumen semanal (dom 08:00). Requiere `CRON_SECRET` en `/opt/ibiomedica/.env`.
 
 **Rotación de `CRON_SECRET`:** generar valor nuevo (`openssl rand -base64 32`), actualizar `.env` en el VPS, reiniciar la app (`pm2 restart ibiomedica`), y actualizar el mismo valor en `/etc/cron.d/ibiomedica-cron` (o re-ejecutar `vps-install-cron.sh`). Probar con `curl -sf -X POST $APP_URL/api/cron/ots-vencidas -H "Authorization: Bearer $CRON_SECRET"`. Sin reinicio de app + cron, las rutas `/api/cron/*` rechazan con 401.
 
@@ -207,9 +208,12 @@ Ejemplo manual equivalente:
 
 # Presupuestos con vigencia vencida — diario 05:00
 0 5 * * * deploy bash -c 'set -a; source /opt/ibiomedica/.env; set +a; curl -sf -X POST https://erp-ibiomedica.com.ar/api/cron/presupuestos-vencidos -H "Authorization: Bearer $CRON_SECRET"'
+
+# Cuotas alquiler — diario 06:15
+15 6 * * * deploy bash -c 'set -a; source /opt/ibiomedica/.env; set +a; curl -sf -X POST https://erp-ibiomedica.com.ar/api/cron/alquiler-cuotas -H "Authorization: Bearer $CRON_SECRET"'
 ```
 
-Alternativa local en el VPS (sin HTTP): `cd /opt/ibiomedica && npm run cron:ots-vencidas` o `npm run cron:presupuestos-vencidos`.
+Alternativa local en el VPS (sin HTTP): `cd /opt/ibiomedica && npm run cron:ots-vencidas`, `npm run cron:presupuestos-vencidos` o `npm run cron:alquiler-cuotas`.
 
 ---
 

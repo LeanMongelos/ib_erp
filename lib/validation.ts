@@ -803,7 +803,7 @@ export const inventarioUnidadCreateSchema = z.object({
 })
 
 export const inventarioUnidadUpdateSchema = inventarioUnidadCreateSchema.partial().extend({
-  estado: z.enum(['EN_STOCK', 'RESERVADO', 'VENDIDO', 'BAJA']).optional(),
+  estado: z.enum(['EN_STOCK', 'RESERVADO', 'EN_ALQUILER', 'VENDIDO', 'BAJA']).optional(),
 })
 
 // ============ USUARIOS ============
@@ -1014,4 +1014,51 @@ export const listaPreciosItemUpdateSchema = z.object({
   bonificacionPct: z.number().min(0).max(100).optional(),
   vigenciaDesde: z.coerce.date().optional().nullable(),
   vigenciaHasta: z.coerce.date().optional().nullable(),
+})
+
+// ---- Alquiler de equipos ----
+
+export const estadoContratoAlquilerEnum = z.enum([
+  'BORRADOR', 'ACTIVO', 'SUSPENDIDO', 'FINALIZADO', 'CANCELADO',
+])
+
+export const lineaAlquilerSchema = z.object({
+  inventarioUnidadId: z.string().min(1, 'Seleccioná una unidad'),
+  montoMensual: z.number().positive('El monto mensual debe ser mayor a 0'),
+  beneficiarioNombre: z.string().trim().max(120).optional().nullable(),
+  beneficiarioDocumento: z.string().trim().max(30).optional().nullable(),
+  beneficiarioTelefono: telefonoOpcional,
+  beneficiarioEmail: emailOpcional,
+  domicilio: z.string().trim().max(200).optional().nullable(),
+  localidad: z.string().trim().max(100).optional().nullable(),
+  provincia: z.string().trim().max(80).optional().nullable(),
+  codigoPostal: z.string().trim().max(12).optional().nullable(),
+  lat: z.number().optional().nullable(),
+  lng: z.number().optional().nullable(),
+  fechaEntrega: z.coerce.date().optional().nullable(),
+  observaciones: z.string().trim().max(500).optional().nullable(),
+})
+
+export const contratoAlquilerCreateSchema = z.object({
+  clienteId: z.string().min(1, 'Seleccioná el cliente pagador'),
+  fechaInicio: z.coerce.date().optional().nullable(),
+  fechaFin: z.coerce.date().optional().nullable(),
+  diaFacturacion: z.number().int().min(1).max(28).default(1),
+  observaciones: z.string().trim().max(1000).optional().nullable(),
+  lineas: z.array(lineaAlquilerSchema).min(1, 'Agregá al menos una línea'),
+})
+
+export const contratoAlquilerUpdateSchema = z.object({
+  clienteId: z.string().min(1).optional(),
+  fechaInicio: z.coerce.date().optional().nullable(),
+  fechaFin: z.coerce.date().optional().nullable(),
+  diaFacturacion: z.number().int().min(1).max(28).optional(),
+  observaciones: z.string().trim().max(1000).optional().nullable(),
+})
+
+export const facturarCuotasAlquilerSchema = z.object({
+  periodo: z.string().regex(/^\d{4}-\d{2}$/).optional(),
+  cuotaIds: z.array(z.string().min(1)).optional(),
+  tipo: tipoFacturaEnum.default('B'),
+  observaciones: z.string().trim().max(500).optional().nullable(),
 })

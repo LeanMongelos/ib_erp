@@ -87,7 +87,8 @@ useCan('modulo.accion')
 | Clientes | `/crm`, `/crm/nuevo`, `/crm/[id]` | `/api/clientes`, `/api/clientes/[id]/sucursales`, `/api/geocoding` | ✅ |
 | Presupuestos | `/presupuestos` | `/api/presupuestos` | ✅ |
 | Facturación | `/facturacion` | `/api/facturas` | ✅ (+ AFIP parcial) |
-| Cobranzas | `/cobranzas` | `/api/cobranzas` | ✅ |
+| Cobranzas | `/cobranzas` | `/api/cobranzas` | ✅ (+ cronograma alquiler) |
+| Alquiler equipos | `/alquiler` | `/api/alquiler` | ✅ |
 | Inventario | `/inventario` | `/api/inventario` | ✅ |
 | Compras | `/compras` | `/api/ordenes-compra` | ✅ |
 | Proveedores | `/proveedores` | `/api/proveedores` | ✅ |

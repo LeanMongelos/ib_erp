@@ -18,7 +18,8 @@
 | Modelo datos | [`../prisma/schema.prisma`](../prisma/schema.prisma) | 09 (referencia histórica) |
 | Catálogo API | [`11-API-ENDPOINTS.md`](11-API-ENDPOINTS.md) | 22 (solo rutas principales) |
 | Cliente/servidor | [`14-CONTRATOS-FRONTERAS.md`](14-CONTRATOS-FRONTERAS.md) | AGENTS §4 |
-| Flujos comerciales | [`13-FLUJOS-COMERCIALES.md`](13-FLUJOS-COMERCIALES.md) | 02, 06, 07 |
+| Flujos comerciales | [`13-FLUJOS-COMERCIALES.md`](13-FLUJOS-COMERCIALES.md) | 02, 06, 07, 24 |
+| Alquiler equipos | [`24-alquiler-equipos.md`](24-alquiler-equipos.md) | 06 §stock, 13 §cobranzas |
 | PDF / plantillas | [`12-PLANTILLAS-PDF.md`](12-PLANTILLAS-PDF.md) | 02 §plantillas, 08 §3 |
 | Estados + workers | [`15-ESTADOS-WORKERS-SEGURIDAD.md`](15-ESTADOS-WORKERS-SEGURIDAD.md) | 00 §workers |
 | Logs vs auditoría | [`17-OBSERVABILIDAD-Y-LOGS.md`](17-OBSERVABILIDAD-Y-LOGS.md) | 08 §11, 18 |
@@ -39,7 +40,8 @@
 | CRM omnicanal | [`05-crm-omnicanal.md`](05-crm-omnicanal.md) | `/crm/inbox`, `/crm/embudo` | `crm.*` |
 | Facturación | [`02-facturacion-afip.md`](02-facturacion-afip.md) | `/facturacion/*` | `facturas.*` |
 | Presupuestos | (en 13) | `/presupuestos/*` | `presupuestos.*` |
-| Cobranzas | (en 13, 08) | `/cobranzas` | `cobranzas.*` |
+| Cobranzas | (en 13, 08, **24**) | `/cobranzas` | `cobranzas.*` |
+| Alquiler equipos | [`24-alquiler-equipos.md`](24-alquiler-equipos.md) | `/alquiler/*` | `alquiler.*` |
 | Inventario | [`06-inventario-y-compras.md`](06-inventario-y-compras.md) | `/inventario`, `/compras` | `inventario.*`, `compras.*` |
 | Proveedores | [`04-proveedores.md`](04-proveedores.md) | `/proveedores/*` | `proveedores.*` |
 | Servicio técnico | [`07-servicio-tecnico.md`](07-servicio-tecnico.md) | `/servicio-tecnico/*` | `ots.*`, `equipos.*` |
@@ -71,6 +73,7 @@ Al cambiar código, actualizar **solo el canónico** del tema:
 | Nuevo permiso | `lib/rbac.ts` + seed + `01-roles-y-permisos.md` |
 | Nuevo modelo Prisma | migración + `schema.prisma` (+ 09 si entidad nueva) |
 | Nuevo worker | `15-ESTADOS-WORKERS-SEGURIDAD.md` |
+| Nuevo módulo (ej. alquiler) | doc canónico `24-*` + `11` + `22` + `AGENTS.md` + `AI-MASTER.md` |
 | Cambio deploy | `00-INFRAESTRUCTURA.md` + `16-DESPLIEGUE-PRODUCCION.md` |
 
 **No** copiar párrafos enteros entre docs — enlazar al canónico.

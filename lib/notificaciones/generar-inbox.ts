@@ -8,6 +8,7 @@ import { tienePermiso } from '@/lib/rbac'
 import { getAlertasComponentesEquipos } from '@/lib/equipos/historia-clinica'
 import { consultarAlertasCompra, UMBRAL_AP_PROXIMO_DIAS, type AlertaCompra } from '@/lib/compras/alertas-compra'
 import { consultarAlertasAlquiler } from '@/lib/compras/alquiler-recordatorio'
+import { listarGruposCuotasAlquilerCobranza } from '@/lib/alquiler/alertas-cobranza'
 import { formatFecha, formatMonto } from '@/lib/utils'
 import type { AlertaInbox, PrioridadAlerta } from '@/lib/notificaciones/generar-inbox-types'
 
@@ -196,17 +197,27 @@ export async function generarAlertasInbox(opts?: GenerarInboxOptions): Promise<A
   }
 
   if (reglaActiva(reglas, 'cobranza.vencida')) {
-    const vencidas = await prisma.vencimientoCobranza.findMany({
-      where: {
-        estado: { in: ['PENDIENTE', 'AVISO_ENVIADO'] },
-        fechaVencimiento: { lt: ahora },
-      },
-      include: {
-        factura: { select: { id: true, numero: true, cliente: { select: { nombre: true } } } },
-      },
-      take: 15,
-      orderBy: { fechaVencimiento: 'asc' },
-    })
+    const [vencidas, alquilerVencidas] = await Promise.all([
+      prisma.vencimientoCobranza.findMany({
+        where: {
+          estado: { in: ['PENDIENTE', 'AVISO_ENVIADO'] },
+          fechaVencimiento: { lt: ahora },
+        },
+        include: {
+          factura: {
+            select: {
+              id: true,
+              numero: true,
+              clienteId: true,
+              cliente: { select: { nombre: true } },
+            },
+          },
+        },
+        take: 15,
+        orderBy: { fechaVencimiento: 'asc' },
+      }),
+      listarGruposCuotasAlquilerCobranza({ vencidas: true, take: 15, ahora }),
+    ])
     for (const v of vencidas) {
       alertas.push({
         clave: `cobranza-vencida:${v.id}`,
@@ -214,8 +225,20 @@ export async function generarAlertasInbox(opts?: GenerarInboxOptions): Promise<A
         prioridad: 'urgente',
         titulo: `Cobranza vencida — ${v.factura.numero}`,
         mensaje: `${v.factura.cliente.nombre} · cuota ${v.numeroCuota} · ${formatMonto(v.monto)}`,
-        href: `/facturacion?highlight=${v.factura.id}`,
+        href: `/cobranzas?cliente=${v.factura.clienteId}`,
         fecha: v.fechaVencimiento.toISOString(),
+      })
+    }
+    for (const g of alquilerVencidas) {
+      const dias = Math.abs(differenceInCalendarDays(g.vencimiento, ahora))
+      alertas.push({
+        clave: `alquiler-cuota-vencida:${g.contratoId}:${g.periodo}`,
+        categoria: 'cobranza',
+        prioridad: 'urgente',
+        titulo: `Alquiler — cuota vencida sin facturar — ${g.clienteNombre} — ${g.periodo}`,
+        mensaje: `${g.numeroContrato} · ${formatMonto(g.montoTotal)} · ${dias}d de atraso · ${g.cantidadLineas} línea(s)`,
+        href: '/cobranzas?origen=ALQUILER',
+        fecha: g.vencimiento.toISOString(),
       })
     }
   }
@@ -251,17 +274,20 @@ export async function generarAlertasInbox(opts?: GenerarInboxOptions): Promise<A
   if (reglaActiva(reglas, 'cobranza.proximo')) {
     const dias = diasAnticipacion(reglas, 'cobranza.proximo', 3)
     const limite = addDays(ahora, dias)
-    const proximas = await prisma.vencimientoCobranza.findMany({
-      where: {
-        estado: { in: ['PENDIENTE', 'AVISO_ENVIADO'] },
-        fechaVencimiento: { gte: ahora, lte: limite },
-      },
-      include: {
-        factura: { select: { id: true, numero: true, cliente: { select: { nombre: true } } } },
-      },
-      take: 10,
-      orderBy: { fechaVencimiento: 'asc' },
-    })
+    const [proximas, alquilerProximas] = await Promise.all([
+      prisma.vencimientoCobranza.findMany({
+        where: {
+          estado: { in: ['PENDIENTE', 'AVISO_ENVIADO'] },
+          fechaVencimiento: { gte: ahora, lte: limite },
+        },
+        include: {
+          factura: { select: { id: true, numero: true, cliente: { select: { nombre: true } } } },
+        },
+        take: 10,
+        orderBy: { fechaVencimiento: 'asc' },
+      }),
+      listarGruposCuotasAlquilerCobranza({ diasProximo: dias, take: 10, ahora }),
+    ])
     for (const v of proximas) {
       alertas.push({
         clave: `cobranza-proxima:${v.id}`,
@@ -271,6 +297,17 @@ export async function generarAlertasInbox(opts?: GenerarInboxOptions): Promise<A
         mensaje: `${v.factura.cliente.nombre} · ${formatMonto(v.monto)} · ${differenceInCalendarDays(v.fechaVencimiento, ahora)}d`,
         href: `/cobranzas`,
         fecha: v.fechaVencimiento.toISOString(),
+      })
+    }
+    for (const g of alquilerProximas) {
+      alertas.push({
+        clave: `alquiler-cuota-proximo:${g.contratoId}:${g.periodo}`,
+        categoria: 'cobranza',
+        prioridad: 'importante',
+        titulo: `Alquiler — cuota próxima sin facturar — ${g.clienteNombre} — ${g.periodo}`,
+        mensaje: `${g.numeroContrato} · ${formatMonto(g.montoTotal)} · vence en ${differenceInCalendarDays(g.vencimiento, ahora)}d · ${g.cantidadLineas} línea(s)`,
+        href: '/cobranzas?origen=ALQUILER',
+        fecha: g.vencimiento.toISOString(),
       })
     }
   }

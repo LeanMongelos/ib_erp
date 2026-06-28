@@ -64,6 +64,7 @@ storage/                 # Archivos subidos (gitignored)
 | Plantillas / PDF / editor visual | [`docs/12-PLANTILLAS-PDF.md`](docs/12-PLANTILLAS-PDF.md) |
 | Facturación AFIP | [`docs/02-facturacion-afip.md`](docs/02-facturacion-afip.md) |
 | RBAC | [`docs/01-roles-y-permisos.md`](docs/01-roles-y-permisos.md) |
+| Alquiler equipos → cobranza fiscal | [`docs/24-alquiler-equipos.md`](docs/24-alquiler-equipos.md) · `lib/alquiler/` · `lib/cobranzas/cronograma-cobranzas.ts` |
 | Estados / workers / seguridad | [`docs/15-ESTADOS-WORKERS-SEGURIDAD.md`](docs/15-ESTADOS-WORKERS-SEGURIDAD.md) |
 | Logs técnicos vs auditoría | [`docs/17-OBSERVABILIDAD-Y-LOGS.md`](docs/17-OBSERVABILIDAD-Y-LOGS.md) · `lib/error-log.ts` |
 | Despliegue producción | [`docs/16-DESPLIEGUE-PRODUCCION.md`](docs/16-DESPLIEGUE-PRODUCCION.md) |
@@ -80,6 +81,7 @@ npm run smoke            # Smoke test Prisma + contabilidad
 npm run e2e              # E2E CRM, sucursales, historial, geocoding
 npm run e2e:all          # smoke + e2e
 npm run logs:purge       # Eliminar logs > 15 días
+npm run cron:alquiler-cuotas  # Cuotas mensuales alquiler + marcar vencidas (local)
 npm run icons:generate   # Regenerar favicon desde logo.png
 npx tsx --env-file=.env scripts/sync-logs-permiso.ts  # Permiso logs.read en BD existente
 npx prisma migrate deploy
@@ -113,6 +115,7 @@ Ver [`docs/README.md`](docs/README.md).
 | [`docs/00-INFRAESTRUCTURA.md`](docs/00-INFRAESTRUCTURA.md) | Dev, Docker, VPS, CI/CD |
 | [`docs/00-INDICE-CANONICO.md`](docs/00-INDICE-CANONICO.md) | Qué doc manda; anti-duplicados |
 | [`docs/22-MAPA-MODULOS.md`](docs/22-MAPA-MODULOS.md) | Dónde está cada feature |
+| [`docs/24-alquiler-equipos.md`](docs/24-alquiler-equipos.md) | Alquiler recurrente + cobranzas |
 | [`docs/18-RUNBOOK-OPERACIONES.md`](docs/18-RUNBOOK-OPERACIONES.md) | Troubleshooting |
 | [`docs/17-OBSERVABILIDAD-Y-LOGS.md`](docs/17-OBSERVABILIDAD-Y-LOGS.md) | Logs vs auditoría |
 | [`docs/16-DESPLIEGUE-PRODUCCION.md`](docs/16-DESPLIEGUE-PRODUCCION.md) | Producción |

@@ -68,6 +68,27 @@ const EXPORTES: ExportDef[] = [
     permisos: ['presupuestos.read', 'reportes.read_comercial'],
   },
   {
+    id: 'alquiler-parque',
+    titulo: 'Parque en alquiler',
+    descripcion: 'Contratos activos/suspendidos: cliente, beneficiario, equipo y MRR por línea.',
+    href: '/api/reportes/alquiler-parque',
+    permisos: ['alquiler.export', 'reportes.read_operativo'],
+  },
+  {
+    id: 'alquiler-cuotas',
+    titulo: 'Cuotas de alquiler (mes)',
+    descripcion: 'Cuotas del período con vencimiento, estado y factura vinculada.',
+    href: '/api/reportes/alquiler-cuotas',
+    permisos: ['alquiler.export', 'reportes.read_financiero'],
+  },
+  {
+    id: 'alquiler-mrr',
+    titulo: 'MRR alquiler por cliente',
+    descripcion: 'Ingreso recurrente mensual agrupado por cliente pagador.',
+    href: '/api/reportes/alquiler-mrr',
+    permisos: ['alquiler.export', 'reportes.read_financiero'],
+  },
+  {
     id: 'movimientos-stock',
     titulo: 'Movimientos de stock (kardex)',
     descripcion: 'Entradas, salidas y ajustes del mes en curso por producto y referencia.',

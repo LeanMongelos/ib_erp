@@ -11,10 +11,12 @@ interface EquipoMapa {
   nombre: string
   numeroSerie: string | null
   estado: string
+  origen?: string
   lat: number
   lng: number
   direccion: string | null
   cliente: { nombre: string; ciudad: string | null }
+  beneficiario?: string | null
   mantenimientoVencido: boolean
 }
 
@@ -41,6 +43,13 @@ const ICONO = {
   EN_REPARACION: icono('#f97316'),
   BAJA: icono('#9ca3af'),
   MANT_VENCIDO: icono('#ef4444'),
+  ALQUILER: icono('#3b82f6'),
+}
+
+function iconoEquipo(e: EquipoMapa) {
+  if (e.mantenimientoVencido) return ICONO.MANT_VENCIDO
+  if (e.origen === 'ALQUILER') return ICONO.ALQUILER
+  return ICONO[e.estado as keyof typeof ICONO] ?? ICONO.ACTIVO
 }
 
 function AjustarVista({ equipos, puntos }: { equipos: EquipoMapa[]; puntos: [number, number][] }) {
@@ -94,9 +103,7 @@ export default function MapaLeaflet({ equipos, seleccionado, puntosRecorrido, on
         <Polyline positions={puntosRecorrido} pathOptions={{ color: '#E8650A', weight: 3, opacity: 0.85 }} />
       )}
       {equipos.map((e) => {
-        const icon = e.mantenimientoVencido
-          ? ICONO.MANT_VENCIDO
-          : ICONO[e.estado as keyof typeof ICONO] ?? ICONO.ACTIVO
+        const icon = iconoEquipo(e)
         const activo = seleccionado === e.id
         return (
           <Marker

@@ -62,6 +62,17 @@ export async function siguienteNumeroRemito(): Promise<string> {
   return reservarSiguienteNumero(claveRemito())
 }
 
+export async function siguienteNumeroContratoAlquiler(): Promise<string> {
+  const año = new Date().getFullYear()
+  const prefijo = `ALQ-${año}-`
+  const ultimos = await prisma.contratoAlquiler.findMany({
+    where: { numero: { startsWith: prefijo } },
+    select: { numero: true },
+  })
+  const maximo = ultimos.reduce((max, { numero }) => Math.max(max, parseCorrelativo(numero)), 0)
+  return `${prefijo}${String(maximo + 1).padStart(4, '0')}`
+}
+
 export async function siguienteNumeroOC(): Promise<string> {
   const año = new Date().getFullYear()
   const prefijo = `OC-${año}-`

@@ -49,6 +49,7 @@ Datos: PostgreSQL · Archivos: storage/ o S3 · Colas: Redis/BullMQ · Automatiz
 | Cliente / sucursal / mapa | `03-clientes.md` | `13-FLUJOS-COMERCIALES.md` §7 |
 | CRM / inbox / webhooks | `05-crm-omnicanal.md` | `15-ESTADOS-WORKERS-SEGURIDAD.md` |
 | Inventario / OC | `06-inventario-y-compras.md` | `lib/inventario*.ts` |
+| Alquiler equipos / cuotas | `24-alquiler-equipos.md` | `lib/alquiler/`, `cronograma-cobranzas.ts` |
 | OT / mapa ST | `07-servicio-tecnico.md` | `lib/ots.ts`, `lib/tracking.ts` |
 | Schema / migración | `schema.prisma` | `09-modelo-de-datos.md` (referencia) |
 | Deploy / prod | `00-INFRAESTRUCTURA.md` | `16-DESPLIEGUE-PRODUCCION.md` |
@@ -129,7 +130,8 @@ Ver diagramas completos en [`00-SISTEMA-PUNTA-A-PUNTA.md`](00-SISTEMA-PUNTA-A-PU
 3. **Venta equipo** → sucursal obligatoria → provisión inventario → mapa ST  
 4. **CRM ingest** → conversación → vincular cliente → embudo  
 5. **Plantilla PDF** → editor → preview → impresión factura/presupuesto  
-6. **Deploy** → git push → GitHub Actions → VPS script → PM2 + Caddy  
+6. **Alquiler** → activar → cron cuotas → Cobranzas (facturar → AFIP → cobrar) → sync cuota COBRADA  
+7. **Deploy** → git push → GitHub Actions → VPS script → PM2 + Caddy  
 
 ---
 
@@ -172,7 +174,10 @@ Ver [`20-GLOSARIO-DOMINIO.md`](20-GLOSARIO-DOMINIO.md). Términos clave:
 - **OT** — orden de trabajo de servicio técnico
 - **CAE** — código AFIP de autorización electrónica
 - **Embudo** — pipeline comercial CRM (`NegocioEmbudo`)
+- **Contrato alquiler** — alquiler mensual de unidades inventario (`ContratoAlquiler`)
+- **Cuota alquiler** — cargo mensual por línea (`CuotaAlquiler`, período `YYYY-MM`)
+- **MRR** — ingreso recurrente mensual de contratos activos
 
 ---
 
-*Última actualización: alineado con commit de producción post-CI/CD. Mantener este archivo cuando cambie arquitectura transversal.*
+*Última actualización: módulo alquiler equipos + cronograma cobranzas unificado. Mantener este archivo cuando cambie arquitectura transversal.*

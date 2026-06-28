@@ -27,6 +27,7 @@
 | **[`16-DESPLIEGUE-PRODUCCION.md`](16-DESPLIEGUE-PRODUCCION.md)** | Deploy VPS, checklist prod |
 | **[`18-RUNBOOK-OPERACIONES.md`](18-RUNBOOK-OPERACIONES.md)** | Si X falla → Y |
 | **[`22-MAPA-MODULOS.md`](22-MAPA-MODULOS.md)** | Ruta → API → lib → permiso |
+| **[`24-alquiler-equipos.md`](24-alquiler-equipos.md)** | Alquiler recurrente + cobranzas fiscal |
 | **[`REGLAS-INTERFAZ-ESPAÑOL.md`](REGLAS-INTERFAZ-ESPAÑOL.md)** | UI y errores en español |
 | **[`DEV-ESTABILIDAD.md`](DEV-ESTABILIDAD.md)** | Prisma HMR, dev:reset, E2E |
 
@@ -51,6 +52,7 @@
 | 20 | [Glosario dominio](20-GLOSARIO-DOMINIO.md) | Términos negocio |
 | 21 | [Testing y calidad](21-TESTING-Y-CALIDAD.md) | smoke, e2e, build |
 | 22 | [Mapa módulos](22-MAPA-MODULOS.md) | UI → API → permisos |
+| 24 | [Alquiler equipos](24-alquiler-equipos.md) | Contratos, cuotas, cobranzas |
 
 ### Diseño / dominio
 
@@ -81,7 +83,11 @@ Lead/Contacto → Presupuesto → Venta (sucursal obligatoria) → Factura AFIP
    CRM Bandeja                         Equipo en mapa ST
      ↓                                      ↓
 Cliente + Sucursales geocodificadas → OT / Preventivo / Tracking
+
+Alquiler: Contrato → Activar → Cuotas mensuales (cron) → Cobranzas → Factura AFIP → Cobro
 ```
+
+Ver [`24-alquiler-equipos.md`](24-alquiler-equipos.md).
 
 Principios: trazabilidad punta a punta, RBAC granular, cumplimiento fiscal AFIP, UI en español.
 
@@ -104,6 +110,8 @@ Ver [`AI-MASTER.md`](AI-MASTER.md) §9 y [`DEV-ESTABILIDAD.md`](DEV-ESTABILIDAD.
 | `/crm/inbox` | Bandeja omnicanal + historial lateral |
 | `/crm/embudo` | Kanban ventas |
 | `/presupuestos`, `/facturacion/nueva` | Comercial |
+| `/alquiler` | Contratos alquiler equipos |
+| `/cobranzas` | Cronograma vencimientos + pagos |
 | `/servicio-tecnico/mapa` | Mapa equipos |
 | `/configuracion/plantillas` | Editor PDF |
 | `/configuracion/logs` | Logs técnicos (15 días) |

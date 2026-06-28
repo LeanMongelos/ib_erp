@@ -38,10 +38,12 @@ interface EquipoMapa {
   nombre: string
   numeroSerie: string | null
   estado: string
+  origen?: string
   lat: number
   lng: number
   direccion: string | null
   cliente: { id: string; nombre: string; ciudad: string | null }
+  beneficiario?: string | null
   mantenimientoProximoDias: number | null
   mantenimientoVencido: boolean
 }
@@ -85,12 +87,16 @@ export function TrackingMap({ equiposIniciales }: { equiposIniciales: EquipoOpti
   const [seleccionado, setSeleccionado] = useState<string | null>(null)
   const [recorrido, setRecorrido] = useState<EventoRecorrido[]>([])
   const [filtroEstado, setFiltroEstado] = useState('TODOS')
+  const [filtroOrigen, setFiltroOrigen] = useState('TODOS')
   const [modal, setModal] = useState(false)
 
   async function cargarMapa() {
     setLoading(true)
     try {
-      const q = filtroEstado !== 'TODOS' ? `?estado=${filtroEstado}` : ''
+      const params = new URLSearchParams()
+      if (filtroEstado !== 'TODOS') params.set('estado', filtroEstado)
+      if (filtroOrigen !== 'TODOS') params.set('origen', filtroOrigen)
+      const q = params.toString() ? `?${params.toString()}` : ''
       const data = await fetchJsonConTimeout(`/api/tracking/mapa${q}`)
       setEquipos(data)
     } catch (e) {
@@ -101,7 +107,7 @@ export function TrackingMap({ equiposIniciales }: { equiposIniciales: EquipoOpti
     }
   }
 
-  useEffect(() => { cargarMapa() }, [filtroEstado])
+  useEffect(() => { cargarMapa() }, [filtroEstado, filtroOrigen])
 
   async function cargarRecorrido(equipoId: string) {
     setSeleccionado(equipoId)
@@ -131,6 +137,15 @@ export function TrackingMap({ equiposIniciales }: { equiposIniciales: EquipoOpti
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <select
+            value={filtroOrigen}
+            onChange={(e) => setFiltroOrigen(e.target.value)}
+            className="bg-white border border-[#e4e7eb] rounded-[9px] px-3 py-2 text-[12.5px]"
+          >
+            <option value="TODOS">Vendido y alquilado</option>
+            <option value="VENTA">Solo vendidos</option>
+            <option value="ALQUILER">Solo alquilados</option>
+          </select>
           <select
             value={filtroEstado}
             onChange={(e) => setFiltroEstado(e.target.value)}

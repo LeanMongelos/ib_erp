@@ -75,6 +75,16 @@ Documento de referencia para desarrollo, code review y agentes. Si un cambio vio
 | N1 | Email OT SLA / preventivo respeta `ReglaNotificacion` activa; dedup diaria | `lib/notificaciones/procesar-emails-operativos.ts` | cron manual |
 | Pv1 | Plan PROGRAMADO/PENDIENTE con `proximoServicio` pasado → VENCIDO (`actualizarPlanesMantenimientoVencidos`, idempotente) | `lib/mantenimiento/actualizar-vencidos.ts` · cron `POST /api/cron/notificaciones-operativas` | `test-preventivo-vencidos.ts` |
 
+## Alquiler de equipos
+
+| ID | Invariante | Resolvedor | Test |
+|----|------------|------------|------|
+| Al1 | Cuota única por `lineaId` + `periodo` (cron idempotente) | `lib/alquiler/generar-cuotas-mes.ts` | cron manual |
+| Al2 | Solo contratos `ACTIVO` reciben cuotas nuevas; `SUSPENDIDO` no | `generar-cuotas-mes.ts` | — |
+| Al3 | Activar contrato → unidad `EN_ALQUILER`; devolver → `EN_STOCK` | `activar-contrato.ts` · `devolver-linea.ts` | manual |
+| Al4 | Cobro imputa solo facturas emitidas; cuota sin AFIP no aparece en formulario pago | `cronograma-cobranzas.ts` · `validar-pago.ts` | manual |
+| Al5 | Pago que salda factura alquiler → cuotas vinculadas `COBRADA` | `sincronizar-cuota-cobrada.ts` | manual |
+
 ## Presupuestos
 
 | ID | Invariante | Resolvedor | Test |

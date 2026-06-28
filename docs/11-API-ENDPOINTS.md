@@ -30,6 +30,9 @@
 | GET | `/api/dashboard` | 🔐 | KPIs dashboard |
 | GET | `/api/reportes/resumen` | 🔐 | Resumen reportes |
 | GET | `/api/reportes/fiscal/export` | 🔐 | Export fiscal |
+| GET | `/api/reportes/alquiler-parque` | `alquiler.export` | CSV parque en alquiler |
+| GET | `/api/reportes/alquiler-cuotas` | `alquiler.export` | CSV cuotas; query `periodo=YYYY-MM` |
+| GET | `/api/reportes/alquiler-mrr` | `alquiler.export` | CSV MRR contratos activos |
 
 ## Usuarios y roles
 
@@ -108,7 +111,24 @@ Usado por `SucursalUbicacionFields` y `SucursalRapidaModal` al validar direcció
 | GET | `/api/cobranzas` | `cobranzas.read` | Listar pagos |
 | GET | `/api/cobranzas/pagos` | `cobranzas.read` | Listar pagos (paginado; filtros: `clienteId`, `referencia`, `fechaDesde`, `fechaHasta`, `page`, `limit`) |
 | POST | `/api/cobranzas` | `cobranzas.register_payment` | Registrar pago |
-| GET | `/api/cobranzas/vencimientos` | `cobranzas.read` | Vencimientos |
+| GET | `/api/cobranzas/vencimientos` | `cobranzas.read` | Cronograma unificado; query `origen=TODOS\|FACTURA\|ALQUILER`, `dias` |
+
+## Alquiler de equipos
+
+| Método | Ruta | Permiso | Descripción |
+|--------|------|---------|-------------|
+| GET | `/api/alquiler/resumen` | `alquiler.read` | KPIs módulo (activos, cuotas, MRR) |
+| GET/POST | `/api/alquiler/contratos` | read / `alquiler.create` | Listar / crear contrato |
+| GET/PATCH | `/api/alquiler/contratos/[id]` | read / `alquiler.update` | Detalle / editar borrador |
+| POST | `/api/alquiler/contratos/[id]/activar` | `alquiler.update` | Activar → unidades EN_ALQUILER |
+| POST | `/api/alquiler/contratos/[id]/suspender` | `alquiler.update` | Suspender (sin cuotas nuevas) |
+| POST | `/api/alquiler/contratos/[id]/finalizar` | `alquiler.close` | Cierre + devolución líneas |
+| POST | `/api/alquiler/contratos/[id]/cancelar` | `alquiler.close` | Cancelar contrato |
+| POST | `/api/alquiler/contratos/[id]/facturar` | `alquiler.bill` | Factura BORRADOR por período |
+| POST | `/api/alquiler/lineas/[id]/devolver` | `alquiler.close` | Devolver unidad al stock |
+| GET | `/api/alquiler/unidades-disponibles` | `alquiler.read` | Unidades EN_STOCK elegibles |
+
+Ver [`24-alquiler-equipos.md`](24-alquiler-equipos.md).
 
 ## Inventario y compras
 
@@ -225,6 +245,7 @@ Ver detalle: [`12-PLANTILLAS-PDF.md`](12-PLANTILLAS-PDF.md).
 | * | `/api/webhooks/whatsapp` | Meta verify | WhatsApp |
 | * | `/api/webhooks/meta` | Meta verify | Meta |
 | POST | `/api/cron/cobranzas-vencimientos` | `CRON_SECRET` | Job vencimientos |
+| POST | `/api/cron/alquiler-cuotas` | `CRON_SECRET` | Cuotas mensuales alquiler + marcar vencidas |
 | POST | `/api/cron/ots-vencidas` | `CRON_SECRET` | Marcar OTs con SLA vencido + email SLA próximo |
 | POST | `/api/cron/presupuestos-vencidos` | `CRON_SECRET` | Marcar presupuestos con vigencia vencida |
 | POST | `/api/cron/notificaciones-operativas` | `CRON_SECRET` | Email preventivo próximo (respeta reglas) |

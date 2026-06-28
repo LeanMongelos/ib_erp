@@ -122,6 +122,22 @@ export async function reservarUnidadParaFactura(unidadId: string, db?: DbClient)
   await sincronizarStockDesdeUnidades(unidad.inventarioId, client)
 }
 
+export async function devolverUnidadDeAlquiler(unidadId: string, db?: DbClient) {
+  const client = db ?? prisma
+  const unidad = await client.inventarioUnidad.findUnique({ where: { id: unidadId } })
+  if (!unidad) throw new ApiError(404, 'Unidad de inventario no encontrada')
+  if (unidad.estado !== 'EN_ALQUILER') {
+    throw new ApiError(400, 'La unidad no está en alquiler')
+  }
+
+  await client.inventarioUnidad.update({
+    where: { id: unidadId },
+    data: { estado: 'EN_STOCK' },
+  })
+
+  await sincronizarStockDesdeUnidades(unidad.inventarioId, client)
+}
+
 export async function liberarUnidadReservada(unidadId: string, db?: DbClient) {
   const client = db ?? prisma
   const unidad = await client.inventarioUnidad.findUnique({ where: { id: unidadId } })

@@ -297,6 +297,25 @@ flowchart LR
 
 ---
 
+## 9b. Alquiler de equipos
+
+```mermaid
+flowchart TD
+  CRON[Cron 06:15 alquiler-cuotas] --> GEN[generar-cuotas-mes]
+  GEN --> CUO[(CuotaAlquiler PENDIENTE)]
+  CRON --> VEN[marcar-cuotas-vencidas]
+  VEN --> CUOV[VENCIDA]
+  CUO --> COB[Cronograma /cobranzas]
+  COB --> FAC[facturar-cuotas → Factura BORRADOR]
+  FAC --> AFIP[Emitir AFIP]
+  AFIP --> PAG[Cobranza]
+  PAG --> SYNC[sincronizar-cuota-cobrada → COBRADA]
+```
+
+Doc canónico: [`24-alquiler-equipos.md`](24-alquiler-equipos.md).
+
+---
+
 ## 10. Observabilidad
 
 ```mermaid

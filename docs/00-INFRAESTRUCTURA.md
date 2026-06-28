@@ -162,8 +162,38 @@ flowchart LR
 | CRM email | `npm run worker:crm-email` | PG, IMAP config | Ingesta email |
 | CRM Graph | `npm run worker:crm-graph` | PG, OAuth MS | Ingesta Outlook |
 | Cobranzas | `npm run worker:cobranzas` o cron HTTP | PG | Vencimientos |
+| Alquiler equipos | cron HTTP `POST /api/cron/alquiler-cuotas` | PG | Cuotas mensuales + marcar vencidas |
 
-**Prod actual:** típicamente solo PM2 app. Workers deben levantarse aparte o vía cron HTTP (`/api/cron/cobranzas-vencimientos` + `CRON_SECRET`).
+**Prod actual:** típicamente solo PM2 app. Workers deben levantarse aparte o vía cron HTTP (`/api/cron/*` + `CRON_SECRET` en `.env`).
+
+### Cron HTTP (`/api/cron/*`)
+
+Todas las rutas exigen `Authorization: Bearer $CRON_SECRET`. Instalación en VPS: `sudo APP_URL=https://erp-ibiomedica.com.ar bash scripts/vps-install-cron.sh` → genera `/etc/cron.d/ibiomedica-cron`.
+
+| Endpoint | Horario (VPS) | Qué hace |
+|----------|---------------|----------|
+| `POST /api/cron/ots-vencidas` | Cada hora | OTs con SLA vencido → `VENCIDA` |
+| `POST /api/cron/presupuestos-vencidos` | 05:00 | Presupuestos con vigencia vencida |
+| `POST /api/cron/cobranzas-vencimientos` | 06:00 | Vencimientos facturas + avisos cobranza |
+| `POST /api/cron/alquiler-cuotas` | **06:15** | Genera cuotas del mes (contratos ACTIVOS) + marca cuotas vencidas |
+| `POST /api/cron/notificaciones-operativas` | 06:30 | Email preventivo + CRM sin respuesta 2 h |
+| `POST /api/cron/stock-minimo` | 07:00 | Alertas stock bajo |
+| `POST /api/cron/resumen-semanal` | Dom 08:00 | Email KPIs admin |
+
+**Alquiler (`alquiler-cuotas`):** idempotente — no duplica cuotas (`lineaId` + `periodo` únicos). Solo contratos en estado `ACTIVO`; los `SUSPENDIDO` no reciben cuotas nuevas. Corre **después** de cobranzas (06:00) para que facturas y cuotas de alquiler sigan el mismo ciclo diario.
+
+Probar manualmente en prod:
+
+```bash
+set -a; source /opt/ibiomedica/.env; set +a
+curl -sf -X POST "https://erp-ibiomedica.com.ar/api/cron/alquiler-cuotas" \
+  -H "Authorization: Bearer $CRON_SECRET"
+# Respuesta esperada: {"ok":true,"periodo":"2026-06","creadas":0,"cuotasMarcadasVencidas":0}
+```
+
+Alternativa local (sin HTTP): `cd /opt/ibiomedica && npm run cron:alquiler-cuotas`
+
+Log del job: origen `cron-alquiler-cuotas` en **Configuración → Logs** (nivel INFO).
 
 ```mermaid
 flowchart LR

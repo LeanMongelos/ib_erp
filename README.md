@@ -2,8 +2,8 @@
 
 ERP/CRM para una empresa de **ingeniería biomédica** en Formosa, Argentina.
 Gestiona clientes (con sucursales geolocalizadas), equipos médicos, órdenes de
-trabajo (servicio técnico con SLA), facturación, inventario y bandeja CRM
-omnicanal.
+trabajo (servicio técnico con SLA), facturación, **alquiler recurrente de equipos**,
+inventario, cobranzas y bandeja CRM omnicanal.
 
 ## Stack
 
@@ -132,7 +132,7 @@ Antes de abrir a usuarios reales:
 - [ ] Certificados AFIP de **producción** en emisores
 - [ ] `docker compose up -d` + `npx prisma migrate deploy`
 - [ ] `npm run build && npm run start` (no `npm run dev`)
-- [ ] Workers y cron (`logs:purge`, cobranzas) en PM2/systemd
+- [ ] Workers y cron (`logs:purge`, cobranzas, **alquiler-cuotas** 06:15) en PM2/systemd
 - [ ] Backup diario PostgreSQL
 - [ ] `npm run smoke` post-deploy
 
@@ -155,6 +155,11 @@ Guía completa: **[docs/16-DESPLIEGUE-PRODUCCION.md](docs/16-DESPLIEGUE-PRODUCCI
 - Ítems `EQUIPO` exigen **sucursal de instalación** obligatoria.
 - **Carga rápida de sucursal** desde la factura si no existe en el cliente.
 - Provisión automática: equipo + kit + preventivo + posición en mapa.
+
+### Alquiler de equipos
+- Contratos mensuales con unidades serializadas (`/alquiler`).
+- Cron diario genera cuotas; cronograma unificado en **Cobranzas** (facturar → AFIP → cobrar).
+- Reportes CSV: parque, cuotas, MRR. Ver **[docs/24-alquiler-equipos.md](docs/24-alquiler-equipos.md)**.
 
 ### Observabilidad
 - **Auditoría** (`/configuracion/auditoria`): quién cambió qué.

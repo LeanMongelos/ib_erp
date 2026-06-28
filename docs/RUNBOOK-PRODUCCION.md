@@ -115,6 +115,8 @@ Script: [`scripts/vps-verify-infra.sh`](../scripts/vps-verify-infra.sh). Variabl
 | OT SLA vencidas | Cada hora |
 | Presupuestos vencidos | 05:00 diario |
 | Cobranzas vencimientos | 06:00 diario |
+| Cuotas alquiler | 06:15 diario |
+| Notificaciones operativas | 06:30 diario |
 | Stock mínimo (email admin) | 07:00 diario |
 
 Instalación: `scripts/vps-install-cron.sh`. Manual: [`16-DESPLIEGUE-PRODUCCION.md`](16-DESPLIEGUE-PRODUCCION.md) §8.

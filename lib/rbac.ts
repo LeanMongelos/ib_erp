@@ -91,6 +91,13 @@ export const PERMISSIONS: Permiso[] = [
   // Tracking / mapa (Fase 8)
   { clave: 'tracking.read',   modulo: 'tracking', descripcion: 'Ver mapa y recorridos' },
   { clave: 'tracking.create', modulo: 'tracking', descripcion: 'Registrar eventos de ubicación' },
+  // Alquiler de equipos
+  { clave: 'alquiler.read',   modulo: 'alquiler', descripcion: 'Ver contratos de alquiler' },
+  { clave: 'alquiler.create', modulo: 'alquiler', descripcion: 'Crear contratos de alquiler' },
+  { clave: 'alquiler.update', modulo: 'alquiler', descripcion: 'Editar contratos de alquiler' },
+  { clave: 'alquiler.close',  modulo: 'alquiler', descripcion: 'Finalizar o cancelar contratos' },
+  { clave: 'alquiler.bill',   modulo: 'alquiler', descripcion: 'Facturar cuotas de alquiler' },
+  { clave: 'alquiler.export', modulo: 'alquiler', descripcion: 'Exportar datos de alquiler' },
   // CRM
   { clave: 'crm.read',            modulo: 'crm', descripcion: 'Ver conversaciones' },
   { clave: 'crm.reply',           modulo: 'crm', descripcion: 'Responder mensajes' },
@@ -153,6 +160,7 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     'servicio.read', 'servicio.create', 'servicio.update', 'servicio.close', 'servicio.assign',
     'preventivo.read', 'preventivo.schedule', 'preventivo.complete',
     'tracking.read', 'tracking.create',
+    'alquiler.read', 'alquiler.create', 'alquiler.update', 'alquiler.close', 'alquiler.bill', 'alquiler.export',
     'crm.read', 'crm.reply', 'crm.assign',
     'reportes.read_comercial', 'reportes.read_financiero', 'reportes.read_fiscal', 'reportes.read_operativo', 'reportes.read_fiscal',
     'emisores.read', 'emisores.create', 'emisores.update',
@@ -181,6 +189,7 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     'servicio.read',
     'preventivo.read', 'preventivo.schedule',
     'tracking.read',
+    'alquiler.read', 'alquiler.create', 'alquiler.update', 'alquiler.bill',
     'crm.read', 'crm.reply', 'crm.assign',
     'reportes.read_comercial', 'reportes.read_financiero', 'reportes.read_fiscal',
     'emisores.read',
@@ -198,6 +207,7 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     'servicio.read', 'servicio.create', 'servicio.update', 'servicio.assign',
     'preventivo.read', 'preventivo.schedule',
     'tracking.read', 'tracking.create',
+    'alquiler.read', 'alquiler.create', 'alquiler.update',
     'crm.read', 'crm.reply', 'crm.assign',
     'reportes.read_comercial',
   ],
@@ -212,6 +222,7 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     'cobranzas.cheques.read', 'cobranzas.cheques.manage',
     'tesoreria.read', 'tesoreria.manage', 'tesoreria.initial_balance', 'tesoreria.reconcile',
     'compras.read', 'compras.invoice', 'compras.pay',
+    'alquiler.read', 'alquiler.bill',
     'crm.read', 'crm.reply',
     'reportes.read_financiero', 'reportes.read_fiscal',
     'emisores.read',
@@ -241,6 +252,7 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     'servicio.read', 'servicio.create', 'servicio.update', 'servicio.close', 'servicio.assign',
     'preventivo.read', 'preventivo.schedule', 'preventivo.complete',
     'tracking.read', 'tracking.create',
+    'alquiler.read',
     'crm.read', 'crm.reply',
   ],
 }

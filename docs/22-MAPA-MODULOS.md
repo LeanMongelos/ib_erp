@@ -47,7 +47,27 @@ Componentes clave: `SucursalesEditor`, `ClienteHistorialInbox`, `InboxPanel`, `N
 | `/facturacion/nueva` | `POST /api/facturas` | `lib/facturas/validar-sucursal-equipo.ts` | `facturas.create` |
 | Picker precio sugerido | `GET /api/precios/resolver` | `lib/precios/resolver-precio.ts` | `presupuestos.read` o `facturas.read` |
 | Emitir AFIP | `POST .../emitir` | `lib/afip/` | `facturas.emit_afip` |
-| `/cobranzas` | `/api/cobranzas*` | `lib/cobranzas/` | `cobranzas.*` |
+| `/cobranzas` | `/api/cobranzas*` | `lib/cobranzas/` · `cronograma-cobranzas.ts` | `cobranzas.*` |
+
+Cronograma unificado: facturas + cuotas alquiler sin facturar. Query `GET .../vencimientos?origen=TODOS|FACTURA|ALQUILER`. Ver [`24-alquiler-equipos.md`](24-alquiler-equipos.md) §4.
+
+---
+
+## Alquiler de equipos
+
+| UI | API | lib | Permiso |
+|----|-----|-----|---------|
+| `/alquiler` | `GET /api/alquiler/resumen` | `lib/alquiler/resumen.ts` | `alquiler.read` |
+| `/alquiler/contratos/nuevo` | `POST /api/alquiler/contratos` | — | `alquiler.create` |
+| `/alquiler/contratos/[id]` | `GET/PATCH /api/alquiler/contratos/[id]` | — | read/update |
+| Activar | `POST .../activar` | `lib/alquiler/activar-contrato.ts` | `alquiler.update` |
+| Facturar cuota | `POST .../facturar` | `lib/alquiler/facturar-cuotas.ts` | `alquiler.bill` |
+| Finalizar / cancelar | `POST .../finalizar`, `.../cancelar` | `finalizar-contrato.ts`, `estado-contrato.ts` | `alquiler.close` |
+| Devolver línea | `POST /api/alquiler/lineas/[id]/devolver` | `devolver-linea.ts` | `alquiler.close` |
+| Unidades stock | `GET /api/alquiler/unidades-disponibles` | — | `alquiler.read` |
+| Reportes CSV | `GET /api/reportes/alquiler-*` | `lib/reportes-alquiler-*.ts` | `alquiler.export` |
+
+Componentes: `AlquilerDashboard`, `NuevoContratoAlquilerForm`, `ContratoAlquilerDetalle`. Doc canónico: [`24-alquiler-equipos.md`](24-alquiler-equipos.md).
 
 ---
 
@@ -102,6 +122,7 @@ Componentes clave: `SucursalesEditor`, `ClienteHistorialInbox`, `InboxPanel`, `N
 | Meta WhatsApp (legacy) | `/api/webhooks/whatsapp` | verify token + HMAC |
 | Microsoft Graph | OAuth + `worker:crm-graph` | OAuth tokens en BD |
 | Cron cobranzas | `/api/cron/cobranzas-vencimientos` | `CRON_SECRET` |
+| Cron alquiler cuotas | `/api/cron/alquiler-cuotas` | `CRON_SECRET` · diario 06:15 · `lib/alquiler/procesar-cuotas-alquiler.ts` |
 | Cron OT SLA | `/api/cron/ots-vencidas` | `CRON_SECRET` (marca VENCIDA + email SLA próximo) |
 | Cron presupuestos | `/api/cron/presupuestos-vencidos` | `CRON_SECRET` |
 | Cron stock mínimo | `/api/cron/stock-minimo` | `CRON_SECRET` · diario 07:00 · `lib/inventario/alerta-stock-minimo.ts` |

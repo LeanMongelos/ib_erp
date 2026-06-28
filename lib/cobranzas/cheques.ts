@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma'
 import type { Prisma } from '@prisma/client'
 import { imputarPagoAVencimientos, revertirImputacionVencimientos } from '@/lib/cobranzas/vencimientos'
 import { recalcularEstadoFacturaTrasReversion } from '@/lib/cobranzas/estado-factura-cobranza'
+import { sincronizarCuotasAlquilerFacturaPagada } from '@/lib/alquiler/sincronizar-cuota-cobrada'
 
 type Tx = Prisma.TransactionClient
 
@@ -35,6 +36,7 @@ export async function confirmarFacturasPagadasPorImputaciones(
         where: { id: facturaId },
         data: { estado: 'PAGADA', fechaPago: new Date() },
       })
+      await sincronizarCuotasAlquilerFacturaPagada(facturaId, tx)
     }
   }
 }

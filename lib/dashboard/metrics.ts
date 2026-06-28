@@ -7,6 +7,7 @@ import { subMonths, startOfMonth, endOfMonth, format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { prisma } from '@/lib/prisma'
 import { actualizarOTsVencidas } from '@/lib/ots'
+import { contarCuotasAlquilerCobranzaVencidas } from '@/lib/alquiler/alertas-cobranza'
 import { tienePermiso } from '@/lib/rbac'
 import type { OrdenTrabajo } from '@/types'
 
@@ -116,13 +117,16 @@ export async function getDashboardMetrics(permissions: string[]): Promise<Dashbo
         })
       : Promise.resolve(null),
     visibility.facturas
-      ? prisma.vencimientoCobranza.count({
-          where: {
-            estado: { in: ['PENDIENTE', 'AVISO_ENVIADO'] },
-            fechaVencimiento: { lt: ahora },
-            factura: { estado: { in: ['EMITIDA', 'VENCIDA', 'PENDIENTE'] } },
-          },
-        })
+      ? Promise.all([
+          prisma.vencimientoCobranza.count({
+            where: {
+              estado: { in: ['PENDIENTE', 'AVISO_ENVIADO'] },
+              fechaVencimiento: { lt: ahora },
+              factura: { estado: { in: ['EMITIDA', 'VENCIDA', 'PENDIENTE'] } },
+            },
+          }),
+          contarCuotasAlquilerCobranzaVencidas(ahora),
+        ]).then(([factura, alquiler]) => factura + alquiler)
       : Promise.resolve(null),
     visibility.servicio
       ? prisma.equipo.count({

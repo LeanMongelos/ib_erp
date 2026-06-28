@@ -87,6 +87,7 @@ Sincronizado con `lib/rbac.ts` (jun 2026).
 | `servicio`     | `read`, `create`, `update`, `close`, `assign` |
 | `preventivo`   | `read`, `schedule`, `complete` |
 | `tracking`     | `read`, `create` |
+| `alquiler`     | `read`, `create`, `update`, `close`, `bill`, `export` |
 | `crm`          | `read`, `reply`, `assign`, `manage_channels` |
 | `reportes`     | `read_comercial`, `read_financiero`, `read_operativo`, `read_fiscal` |
 | `emisores`     | `read`, `create`, `update`, `delete` |
@@ -119,6 +120,8 @@ Sincronizado con `lib/rbac.ts` (jun 2026).
 | servicio.* (full) | ✅ | ✅ | 👁️ | parcial | ❌ | ❌ | ✅ |
 | preventivo.schedule | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ |
 | tracking.* | ✅ | ✅ | 👁️ | ✅ | ❌ | ❌ | ✅ |
+| alquiler.bill / close | ✅ | ✅ | ✅/bill | ❌ | ✅ bill | ❌ | 👁️ read |
+| alquiler.create/update | ✅ | ✅ | ✅ | ✅ | 👁️ | ❌ | 👁️ |
 | crm.reply | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ✅ |
 | crm.assign | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | config.manage_integrations | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |

@@ -5,6 +5,7 @@ import { pagoCreateSchema } from '@/lib/validation'
 import { plain } from '@/lib/serialize'
 import { registrarAuditoria, getIp } from '@/lib/audit'
 import { imputarPagoAVencimientos } from '@/lib/cobranzas/vencimientos'
+import { sincronizarCuotasAlquilerFacturaPagada } from '@/lib/alquiler/sincronizar-cuota-cobrada'
 import { crearChequeConPago } from '@/lib/cobranzas/cheques'
 import { validarImputacionesContraFacturas } from '@/lib/cobranzas/validar-pago'
 import { registrarIngresoDesdePago } from '@/lib/tesoreria/registrar-ingreso-pago'
@@ -120,6 +121,7 @@ export async function POST(req: NextRequest) {
             where: { id: imp.facturaId },
             data: { estado: 'PAGADA', fechaPago: new Date() },
           })
+          await sincronizarCuotasAlquilerFacturaPagada(imp.facturaId, tx)
         }
       }
 

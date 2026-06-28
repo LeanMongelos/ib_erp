@@ -54,6 +54,21 @@
 | **Preventivo** | Mantenimiento programado (`PlanPreventivo` / visitas). |
 | **Tracking** | Eventos de ubicación/recorrido del técnico en mapa. |
 | **Repuesto OT** | Ítem de inventario consumido en una OT. |
+| **EN_ALQUILER** | Estado de unidad serializada prestada en contrato activo. |
+
+---
+
+## Alquiler
+
+| Término | Significado |
+|---------|-------------|
+| **Contrato alquiler** | Acuerdo mensual con cliente; cabecera `ContratoAlquiler`. |
+| **Línea alquiler** | Una unidad + beneficiario + domicilio/geo de entrega. |
+| **Cuota alquiler** | Cargo mensual por línea (`periodo` = `YYYY-MM`). |
+| **MRR** | Monthly Recurring Revenue — suma de montos mensuales de contratos activos. |
+| **Cronograma cobranzas** | Vista unificada en `/cobranzas` (facturas + cuotas alquiler sin facturar). |
+
+Ver [`24-alquiler-equipos.md`](24-alquiler-equipos.md).
 
 ---
 

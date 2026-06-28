@@ -54,6 +54,7 @@ export const NAV_ITEM_PERMISSIONS: Record<string, readonly string[]> = {
   '/cobranzas': ['cobranzas.read'],
   '/tesoreria': ['tesoreria.read'],
   '/compras': ['compras.read'],
+  '/alquiler': ['alquiler.read'],
   '/proveedores': ['proveedores.read'],
   '/automatizaciones': ['config.manage_integrations'],
   '/configuracion': ['config.read'],

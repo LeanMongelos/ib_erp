@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { Header } from '@/components/layout/Header'
 import { CobranzasForm } from '@/components/cobranzas/CobranzasForm'
 import { CobranzasPanel } from '@/components/cobranzas/CobranzasPanel'
@@ -5,6 +6,14 @@ import { ExportCobranzasMesButton } from '@/components/cobranzas/ExportCobranzas
 import { prisma } from '@/lib/prisma'
 import { plain } from '@/lib/serialize'
 import { requirePagePermission } from '@/lib/page-guard'
+
+function CobranzasFormLoader({ clientes }: { clientes: Array<{ id: string; nombre: string }> }) {
+  return (
+    <Suspense fallback={<div className="h-40 bg-white rounded-[11px] border border-[#edeef1] animate-pulse" />}>
+      <CobranzasForm clientes={clientes} />
+    </Suspense>
+  )
+}
 
 export default async function CobranzasPage() {
   await requirePagePermission('cobranzas.read')
@@ -18,13 +27,13 @@ export default async function CobranzasPage() {
 
   return (
     <>
-      <Header title="Cobranzas" subtitle="Registro de pagos e imputaciones" />
+      <Header title="Cobranzas" subtitle="Vencimientos, facturación de alquileres y registro de pagos" />
       <div className="flex-1 overflow-y-auto bg-[#F4F6F9] p-6 flex flex-col gap-4">
         <div className="flex justify-end">
           <ExportCobranzasMesButton />
         </div>
-        <CobranzasForm clientes={clientesPlain} />
         <CobranzasPanel clientes={clientesPlain} />
+        <CobranzasFormLoader clientes={clientesPlain} />
       </div>
     </>
   )

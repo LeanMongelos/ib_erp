@@ -170,3 +170,15 @@ Flujo alineado en presupuesto, factura y servicio técnico:
 7. **Import Excel** — columnas `tipo_articulo`, `marca`, `modelo`, etc.; hoja opcional `kit`.
 
 Constantes UI: `lib/inventario-constants.ts`.
+
+---
+
+## 7. Alquiler de equipos (stock serializado)
+
+Estado `InventarioUnidad`: `EN_STOCK` → **`EN_ALQUILER`** (activar contrato) → `EN_STOCK` (devolver).
+
+- No es venta: la unidad sigue siendo propiedad de la empresa.
+- Unidades elegibles: `GET /api/alquiler/unidades-disponibles` (estado `EN_STOCK`).
+- Devolución: `lib/inventario/unidades.ts` → `devolverUnidadDeAlquiler`.
+
+Doc canónico: [`24-alquiler-equipos.md`](24-alquiler-equipos.md).

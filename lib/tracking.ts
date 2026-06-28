@@ -4,7 +4,7 @@
 
 import { prisma } from '@/lib/prisma'
 import { construirDireccionCompleta } from '@/lib/geocoding'
-import type { TipoEventoTracking, EstadoEquipo } from '@prisma/client'
+import type { TipoEventoTracking, EstadoEquipo, OrigenEquipo } from '@prisma/client'
 
 export const UBICACION_IB = {
   lat: -26.1849,
@@ -82,11 +82,19 @@ export async function registrarEventoTracking(opts: {
   return evento
 }
 
-export async function getEquiposParaMapa(filtros?: { clienteId?: string; estado?: EstadoEquipo }) {
+export async function getEquiposParaMapa(filtros?: {
+  clienteId?: string
+  estado?: EstadoEquipo
+  origen?: OrigenEquipo | 'TODOS'
+}) {
+  const origenFilter =
+    filtros?.origen && filtros.origen !== 'TODOS' ? { origen: filtros.origen } : {}
+
   const equipos = await prisma.equipo.findMany({
     where: {
       ...(filtros?.clienteId && { clienteId: filtros.clienteId }),
       ...(filtros?.estado && { estado: filtros.estado }),
+      ...origenFilter,
     },
     include: {
       cliente: {
@@ -106,6 +114,18 @@ export async function getEquiposParaMapa(filtros?: { clienteId?: string; estado?
         },
       },
       sucursal: { select: { id: true, nombre: true, direccion: true, numero: true, ciudad: true, lat: true, lng: true } },
+      lineasAlquiler: {
+        where: { activa: true, contrato: { estado: 'ACTIVO' } },
+        orderBy: { creadoEn: 'desc' },
+        take: 1,
+        select: {
+          beneficiarioNombre: true,
+          domicilio: true,
+          localidad: true,
+          lat: true,
+          lng: true,
+        },
+      },
       eventos: {
         orderBy: { fecha: 'desc' },
         take: 1,
@@ -122,15 +142,29 @@ export async function getEquiposParaMapa(filtros?: { clienteId?: string; estado?
 
   return equipos.map((e) => {
     const ultimoEvento = e.eventos[0]
+    const lineaAlq = e.origen === 'ALQUILER' ? e.lineasAlquiler[0] : undefined
     const sucursalGeo = e.sucursal?.lat != null ? e.sucursal : e.cliente.sucursales[0]
-    const lat = e.ubicacionLat ?? sucursalGeo?.lat ?? e.cliente.lat ?? ultimoEvento?.lat
-    const lng = e.ubicacionLng ?? sucursalGeo?.lng ?? e.cliente.lng ?? ultimoEvento?.lng
+    const lat =
+      (lineaAlq?.lat != null ? lineaAlq.lat : null) ??
+      e.ubicacionLat ??
+      sucursalGeo?.lat ??
+      e.cliente.lat ??
+      ultimoEvento?.lat
+    const lng =
+      (lineaAlq?.lng != null ? lineaAlq.lng : null) ??
+      e.ubicacionLng ??
+      sucursalGeo?.lng ??
+      e.cliente.lng ??
+      ultimoEvento?.lng
     const plan = e.planes[0]
     const proximo = plan?.proximoServicio
     const mantenimientoProximo = proximo
       ? Math.ceil((proximo.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
       : null
     const direccion =
+      (lineaAlq?.domicilio
+        ? [lineaAlq.beneficiarioNombre, lineaAlq.domicilio, lineaAlq.localidad].filter(Boolean).join(' · ')
+        : null) ??
       e.direccionUbicacion ??
       ultimoEvento?.direccion ??
       (sucursalGeo
@@ -147,10 +181,12 @@ export async function getEquiposParaMapa(filtros?: { clienteId?: string; estado?
       modelo: e.modelo,
       numeroSerie: e.numeroSerie,
       estado: e.estado,
+      origen: e.origen,
       lat,
       lng,
       direccion,
       cliente: e.cliente,
+      beneficiario: lineaAlq?.beneficiarioNombre ?? null,
       mantenimientoProximoDias: mantenimientoProximo,
       mantenimientoVencido: mantenimientoProximo != null && mantenimientoProximo < 0,
     }

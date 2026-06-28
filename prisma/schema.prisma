@@ -69,6 +69,7 @@ enum TipoItemKitEquipo {
 
 enum OrigenEquipo {
   VENTA
+  ALQUILER
   EXTERNO
   MANUAL_ST
 }
@@ -90,8 +91,25 @@ enum ModoTrazabilidad {
 enum EstadoInventarioUnidad {
   EN_STOCK
   RESERVADO
+  EN_ALQUILER
   VENDIDO
   BAJA
+}
+
+enum EstadoContratoAlquiler {
+  BORRADOR
+  ACTIVO
+  SUSPENDIDO
+  FINALIZADO
+  CANCELADO
+}
+
+enum EstadoCuotaAlquiler {
+  PENDIENTE
+  FACTURADA
+  COBRADA
+  VENCIDA
+  ANULADA
 }
 
 enum TipoOT {
@@ -304,6 +322,7 @@ model Usuario {
   alertasCompraDismiss            AlertaCompraDismiss[]
   eventosOrdenCompra              EventoOrdenCompra[]
   notificacionesUsuario           NotificacionUsuario[]
+  contratosAlquilerCreados        ContratoAlquiler[] @relation("ContratoAlquilerCreador")
 
   @@map("usuarios")
 }
@@ -478,6 +497,7 @@ model Cliente {
   negociosEmbudo NegocioEmbudo[]
   sucursales   ClienteSucursal[]
   ordenesCompra  OrdenCompra[]
+  contratosAlquiler ContratoAlquiler[]
 
   @@map("clientes")
 }
@@ -562,6 +582,7 @@ model Equipo {
   componentes EquipoComponente[]
   entradasHistoria HistoriaClinicaEntrada[]
   itemFacturaOrigen ItemFactura? @relation("FacturaItemEquipo")
+  lineasAlquiler LineaAlquiler[]
 
   @@index([clienteId])
   @@index([sucursalId])
@@ -897,6 +918,7 @@ model Factura {
   items         ItemFactura[]
   pagos         PagoFactura[]
   vencimientos  VencimientoCobranza[]
+  cuotasAlquiler CuotaAlquiler[]
 
   @@index([fechaEmision])
   @@index([estado, fechaEmision])
@@ -992,6 +1014,7 @@ model InventarioUnidad {
   deposito             Deposito?    @relation(fields: [depositoId], references: [id])
   equipo               Equipo?      @relation("UnidadEquipo", fields: [equipoId], references: [id])
   itemFacturaReservado ItemFactura? @relation("UnidadVendida")
+  lineasAlquiler LineaAlquiler[]
 
   @@unique([inventarioId, numeroSerie])
   @@index([inventarioId])
@@ -2040,6 +2063,85 @@ model PoliticaSeguridad {
   actualizadoEn       DateTime @updatedAt
 
   @@map("politica_seguridad")
+}
+
+// ============ ALQUILER DE EQUIPOS ============
+
+model ContratoAlquiler {
+  id               String                 @id @default(cuid())
+  numero           String                 @unique
+  clienteId        String
+  estado           EstadoContratoAlquiler @default(BORRADOR)
+  fechaInicio      DateTime?
+  fechaFin         DateTime?
+  diaFacturacion   Int                    @default(1)
+  observaciones    String?
+  creadoPorId      String?
+  creadoEn         DateTime               @default(now())
+  actualizadoEn    DateTime               @updatedAt
+
+  cliente   Cliente          @relation(fields: [clienteId], references: [id])
+  creadoPor Usuario?         @relation("ContratoAlquilerCreador", fields: [creadoPorId], references: [id])
+  lineas    LineaAlquiler[]
+  cuotas    CuotaAlquiler[]
+
+  @@index([clienteId, estado])
+  @@index([estado])
+  @@map("contratos_alquiler")
+}
+
+model LineaAlquiler {
+  id                    String    @id @default(cuid())
+  contratoId            String
+  inventarioUnidadId    String
+  equipoId              String?
+  montoMensual          Float
+  beneficiarioNombre    String?
+  beneficiarioDocumento String?
+  beneficiarioTelefono  String?
+  beneficiarioEmail     String?
+  domicilio             String?
+  localidad             String?
+  provincia             String?
+  codigoPostal          String?
+  lat                   Float?
+  lng                   Float?
+  fechaEntrega          DateTime?
+  fechaDevolucion       DateTime?
+  activa                Boolean   @default(true)
+  observaciones         String?
+  creadoEn              DateTime  @default(now())
+
+  contrato         ContratoAlquiler @relation(fields: [contratoId], references: [id], onDelete: Cascade)
+  inventarioUnidad InventarioUnidad @relation(fields: [inventarioUnidadId], references: [id])
+  equipo           Equipo?          @relation(fields: [equipoId], references: [id])
+  cuotas           CuotaAlquiler[]
+
+  @@index([contratoId])
+  @@index([inventarioUnidadId])
+  @@index([equipoId])
+  @@map("lineas_alquiler")
+}
+
+model CuotaAlquiler {
+  id           String              @id @default(cuid())
+  contratoId   String
+  lineaId      String
+  periodo      String
+  monto        Float
+  vencimiento  DateTime
+  estado       EstadoCuotaAlquiler @default(PENDIENTE)
+  facturaId    String?
+  creadoEn     DateTime            @default(now())
+
+  contrato ContratoAlquiler @relation(fields: [contratoId], references: [id], onDelete: Cascade)
+  linea    LineaAlquiler    @relation(fields: [lineaId], references: [id], onDelete: Cascade)
+  factura  Factura?         @relation(fields: [facturaId], references: [id])
+
+  @@unique([lineaId, periodo])
+  @@index([contratoId, periodo])
+  @@index([estado, vencimiento])
+  @@map("cuotas_alquiler")
 }
 
 model PlantillaNotificacion {

@@ -466,3 +466,9 @@ model AuditLog {
 > Es un **borrador** para dimensionar el alcance; al implementar se ajustan
 > índices, relaciones inversas y enums. Conviene migrar por fases (doc 10) para
 > no romper lo existente.
+
+### Alquiler de equipos (implementado — ver schema real)
+
+Entidades en `schema.prisma`: `ContratoAlquiler`, `LineaAlquiler`, `CuotaAlquiler`.  
+Enums: `EstadoContratoAlquiler`, `EstadoCuotaAlquiler`, `EstadoInventarioUnidad.EN_ALQUILER`.  
+Doc canónico: [`24-alquiler-equipos.md`](24-alquiler-equipos.md).

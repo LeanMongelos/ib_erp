@@ -9,6 +9,7 @@ import { prisma } from '@/lib/prisma'
 import { registrarError } from '@/lib/error-log'
 import { sendSystemEmail, getAdminNotifyEmails } from '@/lib/mail/system-mail'
 import { contarAdvertenciasIntegridad } from '@/lib/admin/integridad-advertencias'
+import { contarCuotasAlquilerCobranzaVencidas } from '@/lib/alquiler/alertas-cobranza'
 import { verificarFreshnessBackupVps } from '@/lib/admin/verificar-backups-vps'
 
 const ORIGEN = 'admin-resumen-semanal'
@@ -85,28 +86,30 @@ export async function obtenerKpisResumenSemanal(): Promise<ResumenSemanalKpis> {
   const inicioMes = startOfMonth(ahora)
   const finMes = endOfMonth(ahora)
 
-  const [ventasAgg, cuotasVencidas, otsAbiertas, advertenciasIntegridad] = await Promise.all([
-    prisma.factura.aggregate({
-      where: {
-        estado: { in: ['EMITIDA', 'PAGADA'] },
-        fechaEmision: { gte: inicioMes, lte: finMes },
-      },
-      _sum: { total: true },
-    }),
-    prisma.vencimientoCobranza.count({
-      where: {
-        estado: { in: ['PENDIENTE', 'AVISO_ENVIADO'] },
-        fechaVencimiento: { lt: ahora },
-        factura: { estado: { in: ['EMITIDA', 'VENCIDA', 'PENDIENTE'] } },
-      },
-    }),
-    prisma.ordenTrabajo.count({ where: { estado: { in: ['ABIERTA', 'EN_PROCESO'] } } }),
-    contarAdvertenciasIntegridad(),
-  ])
+  const [ventasAgg, cuotasVencidasFactura, cuotasVencidasAlquiler, otsAbiertas, advertenciasIntegridad] =
+    await Promise.all([
+      prisma.factura.aggregate({
+        where: {
+          estado: { in: ['EMITIDA', 'PAGADA'] },
+          fechaEmision: { gte: inicioMes, lte: finMes },
+        },
+        _sum: { total: true },
+      }),
+      prisma.vencimientoCobranza.count({
+        where: {
+          estado: { in: ['PENDIENTE', 'AVISO_ENVIADO'] },
+          fechaVencimiento: { lt: ahora },
+          factura: { estado: { in: ['EMITIDA', 'VENCIDA', 'PENDIENTE'] } },
+        },
+      }),
+      contarCuotasAlquilerCobranzaVencidas(ahora),
+      prisma.ordenTrabajo.count({ where: { estado: { in: ['ABIERTA', 'EN_PROCESO'] } } }),
+      contarAdvertenciasIntegridad(),
+    ])
 
   return {
     ventasMesActual: Number(ventasAgg._sum.total ?? 0),
-    cuotasVencidas,
+    cuotasVencidas: cuotasVencidasFactura + cuotasVencidasAlquiler,
     otsAbiertas,
     advertenciasIntegridad,
   }
