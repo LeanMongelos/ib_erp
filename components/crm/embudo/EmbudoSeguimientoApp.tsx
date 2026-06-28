@@ -1,18 +1,19 @@
 'use client'
 
-import { Fragment, useCallback, useEffect, useState } from 'react'
-import { Search, ChevronDown, ChevronRight, Pencil, Trash2, RotateCcw } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
+import { Search, ChevronDown, ChevronRight, Pencil, Trash2, RotateCcw, ChevronsDownUp, ChevronsUpDown } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { useIsSuperAdmin } from '@/components/auth/useCan'
 import { formatFechaHora } from '@/lib/utils'
 import { mensajeErrorDesconocido, mensajeErrorRespuesta } from '@/lib/errores'
+import { etapaLabel, ETAPA_MAP, type EtapaKey } from '@/lib/crm/embudo-constants'
 import styles from './embudo.module.css'
 
 type TipoEvento = 'MOVIMIENTO' | 'CREACION' | 'EDICION' | 'ELIMINACION' | 'REACTIVACION'
 
-interface SeguimientoItem {
+interface SeguimientoEvento {
   id: string
   tipo: TipoEvento
   fecha: string
@@ -21,6 +22,9 @@ interface SeguimientoItem {
   notas?: string | null
   datos?: unknown
   retroceso?: boolean
+}
+
+interface SeguimientoGrupo {
   negocio: {
     id: string
     numero: number
@@ -29,7 +33,10 @@ interface SeguimientoItem {
     vendedor: string
     etapa: string
     activo: boolean
-  } | null
+  }
+  totalEventos: number
+  ultimoEvento: string
+  eventos: SeguimientoEvento[]
 }
 
 const TIPO_LABELS: Record<TipoEvento, string> = {
@@ -42,7 +49,7 @@ const TIPO_LABELS: Record<TipoEvento, string> = {
 
 export function EmbudoSeguimientoApp() {
   const esAdmin = useIsSuperAdmin()
-  const [items, setItems] = useState<SeguimientoItem[]>([])
+  const [grupos, setGrupos] = useState<SeguimientoGrupo[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [pages, setPages] = useState(1)
@@ -50,25 +57,27 @@ export function EmbudoSeguimientoApp() {
   const [q, setQ] = useState('')
   const [tipo, setTipo] = useState('')
   const [incluirInactivos, setIncluirInactivos] = useState(true)
-  const [expandido, setExpandido] = useState<string | null>(null)
-  const [editando, setEditando] = useState<SeguimientoItem | null>(null)
+  const [expandidos, setExpandidos] = useState<Set<string>>(new Set())
+  const [editando, setEditando] = useState<(SeguimientoEvento & { negocioId: string }) | null>(null)
   const [notasEdit, setNotasEdit] = useState('')
   const [saving, setSaving] = useState(false)
 
   const cargar = useCallback(async (p = page) => {
     setLoading(true)
     try {
-      const params = new URLSearchParams({ page: String(p), limit: '40' })
+      const params = new URLSearchParams({ page: String(p), limit: '20' })
       if (q.trim()) params.set('q', q.trim())
       if (tipo) params.set('tipo', tipo)
       if (incluirInactivos) params.set('incluirInactivos', 'true')
       const res = await fetch(`/api/crm/embudo/seguimiento?${params}`)
       if (!res.ok) throw new Error(await mensajeErrorRespuesta(res, 'Error al cargar seguimiento'))
       const data = await res.json()
-      setItems(data.items ?? [])
+      const nextGrupos: SeguimientoGrupo[] = data.grupos ?? []
+      setGrupos(nextGrupos)
       setTotal(data.total ?? 0)
       setPage(data.page ?? 1)
       setPages(data.pages ?? 1)
+      setExpandidos(new Set(nextGrupos.slice(0, 3).map((g) => g.negocio.id)))
     } catch (e) {
       toast.error(mensajeErrorDesconocido(e, 'Error al cargar seguimiento'))
     } finally {
@@ -77,6 +86,23 @@ export function EmbudoSeguimientoApp() {
   }, [page, q, tipo, incluirInactivos])
 
   useEffect(() => { cargar(1) }, [q, tipo, incluirInactivos]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  function toggleGrupo(id: string) {
+    setExpandidos((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  function expandirTodos() {
+    setExpandidos(new Set(grupos.map((g) => g.negocio.id)))
+  }
+
+  function colapsarTodos() {
+    setExpandidos(new Set())
+  }
 
   async function guardarEdicion() {
     if (!editando) return
@@ -98,7 +124,7 @@ export function EmbudoSeguimientoApp() {
     }
   }
 
-  async function eliminarRegistro(item: SeguimientoItem) {
+  async function eliminarRegistro(item: SeguimientoEvento) {
     if (!confirm('¿Eliminar este registro de seguimiento? Solo el administrador puede hacerlo.')) return
     try {
       const res = await fetch(`/api/crm/embudo/seguimiento/${item.id}`, { method: 'DELETE' })
@@ -122,15 +148,17 @@ export function EmbudoSeguimientoApp() {
     }
   }
 
-  function abrirEdicion(item: SeguimientoItem) {
-    setEditando(item)
+  function abrirEdicion(item: SeguimientoEvento, negocioId: string) {
+    setEditando({ ...item, negocioId })
     setNotasEdit(item.notas ?? '')
   }
+
+  const todosExpandidos = grupos.length > 0 && grupos.every((g) => expandidos.has(g.negocio.id))
 
   return (
     <div className={styles.seguimientoRoot}>
       <p className={styles.seguimientoHint}>
-        Historial de negocios del embudo: creación, movimientos, ganados, perdidos y eliminaciones.
+        Historial agrupado por negocio: cada tarjeta muestra la línea de tiempo de ese deal (creación, movimientos, cierre, etc.).
         {esAdmin ? ' Como administrador podés editar, borrar registros y reactivar negocios.' : ' Solo lectura.'}
       </p>
 
@@ -158,112 +186,147 @@ export function EmbudoSeguimientoApp() {
           />
           Incluir eliminados
         </label>
+        {grupos.length > 0 && (
+          <button
+            type="button"
+            className={styles.toggleBtn}
+            onClick={todosExpandidos ? colapsarTodos : expandirTodos}
+          >
+            {todosExpandidos ? <ChevronsDownUp size={14} /> : <ChevronsUpDown size={14} />}
+            {todosExpandidos ? 'Colapsar todos' : 'Expandir todos'}
+          </button>
+        )}
       </div>
 
-      <div className={styles.seguimientoTableWrap}>
+      <div className={styles.seguimientoListWrap}>
         {loading ? (
           <p className="p-6 text-[13px] text-[#6b7280]">Cargando…</p>
-        ) : items.length === 0 ? (
+        ) : grupos.length === 0 ? (
           <p className="p-6 text-[13px] text-[#6b7280]">Sin registros de seguimiento.</p>
         ) : (
-          <table className={styles.seguimientoTable}>
-            <thead>
-              <tr>
-                <th style={{ width: 28 }} />
-                <th>Fecha</th>
-                <th>Negocio</th>
-                <th>Evento</th>
-                <th>Usuario</th>
-                <th>Notas</th>
-                {esAdmin && <th>Acciones</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item) => (
-                <Fragment key={item.id}>
-                  <tr className={!item.negocio?.activo ? styles.negocioInactivo : undefined}>
-                    <td>
-                      <button
-                        type="button"
-                        className="p-1 text-[#9aa1ab]"
-                        onClick={() => setExpandido(expandido === item.id ? null : item.id)}
-                        aria-label="Ver detalle"
-                      >
-                        {expandido === item.id ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                      </button>
-                    </td>
-                    <td className="whitespace-nowrap text-[#6b7280]">{formatFechaHora(item.fecha)}</td>
-                    <td>
-                      {item.negocio ? (
-                        <>
-                          <span className="font-semibold">#{item.negocio.numero}</span>
-                          {' '}{item.negocio.nombre}
-                          <br />
-                          <span className="text-[11px] text-[#9aa1ab]">{item.negocio.cliente} · {item.negocio.vendedor}</span>
-                          {!item.negocio.activo && (
-                            <span className="ml-1 text-[10px] font-bold text-[#c62828]">ELIMINADO</span>
-                          )}
-                        </>
-                      ) : (
-                        <span className="text-[#9aa1ab]">—</span>
-                      )}
-                    </td>
-                    <td>
-                      <span className={`${styles.tipoBadge} ${styles[`tipo${item.tipo}`]}`}>
-                        {TIPO_LABELS[item.tipo]}
-                      </span>
-                      <div className="mt-1 font-medium">{item.movimiento}</div>
-                    </td>
-                    <td>{item.usuario}</td>
-                    <td className="max-w-[200px] truncate" title={item.notas ?? undefined}>
-                      {item.notas || '—'}
-                    </td>
-                    {esAdmin && (
-                      <td>
-                        <div className={styles.seguimientoActions}>
-                          <button type="button" onClick={() => abrirEdicion(item)} title="Editar notas">
-                            <Pencil size={12} />
-                          </button>
-                          <button type="button" className="danger" onClick={() => eliminarRegistro(item)} title="Eliminar registro">
-                            <Trash2 size={12} />
-                          </button>
-                          {item.negocio && !item.negocio.activo && (
-                            <button
-                              type="button"
-                              className="primary"
-                              onClick={() => reactivarNegocio(item.negocio!.id)}
-                              title="Reactivar en pipeline"
-                            >
-                              <RotateCcw size={12} />
-                            </button>
-                          )}
+          <div className={styles.seguimientoGrupos}>
+            {grupos.map((grupo) => {
+              const { negocio } = grupo
+              const abierto = expandidos.has(negocio.id)
+              const ultimo = grupo.eventos[0]
+              const etapaColor = ETAPA_MAP[negocio.etapa as EtapaKey]?.color ?? '#6c757d'
+
+              return (
+                <article
+                  key={negocio.id}
+                  className={`${styles.seguimientoGrupo} ${!negocio.activo ? styles.negocioInactivo : ''}`}
+                >
+                  <button
+                    type="button"
+                    className={styles.seguimientoGrupoHeader}
+                    onClick={() => toggleGrupo(negocio.id)}
+                    aria-expanded={abierto}
+                  >
+                    <span className={styles.seguimientoGrupoChevron}>
+                      {abierto ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                    </span>
+                    <div className={styles.seguimientoGrupoMain}>
+                      <div className={styles.seguimientoGrupoTitleRow}>
+                        <span className={styles.seguimientoGrupoNum}>#{negocio.numero}</span>
+                        <span className={styles.seguimientoGrupoNombre}>{negocio.nombre}</span>
+                        <span
+                          className={styles.seguimientoEtapaBadge}
+                          style={{ background: `${etapaColor}18`, color: etapaColor, borderColor: `${etapaColor}40` }}
+                        >
+                          {etapaLabel(negocio.etapa as EtapaKey)}
+                        </span>
+                        {!negocio.activo && (
+                          <span className={styles.seguimientoEliminadoBadge}>ELIMINADO</span>
+                        )}
+                      </div>
+                      <div className={styles.seguimientoGrupoMeta}>
+                        <span>{negocio.cliente}</span>
+                        <span className={styles.seguimientoGrupoDot}>·</span>
+                        <span>{negocio.vendedor}</span>
+                        <span className={styles.seguimientoGrupoDot}>·</span>
+                        <span>{grupo.totalEventos} evento{grupo.totalEventos !== 1 ? 's' : ''}</span>
+                      </div>
+                      {!abierto && ultimo && (
+                        <div className={styles.seguimientoGrupoPreview}>
+                          <span className={`${styles.tipoBadge} ${styles[`tipo${ultimo.tipo}`]}`}>
+                            {TIPO_LABELS[ultimo.tipo]}
+                          </span>
+                          <span>{ultimo.movimiento}</span>
+                          <span className={styles.seguimientoGrupoPreviewFecha}>
+                            {formatFechaHora(ultimo.fecha)}
+                          </span>
                         </div>
-                      </td>
-                    )}
-                  </tr>
-                  {expandido === item.id && (
-                    <tr>
-                      <td colSpan={esAdmin ? 7 : 6}>
-                        <pre className="text-[11px] bg-[#f4f6f9] p-3 rounded-lg overflow-auto max-h-40">
-                          {JSON.stringify(item.datos, null, 2)}
-                        </pre>
-                        {item.negocio?.activo && (
-                          <Link href="/crm/embudo" className="text-[12px] text-[#E8650A] font-semibold mt-2 inline-block">
+                      )}
+                    </div>
+                    <div className={styles.seguimientoGrupoFecha}>
+                      <span className={styles.seguimientoGrupoFechaLabel}>Última actividad</span>
+                      <span>{formatFechaHora(grupo.ultimoEvento)}</span>
+                    </div>
+                  </button>
+
+                  {abierto && (
+                    <div className={styles.seguimientoTimeline}>
+                      {grupo.eventos.map((item, idx) => (
+                        <div
+                          key={item.id}
+                          className={`${styles.seguimientoTimelineItem} ${item.retroceso ? styles.seguimientoTimelineRetroceso : ''}`}
+                        >
+                          <div className={styles.seguimientoTimelineRail}>
+                            <span className={styles.seguimientoTimelineDot} />
+                            {idx < grupo.eventos.length - 1 && <span className={styles.seguimientoTimelineLine} />}
+                          </div>
+                          <div className={styles.seguimientoTimelineBody}>
+                            <div className={styles.seguimientoTimelineTop}>
+                              <span className="text-[11px] text-[#6b7280]">{formatFechaHora(item.fecha)}</span>
+                              <span className={`${styles.tipoBadge} ${styles[`tipo${item.tipo}`]}`}>
+                                {TIPO_LABELS[item.tipo]}
+                              </span>
+                            </div>
+                            <div className={styles.seguimientoTimelineMov}>{item.movimiento}</div>
+                            <div className={styles.seguimientoTimelineUser}>{item.usuario}</div>
+                            {item.notas && (
+                              <p className={styles.seguimientoTimelineNotas}>{item.notas}</p>
+                            )}
+                            {esAdmin && (
+                              <div className={styles.seguimientoActions}>
+                                <button type="button" onClick={() => abrirEdicion(item, negocio.id)} title="Editar notas">
+                                  <Pencil size={12} />
+                                </button>
+                                <button type="button" className="danger" onClick={() => eliminarRegistro(item)} title="Eliminar registro">
+                                  <Trash2 size={12} />
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                      <div className={styles.seguimientoGrupoFooter}>
+                        {negocio.activo ? (
+                          <Link href="/crm/embudo" className="text-[12px] text-[#E8650A] font-semibold">
                             Ver en Kanban →
                           </Link>
-                        )}
-                      </td>
-                    </tr>
+                        ) : esAdmin ? (
+                          <button
+                            type="button"
+                            className={`${styles.seguimientoActions} ${styles.seguimientoReactivarBtn}`}
+                            onClick={() => reactivarNegocio(negocio.id)}
+                          >
+                            <RotateCcw size={12} />
+                            Reactivar negocio
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
                   )}
-                </Fragment>
-              ))}
-            </tbody>
-          </table>
+                </article>
+              )
+            })}
+          </div>
         )}
       </div>
 
       <div className={styles.seguimientoPagination}>
-        <span>{total.toLocaleString('es-AR')} eventos</span>
+        <span>{total.toLocaleString('es-AR')} negocio{total !== 1 ? 's' : ''}</span>
         <div className="flex gap-2">
           <button
             type="button"
