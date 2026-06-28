@@ -186,16 +186,26 @@ UI: `/reportes` → `ReportesCsvCentro.tsx` · permiso `alquiler.export` o `repo
 
 ---
 
-## 12. Alertas e inbox
+## 12. Alertas e inbox (campana del header)
 
 | Archivo | Rol |
 |---------|-----|
-| `lib/alquiler/alertas-cobranza.ts` | Conteo + grupos cuotas sin facturar |
-| `lib/notificaciones/generar-inbox.ts` | Reglas `cobranza.vencida` / `cobranza.proximo` incluyen alquiler |
-| `lib/dashboard/metrics.ts` | KPI `cuotasVencidas` suma facturas + alquiler |
-| `lib/admin/resumen-semanal.ts` | Email semanal admin |
+| `lib/alquiler/alertas-cobranza.ts` | Grupos por contrato + período + **situación de cobro** |
+| `lib/notificaciones/generar-inbox.ts` | Reglas `cobranza.vencida` / `cobranza.proximo` |
 
-Claves dedup inbox: `alquiler-cuota-vencida:{contratoId}:{periodo}` · href `/cobranzas?origen=ALQUILER`
+**Situaciones que generan alerta** (usuarios con `cobranzas.read` o `alquiler.bill`):
+
+| Situación | Cuándo | Acción en campana |
+|-----------|--------|-------------------|
+| `SIN_FACTURAR` | Cuota vencida o próxima sin factura | → Cobranzas (origen ALQUILER) · Facturar |
+| `PENDIENTE_AFIP` | Factura borrador / pendiente CAE | → Facturación · Emitir AFIP |
+| `POR_COBRAR` | Factura emitida impaga | → Cobranzas · Cobrar cliente |
+
+Vencidas = urgente · Próximas = importante (anticipación configurable en regla `cobranza.proximo`, default 3 días).
+
+Claves dedup: `alquiler-cuota-vencida:{contratoId}:{periodo}:{situacion}`
+
+Las facturas de alquiler **no duplican** alertas genéricas de `VencimientoCobranza` (se muestran solo como alerta alquiler).
 
 ---
 

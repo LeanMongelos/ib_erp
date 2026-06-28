@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import { ArrowLeft, Play, Receipt, Pause, RotateCcw, XCircle, PackageX } from 'lucide-react'
+import { ArrowLeft, Play, Receipt, Pause, RotateCcw, XCircle, PackageX, MapPin, CheckCircle2, AlertCircle } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -12,6 +12,12 @@ import { formatFecha } from '@/lib/utils'
 import { ESTADO_CONTRATO_LABEL, ESTADO_CUOTA_LABEL, formatPeriodo } from '@/lib/alquiler/periodo'
 import { useCan } from '@/components/auth/useCan'
 import { mensajeErrorDesconocido, mensajeErrorRespuesta } from '@/lib/errores'
+import {
+  LineaAlquilerUbicacionFields,
+  ubicacionLineaAlquilerConfirmada,
+  ubicacionLineaAlquilerValida,
+  type UbicacionLineaAlquilerValue,
+} from '@/components/alquiler/LineaAlquilerUbicacionFields'
 
 interface ContratoDetalle {
   id: string
@@ -33,6 +39,8 @@ interface ContratoDetalle {
     domicilio: string | null
     localidad: string | null
     provincia: string | null
+    lat: number | null
+    lng: number | null
     inventarioUnidad: {
       numeroSerie: string | null
       estado: string
@@ -76,6 +84,13 @@ export function ContratoAlquilerDetalle({ contrato: inicial }: { contrato: Contr
   const [contrato, setContrato] = useState(inicial)
   const [loading, setLoading] = useState<string | null>(null)
   const [periodoFacturar, setPeriodoFacturar] = useState(formatPeriodo(new Date()))
+  const [lineaEditUbicacion, setLineaEditUbicacion] = useState<string | null>(null)
+  const [ubicacionDraft, setUbicacionDraft] = useState<UbicacionLineaAlquilerValue | null>(null)
+
+  const lineasSinPin = useMemo(
+    () => contrato.lineas.filter((l) => l.lat == null || l.lng == null),
+    [contrato.lineas],
+  )
 
   const montoTotal = contrato.lineas.reduce((s, l) => s + l.montoMensual, 0)
 
@@ -105,6 +120,48 @@ export function ContratoAlquilerDetalle({ contrato: inicial }: { contrato: Contr
       await recargar()
     } catch (e) {
       toast.error(mensajeErrorDesconocido(e, 'Error'))
+    } finally {
+      setLoading(null)
+    }
+  }
+
+  function abrirEditUbicacion(lineaId: string) {
+    if (lineaEditUbicacion === lineaId) {
+      setLineaEditUbicacion(null)
+      setUbicacionDraft(null)
+      return
+    }
+    const linea = contrato.lineas.find((l) => l.id === lineaId)
+    if (!linea) return
+    setLineaEditUbicacion(lineaId)
+    setUbicacionDraft(ubicacionLineaAlquilerConfirmada(linea))
+  }
+
+  async function guardarUbicacionLinea(lineaId: string) {
+    if (!ubicacionDraft || !ubicacionLineaAlquilerValida(ubicacionDraft)) {
+      toast.error('Confirmá la ubicación en el mapa antes de guardar')
+      return
+    }
+    setLoading(`ubicacion-${lineaId}`)
+    try {
+      const res = await fetch(`/api/alquiler/lineas/${lineaId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          domicilio: ubicacionDraft.domicilio.trim(),
+          localidad: ubicacionDraft.localidad.trim(),
+          provincia: ubicacionDraft.provincia.trim() || 'Formosa',
+          lat: ubicacionDraft.lat,
+          lng: ubicacionDraft.lng,
+        }),
+      })
+      if (!res.ok) throw new Error(await mensajeErrorRespuesta(res, 'No se pudo guardar la ubicación'))
+      toast.success('Ubicación guardada')
+      setLineaEditUbicacion(null)
+      setUbicacionDraft(null)
+      await recargar()
+    } catch (e) {
+      toast.error(mensajeErrorDesconocido(e, 'Error al guardar ubicación'))
     } finally {
       setLoading(null)
     }
@@ -142,6 +199,11 @@ export function ContratoAlquilerDetalle({ contrato: inicial }: { contrato: Contr
         <Badge variant={ESTADO_VARIANT[contrato.estado] ?? 'default'}>
           {ESTADO_CONTRATO_LABEL[contrato.estado] ?? contrato.estado}
         </Badge>
+        {contrato.estado === 'BORRADOR' && lineasSinPin.length > 0 && (
+          <span className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1">
+            {lineasSinPin.length} línea(s) sin pin en mapa — confirmá ubicación antes de activar
+          </span>
+        )}
         {contrato.estado === 'BORRADOR' && puedeActivar && (
           <Button
             variant="primary"
@@ -320,7 +382,25 @@ export function ContratoAlquilerDetalle({ contrato: inicial }: { contrato: Contr
                     )}
                   </td>
                   <td className="py-3 pr-3">
-                    {[l.domicilio, l.localidad, l.provincia].filter(Boolean).join(', ') || '—'}
+                    <div>{[l.domicilio, l.localidad, l.provincia].filter(Boolean).join(', ') || '—'}</div>
+                    {l.lat != null && l.lng != null ? (
+                      <div className="flex items-center gap-1 text-[10px] text-emerald-700 mt-1">
+                        <CheckCircle2 size={11} /> En mapa
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1 text-[10px] text-amber-700 mt-1">
+                        <AlertCircle size={11} /> Sin pin confirmado
+                      </div>
+                    )}
+                    {contrato.estado === 'BORRADOR' && puedeActivar && (
+                      <button
+                        type="button"
+                        className="text-[10px] text-[#E8650A] hover:underline mt-1 flex items-center gap-0.5"
+                        onClick={() => abrirEditUbicacion(l.id)}
+                      >
+                        <MapPin size={10} /> {lineaEditUbicacion === l.id ? 'Cerrar mapa' : 'Ubicar en mapa'}
+                      </button>
+                    )}
                   </td>
                   <td className="py-3 pr-3">{formatMonto(l.montoMensual)}</td>
                   <td className="py-3 pr-3">{l.inventarioUnidad.estado}</td>
@@ -349,6 +429,36 @@ export function ContratoAlquilerDetalle({ contrato: inicial }: { contrato: Contr
             </tbody>
           </table>
         </div>
+
+        {lineaEditUbicacion && ubicacionDraft && (
+          <div className="mt-4 border border-[#eef0f2] rounded-[10px] p-4 space-y-3">
+            <LineaAlquilerUbicacionFields
+              value={ubicacionDraft}
+              onChange={(patch) => setUbicacionDraft((prev) => (prev ? { ...prev, ...patch } : prev))}
+              compact
+            />
+            <div className="flex gap-2">
+              <Button
+                variant="primary"
+                size="sm"
+                disabled={loading !== null}
+                onClick={() => guardarUbicacionLinea(lineaEditUbicacion)}
+              >
+                Guardar ubicación
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setLineaEditUbicacion(null)
+                  setUbicacionDraft(null)
+                }}
+              >
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        )}
       </Card>
 
       {contrato.cuotas.length > 0 && (

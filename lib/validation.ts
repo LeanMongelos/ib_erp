@@ -1029,12 +1029,12 @@ export const lineaAlquilerSchema = z.object({
   beneficiarioDocumento: z.string().trim().max(30).optional().nullable(),
   beneficiarioTelefono: telefonoOpcional,
   beneficiarioEmail: emailOpcional,
-  domicilio: z.string().trim().max(200).optional().nullable(),
-  localidad: z.string().trim().max(100).optional().nullable(),
-  provincia: z.string().trim().max(80).optional().nullable(),
+  domicilio: z.string().trim().min(5, 'El domicilio debe incluir calle y número').max(200),
+  localidad: z.string().trim().min(2, 'La localidad es obligatoria').max(100),
+  provincia: z.string().trim().min(2).max(80).optional().nullable(),
   codigoPostal: z.string().trim().max(12).optional().nullable(),
-  lat: z.number().optional().nullable(),
-  lng: z.number().optional().nullable(),
+  lat: z.number({ message: 'Confirmá la ubicación en el mapa' }),
+  lng: z.number({ message: 'Confirmá la ubicación en el mapa' }),
   fechaEntrega: z.coerce.date().optional().nullable(),
   observaciones: z.string().trim().max(500).optional().nullable(),
 })
@@ -1054,6 +1054,14 @@ export const contratoAlquilerUpdateSchema = z.object({
   fechaFin: z.coerce.date().optional().nullable(),
   diaFacturacion: z.number().int().min(1).max(28).optional(),
   observaciones: z.string().trim().max(1000).optional().nullable(),
+})
+
+export const lineaAlquilerUbicacionUpdateSchema = z.object({
+  domicilio: z.string().trim().min(5).max(200).optional(),
+  localidad: z.string().trim().min(2).max(100).optional(),
+  provincia: z.string().trim().min(2).max(80).optional().nullable(),
+  lat: z.number().min(-90).max(90),
+  lng: z.number().min(-180).max(180),
 })
 
 export const facturarCuotasAlquilerSchema = z.object({

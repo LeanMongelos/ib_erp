@@ -8,6 +8,12 @@ import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { mensajeErrorDesconocido, mensajeErrorRespuesta } from '@/lib/errores'
+import {
+  LineaAlquilerUbicacionFields,
+  ubicacionLineaAlquilerValida,
+  ubicacionLineaAlquilerVacia,
+  type UbicacionLineaAlquilerValue,
+} from '@/components/alquiler/LineaAlquilerUbicacionFields'
 
 interface ClienteOption {
   id: string
@@ -28,9 +34,7 @@ interface LineaForm {
   beneficiarioNombre: string
   beneficiarioDocumento: string
   beneficiarioTelefono: string
-  domicilio: string
-  localidad: string
-  provincia: string
+  ubicacion: UbicacionLineaAlquilerValue
 }
 
 const lineaVacia = (): LineaForm => ({
@@ -40,9 +44,7 @@ const lineaVacia = (): LineaForm => ({
   beneficiarioNombre: '',
   beneficiarioDocumento: '',
   beneficiarioTelefono: '',
-  domicilio: '',
-  localidad: '',
-  provincia: '',
+  ubicacion: ubicacionLineaAlquilerVacia(),
 })
 
 export function NuevoContratoAlquilerForm({ clientes }: { clientes: ClienteOption[] }) {
@@ -82,6 +84,14 @@ export function NuevoContratoAlquilerForm({ clientes }: { clientes: ClienteOptio
     setBusquedaUnidad((prev) => ({ ...prev, [idx]: label }))
   }
 
+  function actualizarUbicacion(idx: number, patch: Partial<UbicacionLineaAlquilerValue>) {
+    setLineas((prev) =>
+      prev.map((l, i) =>
+        i === idx ? { ...l, ubicacion: { ...l.ubicacion, ...patch } } : l,
+      ),
+    )
+  }
+
   async function guardar() {
     if (!clienteId) {
       toast.error('Seleccioná el cliente pagador')
@@ -91,6 +101,13 @@ export function NuevoContratoAlquilerForm({ clientes }: { clientes: ClienteOptio
     if (lineasValidas.length === 0) {
       toast.error('Agregá al menos una línea con unidad y monto mensual')
       return
+    }
+
+    for (let i = 0; i < lineasValidas.length; i++) {
+      if (!ubicacionLineaAlquilerValida(lineasValidas[i]!.ubicacion)) {
+        toast.error(`Línea ${i + 1}: confirmá la ubicación en el mapa (pin verde)`)
+        return
+      }
     }
 
     setGuardando(true)
@@ -108,9 +125,11 @@ export function NuevoContratoAlquilerForm({ clientes }: { clientes: ClienteOptio
             beneficiarioNombre: l.beneficiarioNombre || null,
             beneficiarioDocumento: l.beneficiarioDocumento || null,
             beneficiarioTelefono: l.beneficiarioTelefono || null,
-            domicilio: l.domicilio || null,
-            localidad: l.localidad || null,
-            provincia: l.provincia || null,
+            domicilio: l.ubicacion.domicilio.trim(),
+            localidad: l.ubicacion.localidad.trim(),
+            provincia: l.ubicacion.provincia.trim() || 'Formosa',
+            lat: l.ubicacion.lat,
+            lng: l.ubicacion.lng,
           })),
         }),
       })
@@ -254,33 +273,10 @@ export function NuevoContratoAlquilerForm({ clientes }: { clientes: ClienteOptio
                     }
                   />
                 </div>
-                <div>
-                  <label className="text-[12px] text-[#6b7280] mb-1 block">Domicilio instalación</label>
-                  <Input
-                    value={linea.domicilio}
-                    onChange={(e) =>
-                      setLineas((p) => p.map((l, i) => (i === idx ? { ...l, domicilio: e.target.value } : l)))
-                    }
-                  />
-                </div>
-                <div>
-                  <label className="text-[12px] text-[#6b7280] mb-1 block">Localidad</label>
-                  <Input
-                    value={linea.localidad}
-                    onChange={(e) =>
-                      setLineas((p) => p.map((l, i) => (i === idx ? { ...l, localidad: e.target.value } : l)))
-                    }
-                  />
-                </div>
-                <div>
-                  <label className="text-[12px] text-[#6b7280] mb-1 block">Provincia</label>
-                  <Input
-                    value={linea.provincia}
-                    onChange={(e) =>
-                      setLineas((p) => p.map((l, i) => (i === idx ? { ...l, provincia: e.target.value } : l)))
-                    }
-                  />
-                </div>
+                <LineaAlquilerUbicacionFields
+                  value={linea.ubicacion}
+                  onChange={(patch) => actualizarUbicacion(idx, patch)}
+                />
               </div>
             </div>
           ))}

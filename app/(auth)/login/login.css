@@ -1,13 +1,13 @@
-/* Login — animaciones CSS puras (transform/opacity, sin JS) */
+/* Login — tema claro, animaciones CSS puras (transform/opacity, sin JS) */
 
 .login-page {
   position: relative;
   overflow: hidden;
-  color-scheme: dark;
+  color-scheme: light;
   background:
-    radial-gradient(900px 520px at 50% -8%, rgba(232, 101, 10, 0.26), rgba(232, 101, 10, 0) 60%),
-    radial-gradient(700px 500px at 50% 120%, rgba(245, 184, 0, 0.1), transparent 60%),
-    #050505;
+    radial-gradient(900px 520px at 50% -8%, rgba(232, 101, 10, 0.08), rgba(232, 101, 10, 0) 58%),
+    radial-gradient(700px 480px at 50% 115%, rgba(245, 184, 0, 0.06), transparent 62%),
+    linear-gradient(180deg, #ffffff 0%, #fafafa 55%, #f5f5f5 100%);
 }
 
 .login-ambient {
@@ -24,8 +24,8 @@
   width: 200%;
   height: 200%;
   background-image:
-    linear-gradient(rgba(232, 101, 10, 0.055) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(232, 101, 10, 0.055) 1px, transparent 1px);
+    linear-gradient(rgba(232, 101, 10, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(232, 101, 10, 0.04) 1px, transparent 1px);
   background-size: 56px 56px;
   transform: perspective(600px) rotateX(58deg) translateY(-12%);
   transform-origin: 50% 0%;
@@ -50,8 +50,8 @@
     -52deg,
     transparent,
     transparent 72px,
-    rgba(232, 101, 10, 0.035) 72px,
-    rgba(232, 101, 10, 0.035) 73px
+    rgba(232, 101, 10, 0.025) 72px,
+    rgba(232, 101, 10, 0.025) 73px
   );
   animation: loginRaySlide 28s linear infinite;
   mask-image: radial-gradient(ellipse 90% 80% at 50% 45%, black 15%, transparent 78%);
@@ -69,7 +69,7 @@
 .login-vignette {
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse 55% 50% at 50% 42%, transparent 30%, #050505 88%);
+  background: radial-gradient(ellipse 70% 65% at 50% 42%, transparent 45%, rgba(0, 0, 0, 0.03) 100%);
 }
 
 /* ── Línea de barrido horizontal ── */
@@ -82,12 +82,12 @@
     90deg,
     transparent 0%,
     rgba(232, 101, 10, 0) 15%,
-    rgba(232, 101, 10, 0.55) 50%,
+    rgba(232, 101, 10, 0.35) 50%,
     rgba(232, 101, 10, 0) 85%,
     transparent 100%
   );
-  box-shadow: 0 0 24px rgba(232, 101, 10, 0.35);
-  opacity: 0.7;
+  box-shadow: 0 0 18px rgba(232, 101, 10, 0.2);
+  opacity: 0.5;
   animation: loginScanMove 9s ease-in-out infinite;
 }
 
@@ -98,14 +98,14 @@
     opacity: 0;
   }
   8% {
-    opacity: 0.65;
+    opacity: 0.45;
   }
   92% {
-    opacity: 0.65;
+    opacity: 0.45;
   }
   50% {
     top: 92%;
-    opacity: 0.85;
+    opacity: 0.6;
   }
 }
 
@@ -120,17 +120,17 @@
 
 .login-ecg--back {
   bottom: 18%;
-  opacity: 0.35;
+  opacity: 0.28;
 }
 
 .login-ecg--front {
   bottom: 22%;
-  opacity: 0.55;
+  opacity: 0.42;
 }
 
 .login-ecg-path {
   fill: none;
-  stroke: rgba(232, 101, 10, 0.45);
+  stroke: rgba(232, 101, 10, 0.35);
   stroke-width: 1.5;
   vector-effect: non-scaling-stroke;
   stroke-dasharray: 1;
@@ -139,9 +139,9 @@
 }
 
 .login-ecg-path--bright {
-  stroke: rgba(255, 160, 60, 0.7);
+  stroke: rgba(232, 101, 10, 0.55);
   stroke-width: 2;
-  filter: drop-shadow(0 0 6px rgba(232, 101, 10, 0.6));
+  filter: drop-shadow(0 0 4px rgba(232, 101, 10, 0.25));
   animation-duration: 4.2s;
   animation-delay: -1.8s;
 }
@@ -173,9 +173,9 @@
   background: linear-gradient(
     90deg,
     transparent,
-    rgba(232, 101, 10, 0.15) 40%,
-    rgba(255, 190, 80, 0.35) 50%,
-    rgba(232, 101, 10, 0.15) 60%,
+    rgba(232, 101, 10, 0.08) 40%,
+    rgba(255, 190, 80, 0.18) 50%,
+    rgba(232, 101, 10, 0.08) 60%,
     transparent
   );
   transform: rotate(-12deg);
@@ -208,10 +208,10 @@
     transform: translateX(-8%) rotate(-12deg);
   }
   45% {
-    opacity: 0.9;
+    opacity: 0.7;
   }
   55% {
-    opacity: 0.9;
+    opacity: 0.7;
     transform: translateX(8%) rotate(-12deg);
   }
 }
@@ -229,7 +229,7 @@
   top: -18%;
   left: 50%;
   margin-left: -260px;
-  background: rgba(232, 101, 10, 0.32);
+  background: rgba(232, 101, 10, 0.1);
   animation: loginOrbDrift 24s ease-in-out infinite;
 }
 
@@ -238,7 +238,7 @@
   height: 400px;
   bottom: -12%;
   left: 22%;
-  background: rgba(245, 184, 0, 0.14);
+  background: rgba(245, 184, 0, 0.07);
   animation: loginOrbDrift 30s ease-in-out infinite reverse;
   animation-delay: -10s;
 }
@@ -248,7 +248,7 @@
   height: 280px;
   top: 42%;
   right: -8%;
-  background: rgba(232, 101, 10, 0.12);
+  background: rgba(232, 101, 10, 0.06);
   animation: loginOrbDrift 20s ease-in-out infinite;
   animation-delay: -5s;
 }
@@ -257,15 +257,15 @@
   0%,
   100% {
     transform: translate(0, 0) scale(1);
-    opacity: 0.75;
+    opacity: 0.6;
   }
   33% {
     transform: translate(18px, -22px) scale(1.06);
-    opacity: 1;
+    opacity: 0.85;
   }
   66% {
     transform: translate(-14px, 14px) scale(0.96);
-    opacity: 0.85;
+    opacity: 0.7;
   }
 }
 
@@ -294,15 +294,15 @@
   0%,
   100% {
     filter:
-      drop-shadow(0 0 32px rgba(232, 101, 10, 0.75))
-      drop-shadow(0 0 64px rgba(232, 101, 10, 0.35))
-      brightness(1.05);
+      drop-shadow(0 4px 24px rgba(232, 101, 10, 0.22))
+      drop-shadow(0 8px 40px rgba(232, 101, 10, 0.1))
+      brightness(1);
   }
   50% {
     filter:
-      drop-shadow(0 0 48px rgba(232, 101, 10, 0.95))
-      drop-shadow(0 0 90px rgba(245, 160, 40, 0.45))
-      brightness(1.12);
+      drop-shadow(0 6px 32px rgba(232, 101, 10, 0.32))
+      drop-shadow(0 12px 48px rgba(245, 160, 40, 0.14))
+      brightness(1.02);
   }
 }
 
@@ -339,7 +339,7 @@
   position: absolute;
   width: 26px;
   height: 26px;
-  border-color: rgba(232, 101, 10, 0.5);
+  border-color: rgba(232, 101, 10, 0.35);
   border-style: solid;
   animation: loginCornerPulse 4s ease-in-out infinite;
 }
@@ -374,9 +374,17 @@
 .login-form {
   position: relative;
   animation: loginFadeUp 0.65s ease-out 0.2s both;
+  padding: 28px 24px 24px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 16px;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.04),
+    0 8px 32px rgba(0, 0, 0, 0.06),
+    0 0 0 1px rgba(255, 255, 255, 0.8) inset;
+  backdrop-filter: blur(12px);
 }
 
-/* (legacy pseudo corners removed — use .login-corners) */
 .login-form::before,
 .login-form::after {
   display: none;
@@ -385,12 +393,12 @@
 @keyframes loginCornerPulse {
   0%,
   100% {
-    opacity: 0.35;
+    opacity: 0.4;
     width: 22px;
     height: 22px;
   }
   50% {
-    opacity: 0.85;
+    opacity: 0.75;
     width: 32px;
     height: 32px;
   }
@@ -412,7 +420,8 @@
   position: relative;
   transition:
     border-color 0.2s ease,
-    box-shadow 0.25s ease;
+    box-shadow 0.25s ease,
+    background-color 0.2s ease;
 }
 
 .login-input-wrap::after {
@@ -425,7 +434,7 @@
   background: linear-gradient(
     90deg,
     transparent,
-    rgba(232, 101, 10, 0.5) 50%,
+    rgba(232, 101, 10, 0.45) 50%,
     transparent
   );
   transform: scaleX(0);
@@ -438,19 +447,19 @@
 
 .login-input-wrap:focus-within {
   border-color: #e8650a !important;
+  background-color: #ffffff !important;
   box-shadow:
-    0 0 0 1px rgba(232, 101, 10, 0.35),
-    0 0 22px rgba(232, 101, 10, 0.14);
+    0 0 0 1px rgba(232, 101, 10, 0.25),
+    0 0 16px rgba(232, 101, 10, 0.08);
 }
 
-/* Autofill del navegador: mantener tema oscuro (evita fondo blanco/azul) */
 .login-input-wrap input.login-input {
-  color: #ffffff;
-  caret-color: #ffffff;
+  color: #111827;
+  caret-color: #e8650a;
 }
 
 .login-input-wrap input.login-input::placeholder {
-  color: #6b7280;
+  color: #9ca3af;
   opacity: 1;
 }
 
@@ -458,17 +467,17 @@
 .login-input-wrap input.login-input:-webkit-autofill:hover,
 .login-input-wrap input.login-input:-webkit-autofill:focus,
 .login-input-wrap input.login-input:-webkit-autofill:active {
-  -webkit-box-shadow: 0 0 0 1000px #121212 inset !important;
-  box-shadow: 0 0 0 1000px #121212 inset !important;
-  -webkit-text-fill-color: #ffffff !important;
-  caret-color: #ffffff;
+  -webkit-box-shadow: 0 0 0 1000px #f9fafb inset !important;
+  box-shadow: 0 0 0 1000px #f9fafb inset !important;
+  -webkit-text-fill-color: #111827 !important;
+  caret-color: #e8650a;
   transition: background-color 99999s ease-out 0s;
 }
 
 .login-input-wrap input.login-input:-moz-autofill {
-  box-shadow: 0 0 0 1000px #121212 inset !important;
-  -moz-text-fill-color: #ffffff !important;
-  caret-color: #ffffff;
+  box-shadow: 0 0 0 1000px #f9fafb inset !important;
+  -moz-text-fill-color: #111827 !important;
+  caret-color: #e8650a;
 }
 
 .login-btn {
@@ -487,7 +496,7 @@
   background: linear-gradient(
     105deg,
     transparent 35%,
-    rgba(255, 255, 255, 0.18) 50%,
+    rgba(255, 255, 255, 0.22) 50%,
     transparent 65%
   );
   transform: translateX(-120%);
@@ -507,7 +516,7 @@
 
 .login-btn:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 10px 32px rgba(232, 101, 10, 0.48) !important;
+  box-shadow: 0 10px 28px rgba(232, 101, 10, 0.35) !important;
 }
 
 .login-btn:active:not(:disabled) {
@@ -553,7 +562,7 @@
 
   .login-logo {
     filter:
-      drop-shadow(0 0 32px rgba(232, 101, 10, 0.75))
-      brightness(1.05);
+      drop-shadow(0 4px 24px rgba(232, 101, 10, 0.22))
+      brightness(1);
   }
 }

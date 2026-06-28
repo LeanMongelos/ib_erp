@@ -62,8 +62,50 @@ export async function geocodificarDireccion(
   return geocodificarConsulta(consulta)
 }
 
-async function geocodificarConsulta(consulta: string): Promise<GeocodingResult | null> {
+export type GeocodingLineaAlquiler = GeocodingResult & { nivel: 'domicilio' | 'localidad' }
 
+/** Intentos en cascada: domicilio completo → solo localidad/provincia. */
+export async function geocodificarLineaAlquiler(
+  domicilio?: string | null,
+  localidad?: string | null,
+  provincia?: string | null,
+  pais = 'Argentina',
+): Promise<GeocodingLineaAlquiler | null> {
+  const calle = domicilio?.trim()
+  const loc = localidad?.trim()
+  const prov = provincia?.trim()
+
+  const intentos: Array<{ consulta: string | null; nivel: 'domicilio' | 'localidad' }> = [
+    {
+      consulta: [calle, loc, prov, pais].filter(Boolean).join(', ') || null,
+      nivel: 'domicilio',
+    },
+    {
+      consulta: [calle, loc, pais].filter(Boolean).join(', ') || null,
+      nivel: 'domicilio',
+    },
+    {
+      consulta: [loc, prov, pais].filter(Boolean).join(', ') || null,
+      nivel: 'localidad',
+    },
+    {
+      consulta: loc ? [loc, pais].join(', ') : null,
+      nivel: 'localidad',
+    },
+  ]
+
+  const vistos = new Set<string>()
+  for (const { consulta, nivel } of intentos) {
+    if (!consulta || vistos.has(consulta)) continue
+    vistos.add(consulta)
+    const hit = await geocodificarConsulta(consulta)
+    if (hit) return { ...hit, nivel }
+  }
+
+  return null
+}
+
+async function geocodificarConsulta(consulta: string): Promise<GeocodingResult | null> {
   try {
     const q = encodeURIComponent(consulta)
     const res = await fetch(

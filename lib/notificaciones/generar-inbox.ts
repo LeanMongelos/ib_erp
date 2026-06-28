@@ -8,7 +8,7 @@ import { tienePermiso } from '@/lib/rbac'
 import { getAlertasComponentesEquipos } from '@/lib/equipos/historia-clinica'
 import { consultarAlertasCompra, UMBRAL_AP_PROXIMO_DIAS, type AlertaCompra } from '@/lib/compras/alertas-compra'
 import { consultarAlertasAlquiler } from '@/lib/compras/alquiler-recordatorio'
-import { listarGruposCuotasAlquilerCobranza } from '@/lib/alquiler/alertas-cobranza'
+import { listarGruposCuotasAlquilerCobranza, claveAlertaAlquilerCobranza, hrefAlertaAlquilerCobranza, tituloAlertaAlquilerCobranza, mensajeAlertaAlquilerCobranza } from '@/lib/alquiler/alertas-cobranza'
 import { formatFecha, formatMonto } from '@/lib/utils'
 import type { AlertaInbox, PrioridadAlerta } from '@/lib/notificaciones/generar-inbox-types'
 
@@ -106,6 +106,8 @@ export async function generarAlertasInbox(opts?: GenerarInboxOptions): Promise<A
 
   const verCompras = puedeVerModulo(permisos, 'compras.read')
   const verTesoreria = puedeVerModulo(permisos, 'tesoreria.read')
+  const verCobranzas =
+    puedeVerModulo(permisos, 'cobranzas.read') || puedeVerModulo(permisos, 'alquiler.bill')
 
   if (verCompras || verTesoreria) {
     const comprasAlertas = await consultarAlertasCompra(opts?.usuarioId)
@@ -196,7 +198,7 @@ export async function generarAlertasInbox(opts?: GenerarInboxOptions): Promise<A
     }
   }
 
-  if (reglaActiva(reglas, 'cobranza.vencida')) {
+  if (verCobranzas && reglaActiva(reglas, 'cobranza.vencida')) {
     const [vencidas, alquilerVencidas] = await Promise.all([
       prisma.vencimientoCobranza.findMany({
         where: {
@@ -210,6 +212,7 @@ export async function generarAlertasInbox(opts?: GenerarInboxOptions): Promise<A
               numero: true,
               clienteId: true,
               cliente: { select: { nombre: true } },
+              _count: { select: { cuotasAlquiler: true } },
             },
           },
         },
@@ -219,6 +222,7 @@ export async function generarAlertasInbox(opts?: GenerarInboxOptions): Promise<A
       listarGruposCuotasAlquilerCobranza({ vencidas: true, take: 15, ahora }),
     ])
     for (const v of vencidas) {
+      if (v.factura._count.cuotasAlquiler > 0) continue
       alertas.push({
         clave: `cobranza-vencida:${v.id}`,
         categoria: 'cobranza',
@@ -232,18 +236,18 @@ export async function generarAlertasInbox(opts?: GenerarInboxOptions): Promise<A
     for (const g of alquilerVencidas) {
       const dias = Math.abs(differenceInCalendarDays(g.vencimiento, ahora))
       alertas.push({
-        clave: `alquiler-cuota-vencida:${g.contratoId}:${g.periodo}`,
+        clave: claveAlertaAlquilerCobranza(g, 'vencida'),
         categoria: 'cobranza',
         prioridad: 'urgente',
-        titulo: `Alquiler — cuota vencida sin facturar — ${g.clienteNombre} — ${g.periodo}`,
-        mensaje: `${g.numeroContrato} · ${formatMonto(g.montoTotal)} · ${dias}d de atraso · ${g.cantidadLineas} línea(s)`,
-        href: '/cobranzas?origen=ALQUILER',
+        titulo: tituloAlertaAlquilerCobranza(g, true),
+        mensaje: mensajeAlertaAlquilerCobranza(g, dias, true),
+        href: hrefAlertaAlquilerCobranza(g),
         fecha: g.vencimiento.toISOString(),
       })
     }
   }
 
-  if (reglaActiva(reglas, 'cheque.deposito')) {
+  if (verCobranzas && reglaActiva(reglas, 'cheque.deposito')) {
     const finHoy = new Date()
     finHoy.setHours(23, 59, 59, 999)
     const chequesDepositar = await prisma.chequeCobranza.findMany({
@@ -271,7 +275,7 @@ export async function generarAlertasInbox(opts?: GenerarInboxOptions): Promise<A
     }
   }
 
-  if (reglaActiva(reglas, 'cobranza.proximo')) {
+  if (verCobranzas && reglaActiva(reglas, 'cobranza.proximo')) {
     const dias = diasAnticipacion(reglas, 'cobranza.proximo', 3)
     const limite = addDays(ahora, dias)
     const [proximas, alquilerProximas] = await Promise.all([
@@ -281,7 +285,15 @@ export async function generarAlertasInbox(opts?: GenerarInboxOptions): Promise<A
           fechaVencimiento: { gte: ahora, lte: limite },
         },
         include: {
-          factura: { select: { id: true, numero: true, cliente: { select: { nombre: true } } } },
+          factura: {
+            select: {
+              id: true,
+              numero: true,
+              clienteId: true,
+              cliente: { select: { nombre: true } },
+              _count: { select: { cuotasAlquiler: true } },
+            },
+          },
         },
         take: 10,
         orderBy: { fechaVencimiento: 'asc' },
@@ -289,24 +301,26 @@ export async function generarAlertasInbox(opts?: GenerarInboxOptions): Promise<A
       listarGruposCuotasAlquilerCobranza({ diasProximo: dias, take: 10, ahora }),
     ])
     for (const v of proximas) {
+      if (v.factura._count.cuotasAlquiler > 0) continue
       alertas.push({
         clave: `cobranza-proxima:${v.id}`,
         categoria: 'cobranza',
         prioridad: 'importante',
         titulo: `Vence pronto — ${v.factura.numero}`,
         mensaje: `${v.factura.cliente.nombre} · ${formatMonto(v.monto)} · ${differenceInCalendarDays(v.fechaVencimiento, ahora)}d`,
-        href: `/cobranzas`,
+        href: `/cobranzas?cliente=${v.factura.clienteId}`,
         fecha: v.fechaVencimiento.toISOString(),
       })
     }
     for (const g of alquilerProximas) {
+      const diasRestantes = differenceInCalendarDays(g.vencimiento, ahora)
       alertas.push({
-        clave: `alquiler-cuota-proximo:${g.contratoId}:${g.periodo}`,
+        clave: claveAlertaAlquilerCobranza(g, 'proximo'),
         categoria: 'cobranza',
         prioridad: 'importante',
-        titulo: `Alquiler — cuota próxima sin facturar — ${g.clienteNombre} — ${g.periodo}`,
-        mensaje: `${g.numeroContrato} · ${formatMonto(g.montoTotal)} · vence en ${differenceInCalendarDays(g.vencimiento, ahora)}d · ${g.cantidadLineas} línea(s)`,
-        href: '/cobranzas?origen=ALQUILER',
+        titulo: tituloAlertaAlquilerCobranza(g, false),
+        mensaje: mensajeAlertaAlquilerCobranza(g, diasRestantes, false),
+        href: hrefAlertaAlquilerCobranza(g),
         fecha: g.vencimiento.toISOString(),
       })
     }

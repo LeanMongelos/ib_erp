@@ -168,10 +168,10 @@ export default function LoginPage() {
 
       {/* Títulos */}
       <div className="login-heading text-center mt-6 mb-9">
-        <h1 className="text-white text-[25px] font-extrabold tracking-tight">
+        <h1 className="text-[#1a1a1a] text-[25px] font-extrabold tracking-tight">
           Sistema de Gestión
         </h1>
-        <p className="text-[#9aa1ab] text-[14px] font-medium mt-1.5 tracking-wide">
+        <p className="text-[#6b7280] text-[14px] font-medium mt-1.5 tracking-wide">
           Formosa
         </p>
       </div>
@@ -187,16 +187,16 @@ export default function LoginPage() {
         </div>
         {/* Email */}
         <div className="login-field">
-          <label className="block text-[#8b929c] text-[11.5px] font-semibold mb-1.5 tracking-wide">
+          <label className="block text-[#374151] text-[11.5px] font-semibold mb-1.5 tracking-wide">
             Usuario
           </label>
-          <div className="login-input-wrap flex items-center gap-2.5 bg-[#121212] border border-[#272727] rounded-[9px] px-3">
-            <User size={17} strokeWidth={1.8} className="text-[#6b7280] flex-shrink-0" />
+          <div className="login-input-wrap flex items-center gap-2.5 bg-[#f9fafb] border border-[#e5e7eb] rounded-[9px] px-3">
+            <User size={17} strokeWidth={1.8} className="text-[#9ca3af] flex-shrink-0" />
             <input
               {...register('email')}
               type="email"
               placeholder="tu@email.com"
-              className="login-input flex-1 bg-transparent border-none outline-none text-white text-[14px] font-sans py-3"
+              className="login-input flex-1 bg-transparent border-none outline-none text-[#111827] text-[14px] font-sans py-3"
               autoComplete="email"
             />
           </div>
@@ -207,22 +207,22 @@ export default function LoginPage() {
 
         {/* Contraseña */}
         <div className="login-field">
-          <label className="block text-[#8b929c] text-[11.5px] font-semibold mb-1.5 tracking-wide">
+          <label className="block text-[#374151] text-[11.5px] font-semibold mb-1.5 tracking-wide">
             Contraseña
           </label>
-          <div className="login-input-wrap flex items-center gap-2.5 bg-[#121212] border border-[#272727] rounded-[9px] px-3">
-            <Lock size={17} strokeWidth={1.8} className="text-[#6b7280] flex-shrink-0" />
+          <div className="login-input-wrap flex items-center gap-2.5 bg-[#f9fafb] border border-[#e5e7eb] rounded-[9px] px-3">
+            <Lock size={17} strokeWidth={1.8} className="text-[#9ca3af] flex-shrink-0" />
             <input
               {...register('password')}
               type={showPass ? 'text' : 'password'}
               placeholder="••••••••••"
-              className="login-input flex-1 bg-transparent border-none outline-none text-white text-[14px] font-sans py-3 tracking-widest placeholder:tracking-normal"
+              className="login-input flex-1 bg-transparent border-none outline-none text-[#111827] text-[14px] font-sans py-3 tracking-widest placeholder:tracking-normal"
               autoComplete="current-password"
             />
             <button
               type="button"
               onClick={() => setShowPass(!showPass)}
-              className="text-[#6b7280] hover:text-[#9aa1ab] transition-colors"
+              className="text-[#9ca3af] hover:text-[#6b7280] transition-colors"
               tabIndex={-1}
             >
               {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -240,7 +240,7 @@ export default function LoginPage() {
           className="login-btn mt-1.5 w-full flex items-center justify-center gap-2 text-white font-extrabold text-[14.5px] border-none rounded-[9px] py-3.5 cursor-pointer tracking-wide disabled:opacity-60"
           style={{
             background: 'linear-gradient(135deg,#F0820A,#E8650A)',
-            boxShadow: '0 6px 18px rgba(232,101,10,.4)',
+            boxShadow: '0 6px 18px rgba(232,101,10,.28)',
           }}
         >
           {loading && <Loader2 size={18} className="animate-spin" />}
@@ -249,7 +249,7 @@ export default function LoginPage() {
 
         <a
           href="#"
-          className="login-forgot text-center text-[#8b929c] text-[12.5px] font-medium hover:text-[#9aa1ab] transition-colors"
+          className="login-forgot text-center text-[#6b7280] text-[12.5px] font-medium hover:text-[#374151] transition-colors"
         >
           ¿Olvidaste tu contraseña?
         </a>
@@ -270,9 +270,9 @@ export default function LoginPage() {
           height={40}
           className="object-contain"
         />
-        <span className="text-[#6b7280] text-[12px] font-medium">
+        <span className="text-[#9ca3af] text-[12px] font-medium">
           Desarrollado por{' '}
-          <span className="text-[#7dd3fc] font-bold">LM Digital Solutions</span>
+          <span className="text-[#0284c7] font-bold">LM Digital Solutions</span>
         </span>
       </a>
     </div>

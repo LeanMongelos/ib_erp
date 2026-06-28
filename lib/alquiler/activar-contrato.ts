@@ -1,12 +1,24 @@
 import { prisma } from '@/lib/prisma'
-import { geocodificarDireccion } from '@/lib/geocoding'
 import { calcularVencimientoCuota, formatPeriodo } from '@/lib/alquiler/periodo'
+import { resolverUbicacionLineaAlquiler } from '@/lib/alquiler/resolver-ubicacion-linea'
 
 export async function activarContratoAlquiler(contratoId: string, usuarioId?: string | null) {
   return prisma.$transaction(async (tx) => {
     const contrato = await tx.contratoAlquiler.findUniqueOrThrow({
       where: { id: contratoId },
       include: {
+        cliente: {
+          select: {
+            lat: true,
+            lng: true,
+            sucursales: {
+              where: { activo: true, lat: { not: null }, lng: { not: null } },
+              orderBy: { creadoEn: 'asc' },
+              take: 3,
+              select: { lat: true, lng: true, nombre: true },
+            },
+          },
+        },
         lineas: {
           where: { activa: true },
           include: {
@@ -48,18 +60,14 @@ export async function activarContratoAlquiler(contratoId: string, usuarioId?: st
         throw new Error(`La unidad ${serie} ya está en un contrato activo`)
       }
 
-      let lat = linea.lat
-      let lng = linea.lng
-      if (lat == null || lng == null) {
-        const geo = await geocodificarDireccion(linea.domicilio, linea.localidad)
-        if (geo) {
-          lat = geo.lat
-          lng = geo.lng
-          await tx.lineaAlquiler.update({
-            where: { id: linea.id },
-            data: { lat, lng },
-          })
-        }
+      const ubicacion = await resolverUbicacionLineaAlquiler(linea, contrato.cliente)
+      const { lat, lng } = ubicacion
+
+      if (linea.lat !== lat || linea.lng !== lng) {
+        await tx.lineaAlquiler.update({
+          where: { id: linea.id },
+          data: { lat, lng },
+        })
       }
 
       let equipoId = linea.equipoId ?? unidad.equipoId
@@ -70,8 +78,8 @@ export async function activarContratoAlquiler(contratoId: string, usuarioId?: st
           data: {
             clienteId: contrato.clienteId,
             origen: 'ALQUILER',
-            ubicacionLat: lat ?? undefined,
-            ubicacionLng: lng ?? undefined,
+            ubicacionLat: lat,
+            ubicacionLng: lng,
             direccionUbicacion: linea.domicilio ?? undefined,
             contactoResponsable: linea.beneficiarioNombre ?? undefined,
             fechaInstalacion: linea.fechaEntrega ?? fechaInicio,
@@ -111,19 +119,30 @@ export async function activarContratoAlquiler(contratoId: string, usuarioId?: st
         data: { estado: 'EN_ALQUILER' },
       })
 
-      if (lat != null && lng != null && equipoId) {
-        await tx.eventoTracking.create({
-          data: {
-            equipoId,
-            tipo: 'INSTALADO',
-            lat,
-            lng,
-            direccion: linea.domicilio,
-            nota: `Alquiler activo — beneficiario: ${linea.beneficiarioNombre ?? 'N/D'}`,
-            usuarioId: usuarioId ?? null,
-          },
-        })
-      }
+      const notaFuente =
+        ubicacion.fuente === 'linea_guardada'
+          ? 'ubicación confirmada en contrato'
+          : ubicacion.fuente === 'geocodificacion_domicilio'
+            ? 'geocodificación domicilio'
+            : ubicacion.fuente === 'geocodificacion_localidad'
+              ? 'geocodificación localidad (aprox.)'
+              : ubicacion.fuente === 'sucursal_cliente'
+                ? 'sucursal del cliente (aprox.)'
+                : ubicacion.fuente === 'cliente'
+                  ? 'ubicación del cliente (aprox.)'
+                  : 'depósito IB (revisar domicilio)'
+
+      await tx.eventoTracking.create({
+        data: {
+          equipoId: equipoId!,
+          tipo: 'INSTALADO',
+          lat,
+          lng,
+          direccion: linea.domicilio,
+          nota: `Alquiler activo — ${linea.beneficiarioNombre ?? 'N/D'} · ${notaFuente}`,
+          usuarioId: usuarioId ?? null,
+        },
+      })
 
       const cuotaExistente = await tx.cuotaAlquiler.findUnique({
         where: { lineaId_periodo: { lineaId: linea.id, periodo } },
