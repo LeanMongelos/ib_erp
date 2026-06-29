@@ -5,40 +5,21 @@ import { prisma } from '@/lib/prisma'
 import { ApiError } from '@/lib/api-auth'
 import { claveRemito, reservarSiguienteNumero } from '@/lib/numeracion'
 import { trazabilidadActiva } from '@/lib/inventario/unidades'
+import {
+  remitoPendientesEmision,
+  type ItemRemitoEmisionCheck,
+} from '@/lib/remitos/validacion-emision'
+
+export type { ItemRemitoEmisionCheck } from '@/lib/remitos/validacion-emision'
+export {
+  itemRemitoPendienteSerie,
+  remitoListoParaEmitir,
+  remitoPendientesEmision,
+} from '@/lib/remitos/validacion-emision'
 
 function requiereAsignacionSerie(modoTrazabilidad: string | null | undefined, esSerializado: boolean): boolean {
   if (trazabilidadActiva(modoTrazabilidad as 'NINGUNA' | 'SERIE' | 'LOTE' | 'SERIE_Y_LOTE')) return true
   return esSerializado
-}
-
-export type ItemRemitoEmisionCheck = {
-  descripcion: string
-  inventarioId: string | null
-  inventarioUnidadId?: string | null
-  equipoId?: string | null
-  numeroSerie?: string | null
-  inventario?: {
-    modoTrazabilidad?: string | null
-    tipoArticulo?: string | null
-    esSerializado?: boolean
-  } | null
-}
-
-export function itemRemitoPendienteSerie(item: ItemRemitoEmisionCheck): boolean {
-  const inv = item.inventario
-  const necesitaSerie = inv
-    ? requiereAsignacionSerie(inv.modoTrazabilidad, inv.esSerializado ?? false) || inv.tipoArticulo === 'EQUIPO'
-    : Boolean(item.inventarioId)
-  if (!necesitaSerie) return false
-  return !item.inventarioUnidadId && !item.equipoId && !item.numeroSerie?.trim()
-}
-
-export function remitoPendientesEmision(items: ItemRemitoEmisionCheck[]): string[] {
-  return items.filter(itemRemitoPendienteSerie).map((i) => i.descripcion)
-}
-
-export function remitoListoParaEmitir(items: ItemRemitoEmisionCheck[]): boolean {
-  return remitoPendientesEmision(items).length === 0
 }
 
 export async function crearRemitoDesdeOrdenVenta(ordenVentaId: string) {

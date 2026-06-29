@@ -21,7 +21,7 @@ import { formatMonto } from '@/lib/utils'
 import { useCan } from '@/components/auth/useCan'
 import { mensajeErrorDesconocido, mensajeErrorJson, mensajeErrorRespuesta } from '@/lib/errores'
 import { validarTransicionOT } from '@/lib/ots/transiciones-client'
-import { remitoListoParaEmitir, remitoPendientesEmision } from '@/lib/remitos/venta'
+import { remitoListoParaEmitir, remitoPendientesEmision } from '@/lib/remitos/validacion-emision'
 
 interface ItemRemitoResumen {
   descripcion: string
