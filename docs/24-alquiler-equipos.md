@@ -103,6 +103,24 @@ Una factura puede agrupar todas las líneas del mismo contrato + período.
 
 ---
 
+## 5b. ACTA de entrega (documento firmable)
+
+Comprobante de entrega física del equipo al beneficiario. **Independiente de la factura**: se puede imprimir ACTA sin factura, factura sin ACTA, o ambos vinculados.
+
+| Archivo | Rol |
+|---------|-----|
+| `ActaEntregaAlquiler` | Snapshot editable: cliente, equipo, montos, depósito de garantía |
+| `lib/alquiler/acta-entrega.ts` | Crear / actualizar / listar |
+| `lib/alquiler/acta-pdf.ts` | PDF HTML (mismo encabezado fiscal que factura) |
+| `POST /api/alquiler/contratos/[id]/actas` | Crear · permiso `alquiler.bill` |
+| `GET /api/alquiler/actas/[id]/pdf` | Descargar PDF · permiso `alquiler.read` |
+
+Numeración: secuencia `ACTA_ALQUILER_{año}` (ej. `ACTA-2026-0001`).
+
+UI: botón **ACTA** por línea en `ContratoAlquilerDetalle`; tras facturar desde Cobranzas, toast con enlace al contrato para generar ACTAs.
+
+---
+
 ## 6. Cron y jobs
 
 | Trigger | Horario VPS | lib |

@@ -6,7 +6,7 @@
 
 import { prisma, invalidatePrismaCache } from '@/lib/prisma'
 
-export type TipoSecuencia = 'PRESUPUESTO' | 'FACTURA' | 'REMITO' | 'ORDEN_VENTA'
+export type TipoSecuencia = 'PRESUPUESTO' | 'FACTURA' | 'REMITO' | 'ORDEN_VENTA' | 'ACTA_ALQUILER'
 
 export interface DefSecuencia {
   clave: string
@@ -33,10 +33,28 @@ export function formatearNumero(prefijo: string, correlativo: number, padding: n
   return `${prefijo}${String(correlativo).padStart(padding, '0')}`
 }
 
-function defsAnuales(tipo: 'PRESUPUESTO' | 'REMITO' | 'ORDEN_VENTA', prefijoLetra: string, anio: number): DefSecuencia[] {
+function defsAnuales(
+  tipo: 'PRESUPUESTO' | 'REMITO' | 'ORDEN_VENTA' | 'ACTA_ALQUILER',
+  prefijoLetra: string,
+  anio: number,
+): DefSecuencia[] {
   const prefijo = `${prefijoLetra}-${anio}-`
-  const claveBase = tipo === 'PRESUPUESTO' ? 'PRESUPUESTO' : tipo === 'REMITO' ? 'REMITO' : 'ORDEN_VENTA'
-  const etiqueta = tipo === 'PRESUPUESTO' ? 'Presupuesto' : tipo === 'REMITO' ? 'Remito' : 'Orden de venta'
+  const claveBase =
+    tipo === 'PRESUPUESTO'
+      ? 'PRESUPUESTO'
+      : tipo === 'REMITO'
+        ? 'REMITO'
+        : tipo === 'ORDEN_VENTA'
+          ? 'ORDEN_VENTA'
+          : 'ACTA_ALQUILER'
+  const etiqueta =
+    tipo === 'PRESUPUESTO'
+      ? 'Presupuesto'
+      : tipo === 'REMITO'
+        ? 'Remito'
+        : tipo === 'ORDEN_VENTA'
+          ? 'Orden de venta'
+          : 'Acta entrega alquiler'
   return [{
     clave: `${claveBase}_${anio}`,
     etiqueta: `${etiqueta} ${anio}`,
@@ -53,6 +71,7 @@ export function defsSecuenciasPorDefecto(anio = anioActual()): DefSecuencia[] {
     ...defsAnuales('PRESUPUESTO', 'P', anio),
     ...defsAnuales('REMITO', 'R', anio),
     ...defsAnuales('ORDEN_VENTA', 'OV', anio),
+    ...defsAnuales('ACTA_ALQUILER', 'ACTA', anio),
     ...(['A', 'B', 'C'] as const).map((subtipo) => ({
       clave: `FACTURA_${subtipo}`,
       etiqueta: `Factura ${subtipo} (número interno)`,
@@ -124,6 +143,13 @@ async function maxCorrelativoEnBd(tipo: TipoSecuencia, prefijo: string): Promise
   }
   if (tipo === 'FACTURA') {
     const rows = await prisma.factura.findMany({
+      where: { numero: { startsWith: prefijo } },
+      select: { numero: true },
+    })
+    return rows.reduce((max, { numero }) => Math.max(max, parseCorrelativo(numero)), 0)
+  }
+  if (tipo === 'ACTA_ALQUILER') {
+    const rows = await prisma.actaEntregaAlquiler.findMany({
       where: { numero: { startsWith: prefijo } },
       select: { numero: true },
     })
@@ -226,4 +252,8 @@ export function claveFactura(tipo: string) {
 
 export function claveNotaCredito(tipo: string) {
   return `NOTA_CREDITO_${tipo.toUpperCase()}`
+}
+
+export function claveActaAlquiler(anio = anioActual()) {
+  return `ACTA_ALQUILER_${anio}`
 }

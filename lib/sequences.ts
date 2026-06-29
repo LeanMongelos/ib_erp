@@ -6,6 +6,7 @@
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import {
+  claveActaAlquiler,
   claveFactura,
   claveNotaCredito,
   clavePresupuesto,
@@ -60,6 +61,10 @@ export async function siguienteNumeroPresupuesto(): Promise<string> {
 
 export async function siguienteNumeroRemito(): Promise<string> {
   return reservarSiguienteNumero(claveRemito())
+}
+
+export async function siguienteNumeroActaAlquiler(): Promise<string> {
+  return reservarSiguienteNumero(claveActaAlquiler())
 }
 
 export async function siguienteNumeroContratoAlquiler(): Promise<string> {

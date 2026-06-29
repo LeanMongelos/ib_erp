@@ -2,9 +2,9 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { toast } from 'sonner'
-import { ArrowLeft, Play, Receipt, Pause, RotateCcw, XCircle, PackageX, MapPin, CheckCircle2, AlertCircle } from 'lucide-react'
+import { ArrowLeft, Play, Receipt, Pause, RotateCcw, XCircle, PackageX, MapPin, CheckCircle2, AlertCircle, FileText, Printer } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -18,6 +18,8 @@ import {
   ubicacionLineaAlquilerValida,
   type UbicacionLineaAlquilerValue,
 } from '@/components/alquiler/LineaAlquilerUbicacionFields'
+import { ActaEntregaAlquilerModal } from '@/components/alquiler/ActaEntregaAlquilerModal'
+import type { ActaEntregaDefaultsInput } from '@/lib/alquiler/acta-entrega-client'
 
 interface ContratoDetalle {
   id: string
@@ -59,6 +61,17 @@ interface ContratoDetalle {
   }>
 }
 
+interface ActaResumen {
+  id: string
+  numero: string
+  lineaId: string
+  clienteNombre: string
+  equipoNombre: string
+  fechaActa: string
+  creadoEn: string
+  factura?: { id: string; numero: string } | null
+}
+
 const ESTADO_VARIANT: Record<string, 'default' | 'success' | 'warning' | 'danger' | 'info' | 'gray'> = {
   BORRADOR: 'default',
   ACTIVO: 'success',
@@ -81,11 +94,15 @@ export function ContratoAlquilerDetalle({ contrato: inicial }: { contrato: Contr
   const puedeActivar = useCan('alquiler.update')
   const puedeFacturar = useCan('alquiler.bill')
   const puedeCerrar = useCan('alquiler.close')
+  const puedeActa = useCan('alquiler.bill')
   const [contrato, setContrato] = useState(inicial)
+  const [actas, setActas] = useState<ActaResumen[]>([])
   const [loading, setLoading] = useState<string | null>(null)
   const [periodoFacturar, setPeriodoFacturar] = useState(formatPeriodo(new Date()))
   const [lineaEditUbicacion, setLineaEditUbicacion] = useState<string | null>(null)
   const [ubicacionDraft, setUbicacionDraft] = useState<UbicacionLineaAlquilerValue | null>(null)
+  const [actaModalLineaId, setActaModalLineaId] = useState<string | null>(null)
+  const [actaEditId, setActaEditId] = useState<string | null>(null)
 
   const lineasSinPin = useMemo(
     () => contrato.lineas.filter((l) => l.lat == null || l.lng == null),
@@ -104,10 +121,39 @@ export function ContratoAlquilerDetalle({ contrato: inicial }: { contrato: Contr
     [cuotasFacturables],
   )
 
+  const facturasContrato = useMemo(() => {
+    const map = new Map<string, { id: string; numero: string; periodo: string }>()
+    for (const c of contrato.cuotas) {
+      if (c.factura?.id) {
+        map.set(c.factura.id, {
+          id: c.factura.id,
+          numero: c.factura.numero,
+          periodo: c.periodo,
+        })
+      }
+    }
+    return [...map.values()]
+  }, [contrato.cuotas])
+
+  async function cargarActas() {
+    try {
+      const res = await fetch(`/api/alquiler/contratos/${contrato.id}/actas`)
+      if (res.ok) setActas(await res.json())
+    } catch {
+      /* silencioso */
+    }
+  }
+
+  useEffect(() => {
+    void cargarActas()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contrato.id])
+
   async function recargar() {
     const res = await fetch(`/api/alquiler/contratos/${contrato.id}`)
     if (res.ok) setContrato(await res.json())
     router.refresh()
+    await cargarActas()
   }
 
   async function accion(url: string, msgOk: string, confirmMsg?: string) {
@@ -167,6 +213,22 @@ export function ContratoAlquilerDetalle({ contrato: inicial }: { contrato: Contr
     }
   }
 
+  function abrirActaModal(lineaId: string, actaId?: string | null) {
+    setActaEditId(actaId ?? null)
+    setActaModalLineaId(lineaId)
+  }
+
+  function actaDefaultsInput(lineaId: string, periodo?: string, facturaId?: string): ActaEntregaDefaultsInput {
+    const linea = contrato.lineas.find((l) => l.id === lineaId)!
+    return {
+      clienteNombre: contrato.cliente.nombre,
+      clienteTelefono: contrato.cliente.telefono,
+      linea,
+      periodo: periodo ?? periodoFacturar,
+      facturaId,
+    }
+  }
+
   async function facturarPeriodo() {
     if (!periodosPendientes.includes(periodoFacturar)) {
       toast.error('No hay cuotas pendientes para ese período')
@@ -181,7 +243,17 @@ export function ContratoAlquilerDetalle({ contrato: inicial }: { contrato: Contr
       })
       if (!res.ok) throw new Error(await mensajeErrorRespuesta(res, 'No se pudo facturar'))
       const factura = await res.json()
-      toast.success(`Factura ${factura.numero} creada en borrador`)
+      toast.success(`Factura ${factura.numero} creada en borrador`, {
+        action: puedeActa
+          ? {
+              label: 'Generar ACTA',
+              onClick: () => {
+                const primeraLinea = contrato.lineas[0]
+                if (primeraLinea) abrirActaModal(primeraLinea.id)
+              },
+            }
+          : undefined,
+      })
       await recargar()
     } catch (e) {
       toast.error(mensajeErrorDesconocido(e, 'Error al facturar'))
@@ -358,7 +430,7 @@ export function ContratoAlquilerDetalle({ contrato: inicial }: { contrato: Contr
                 <th className="py-2 pr-3">Ubicación</th>
                 <th className="py-2 pr-3">Monto/mes</th>
                 <th className="py-2 pr-3">Unidad</th>
-                {puedeCerrar && <th className="py-2">Acciones</th>}
+                {(puedeCerrar || puedeActa) && <th className="py-2">Acciones</th>}
               </tr>
             </thead>
             <tbody>
@@ -404,24 +476,35 @@ export function ContratoAlquilerDetalle({ contrato: inicial }: { contrato: Contr
                   </td>
                   <td className="py-3 pr-3">{formatMonto(l.montoMensual)}</td>
                   <td className="py-3 pr-3">{l.inventarioUnidad.estado}</td>
-                  {puedeCerrar && (
+                  {(puedeCerrar || puedeActa) && (
                     <td className="py-3">
-                      {l.activa !== false && ['ACTIVO', 'SUSPENDIDO'].includes(contrato.estado) && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={loading !== null}
-                          onClick={() =>
-                            accion(
-                              `/api/alquiler/lineas/${l.id}/devolver`,
-                              'Equipo devuelto',
-                              '¿Registrar devolución de esta unidad?',
-                            )
-                          }
-                        >
-                          Devolver
-                        </Button>
-                      )}
+                      <div className="flex flex-wrap gap-1">
+                        {puedeActa && ['ACTIVO', 'SUSPENDIDO', 'FINALIZADO'].includes(contrato.estado) && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => abrirActaModal(l.id)}
+                          >
+                            <FileText size={12} /> ACTA
+                          </Button>
+                        )}
+                        {l.activa !== false && ['ACTIVO', 'SUSPENDIDO'].includes(contrato.estado) && puedeCerrar && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={loading !== null}
+                            onClick={() =>
+                              accion(
+                                `/api/alquiler/lineas/${l.id}/devolver`,
+                                'Equipo devuelto',
+                                '¿Registrar devolución de esta unidad?',
+                              )
+                            }
+                          >
+                            Devolver
+                          </Button>
+                        )}
+                      </div>
                     </td>
                   )}
                 </tr>
@@ -460,6 +543,80 @@ export function ContratoAlquilerDetalle({ contrato: inicial }: { contrato: Contr
           </div>
         )}
       </Card>
+
+      {actas.length > 0 && (
+        <Card>
+          <h3 className="text-[14px] font-bold text-[#1f242c] mb-3">ACTAs de entrega</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-[12.5px]">
+              <thead>
+                <tr className="border-b border-[#eef0f2] text-left text-[#9aa1ab]">
+                  <th className="py-2 pr-3">Número</th>
+                  <th className="py-2 pr-3">Beneficiario</th>
+                  <th className="py-2 pr-3">Equipo</th>
+                  <th className="py-2 pr-3">Fecha</th>
+                  <th className="py-2 pr-3">Factura</th>
+                  <th className="py-2">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {actas.map((a) => (
+                  <tr key={a.id} className="border-b border-[#f3f4f6]">
+                    <td className="py-3 pr-3 font-medium">{a.numero}</td>
+                    <td className="py-3 pr-3">{a.clienteNombre}</td>
+                    <td className="py-3 pr-3">{a.equipoNombre}</td>
+                    <td className="py-3 pr-3">{formatFecha(a.fechaActa)}</td>
+                    <td className="py-3 pr-3">
+                      {a.factura ? (
+                        <Link
+                          href={`/facturacion?buscar=${encodeURIComponent(a.factura.numero)}`}
+                          className="text-[#E8650A] hover:underline"
+                        >
+                          {a.factura.numero}
+                        </Link>
+                      ) : '—'}
+                    </td>
+                    <td className="py-3">
+                      <div className="flex flex-wrap gap-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => window.open(`/api/alquiler/actas/${a.id}/pdf`, '_blank')}
+                        >
+                          <Printer size={12} /> Imprimir
+                        </Button>
+                        {puedeActa && (
+                          <Button variant="ghost" size="sm" onClick={() => abrirActaModal(a.lineaId, a.id)}>
+                            Editar
+                          </Button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+
+      {actaModalLineaId && (
+        <ActaEntregaAlquilerModal
+          open
+          contratoId={contrato.id}
+          lineaId={actaModalLineaId}
+          defaultsInput={actaDefaultsInput(actaModalLineaId)}
+          actaExistente={actaEditId ? actas.find((a) => a.id === actaEditId) ?? { id: actaEditId, numero: '' } : null}
+          facturasDisponibles={facturasContrato}
+          onClose={() => {
+            setActaModalLineaId(null)
+            setActaEditId(null)
+          }}
+          onGuardada={() => {
+            void cargarActas()
+          }}
+        />
+      )}
 
       {contrato.cuotas.length > 0 && (
         <Card>

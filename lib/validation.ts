@@ -384,11 +384,21 @@ export const presupuestoCreateSchema = z.object({
   items:                 z.array(itemPresupuestoSchema).min(1),
 })
 
+export const presupuestoRevisionSchema = z.object({
+  clienteId: z.string().min(1).optional(),
+  motivo: z.string().trim().max(500).optional(),
+})
+
 export const presupuestoUpdateSchema = z.object({
   estado:          estadoPresupuestoEnum.optional(),
   moneda:          monedaDocumentoEnum.optional(),
   cotizacionUsd:   z.number().positive().optional().nullable(),
   condicionPago:   z.string().trim().max(60).optional(),
+  plazosCobranza:  z.array(z.number().int().positive().max(730)).min(1).max(12).optional(),
+  tasaFinanciacionPct: z.number().min(0).max(100).optional(),
+  interesFinanciacion: z.number().min(0).optional(),
+  bonificacionPct: z.number().min(0).max(100).optional(),
+  alicuotaIvaPct:  z.number().min(0).max(100).optional(),
   vigenciaDias:    z.number().int().positive().optional(),
   observaciones:   z.string().trim().max(2000).optional(),
   formaPago:       z.string().trim().max(120).optional(),
@@ -1071,4 +1081,37 @@ export const facturarCuotasAlquilerSchema = z.object({
   cuotaIds: z.array(z.string().min(1)).optional(),
   tipo: tipoFacturaEnum.default('B'),
   observaciones: z.string().trim().max(500).optional().nullable(),
+})
+
+export const actaEntregaAlquilerCreateSchema = z.object({
+  lineaId: z.string().min(1, 'Seleccioná la línea'),
+  facturaId: z.string().min(1).optional().nullable(),
+  clienteNombre: z.string().trim().min(1).optional(),
+  clienteDni: z.string().trim().max(20).optional().nullable(),
+  clienteDireccion: z.string().trim().max(300).optional().nullable(),
+  clienteTelefono: z.string().trim().max(40).optional().nullable(),
+  equipoNombre: z.string().trim().min(1).optional(),
+  numeroSerie: z.string().trim().max(80).optional().nullable(),
+  fechaActa: z.coerce.date().optional(),
+  lugar: z.string().trim().min(1).max(80).optional(),
+  montoAlquiler: z.number().min(0).optional(),
+  periodoAlquiler: z.string().trim().min(1).max(40).optional(),
+  montoDepositoGarantia: z.number().min(0).optional(),
+  observaciones: z.string().trim().max(1000).optional().nullable(),
+})
+
+export const actaEntregaAlquilerUpdateSchema = z.object({
+  clienteNombre: z.string().trim().min(1).optional(),
+  clienteDni: z.string().trim().max(20).optional().nullable(),
+  clienteDireccion: z.string().trim().max(300).optional().nullable(),
+  clienteTelefono: z.string().trim().max(40).optional().nullable(),
+  equipoNombre: z.string().trim().min(1).optional(),
+  numeroSerie: z.string().trim().max(80).optional().nullable(),
+  fechaActa: z.coerce.date().optional(),
+  lugar: z.string().trim().min(1).max(80).optional(),
+  montoAlquiler: z.number().min(0).optional(),
+  periodoAlquiler: z.string().trim().min(1).max(40).optional(),
+  montoDepositoGarantia: z.number().min(0).optional(),
+  observaciones: z.string().trim().max(1000).optional().nullable(),
+  facturaId: z.string().min(1).optional().nullable(),
 })

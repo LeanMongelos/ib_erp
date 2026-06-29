@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ACTA {{acta_numero}}</title>
+  <style>
+    :root {
+      --color-accent:    #D94F1E;
+      --color-header-bg: #1A1A1A;
+      --color-border:    #CCCCCC;
+      --color-text:      #1A1A1A;
+      --color-muted:     #555555;
+      --color-white:     #FFFFFF;
+      --font-body:       'Arial', sans-serif;
+      --page-width:      210mm;
+      --page-padding:    12mm;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font-body);
+      font-size: 10pt;
+      color: var(--color-text);
+      background: #fff;
+      line-height: 1.45;
+    }
+    .page {
+      width: var(--page-width);
+      min-height: 297mm;
+      margin: 0 auto;
+      padding: var(--page-padding);
+      display: flex;
+      flex-direction: column;
+      gap: 5mm;
+    }
+    .fiscal-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 7pt;
+      margin-bottom: 3mm;
+    }
+    .fiscal-table td {
+      border: 1px solid #000;
+      padding: 1.5mm 2mm;
+      text-align: center;
+      width: 25%;
+    }
+    .doc-meta { font-size: 8pt; margin-bottom: 2mm; }
+    .doc-numero-centro {
+      text-align: center;
+      font-size: 16pt;
+      font-weight: bold;
+      letter-spacing: 2px;
+      margin-bottom: 4mm;
+      text-transform: uppercase;
+    }
+    .empresa-centro {
+      text-align: center;
+      margin-bottom: 6mm;
+    }
+    .empresa-centro img {
+      height: 18mm;
+      width: auto;
+      display: block;
+      margin: 0 auto 3mm;
+    }
+    .empresa-centro .empresa-nombre {
+      font-size: 14pt;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .empresa-centro .empresa-datos {
+      font-size: 8pt;
+      color: var(--color-muted);
+      line-height: 1.6;
+      margin-top: 2mm;
+    }
+    hr.divider {
+      border: none;
+      border-top: 1.5px solid var(--color-border);
+    }
+    .acta-cuerpo {
+      font-size: 10.5pt;
+      text-align: justify;
+      margin: 4mm 0;
+    }
+    .acta-cuerpo p { margin-bottom: 4mm; }
+    .acta-cuerpo .destacado { font-weight: bold; text-transform: uppercase; }
+    .acta-cuerpo .subrayado {
+      border-bottom: 1px solid var(--color-text);
+      display: inline-block;
+      min-width: 20mm;
+      padding: 0 1mm;
+    }
+    .montos {
+      margin: 6mm 0;
+      font-size: 10.5pt;
+    }
+    .montos .fila {
+      display: flex;
+      gap: 3mm;
+      margin-bottom: 3mm;
+      align-items: baseline;
+    }
+    .montos .simbolo { font-weight: bold; min-width: 5mm; }
+    .montos .monto {
+      border-bottom: 1px solid var(--color-text);
+      min-width: 35mm;
+      padding: 0 2mm;
+      font-weight: bold;
+    }
+    .montos .concepto { flex: 1; }
+    .firma-bloque {
+      margin-top: 12mm;
+      font-size: 9pt;
+    }
+    .firma-bloque .titulo {
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 8mm;
+      font-size: 9.5pt;
+    }
+    .firma-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6mm 4mm;
+      margin-top: 4mm;
+    }
+    .firma-campo {
+      border-bottom: 1px solid var(--color-text);
+      min-height: 14mm;
+      padding-top: 10mm;
+      text-align: center;
+      font-size: 8pt;
+      color: var(--color-muted);
+    }
+    .firma-campo.firma-grande { min-height: 22mm; grid-column: span 1; }
+    .observaciones {
+      font-size: 8.5pt;
+      color: var(--color-muted);
+      border-top: 1px solid var(--color-border);
+      padding-top: 3mm;
+      margin-top: 4mm;
+    }
+    @media print {
+      body { background: #fff; }
+      .page { margin: 0; padding: var(--page-padding); }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <table class="fiscal-table">
+    <tr>
+      <td>CUIT {{empresa_cuit}}</td>
+      <td>Ingresos Brutos {{empresa_ingresos_brutos}}</td>
+      <td>Inicio de Actividades {{empresa_inicio_actividades}}</td>
+      <td>{{empresa_condicion_iva}}</td>
+    </tr>
+  </table>
+
+  <div class="doc-meta">Fecha: {{acta_fecha_corta}}</div>
+  <div class="doc-numero-centro">ACTA</div>
+  <div class="doc-meta" style="text-align:center;margin-bottom:4mm;">N° {{acta_numero}}</div>
+
+  <section class="empresa-centro">
+    <img src="/logo.png" alt="Logo Ingeniería Biomédica" />
+    <div class="empresa-nombre">{{empresa_nombre}}</div>
+    <div class="empresa-datos">
+      {{empresa_direccion}}<br>
+      Cel: {{empresa_telefono}}<br>
+      Mail: {{empresa_email}}
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <section class="acta-cuerpo">
+    <p>{{acta_fecha_lugar}}</p>
+    <p>
+      SE PROCEDE A HACER ENTREGA DE <span class="destacado">{{acta_equipo_completo}}</span>
+      A NOMBRE DE <span class="destacado">{{cliente_nombre}}</span>
+      DNI N° <span class="subrayado">{{cliente_dni}}</span>
+      CON DOMICILIO EN <span class="destacado">{{cliente_direccion}}</span>
+      TELÉFONO <span class="subrayado">{{cliente_telefono}}</span>.
+    </p>
+  </section>
+
+  <section class="montos">
+    <div class="fila">
+      <span class="simbolo">$</span>
+      <span class="monto">{{monto_alquiler}}</span>
+      <span class="concepto">ALQUILER CORRESPONDIENTE AL PERÍODO DE <strong>{{periodo_alquiler}}</strong></span>
+    </div>
+    <div class="fila">
+      <span class="simbolo">$</span>
+      <span class="monto">{{monto_deposito}}</span>
+      <span class="concepto">DEPÓSITO DE GARANTÍA</span>
+    </div>
+  </section>
+
+  <section class="acta-cuerpo">
+    <p>
+      NO SIENDO PARA MÁS SE DA POR FINALIZADA LA PRESENTE ACTA, FIRMANDO DE CONFORMIDAD
+      LAS PARTES INTERVINIENTES EN UN EJEMPLAR DE UN MISMO TENOR Y A UN SOLO EFECTO.
+    </p>
+  </section>
+
+  <section class="firma-bloque">
+    <div class="titulo">FIRMA DEL RECEPTOR</div>
+    <div class="firma-grid">
+      <div class="firma-campo">NOMBRE</div>
+      <div class="firma-campo">DIRECCIÓN</div>
+      <div class="firma-campo">TELÉFONO</div>
+      <div class="firma-campo firma-grande">FIRMA</div>
+      <div class="firma-campo">ACLARACIÓN</div>
+      <div class="firma-campo">DNI</div>
+    </div>
+  </section>
+
+  {{seccion_observaciones}}
+
+</div>
+</body>
+</html>

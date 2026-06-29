@@ -338,6 +338,7 @@ model Usuario {
   eventosOrdenCompra              EventoOrdenCompra[]
   notificacionesUsuario           NotificacionUsuario[]
   contratosAlquilerCreados        ContratoAlquiler[] @relation("ContratoAlquilerCreador")
+  actasEntregaAlquilerCreadas     ActaEntregaAlquiler[] @relation("ActaEntregaAlquilerCreador")
 
   @@map("usuarios")
 }
@@ -941,6 +942,7 @@ model Factura {
   pagos         PagoFactura[]
   vencimientos  VencimientoCobranza[]
   cuotasAlquiler CuotaAlquiler[]
+  actasEntregaAlquiler ActaEntregaAlquiler[]
 
   @@index([fechaEmision])
   @@index([estado, fechaEmision])
@@ -1226,6 +1228,9 @@ model Presupuesto {
   id              String            @id @default(cuid())
   numero          String            @unique
   estado          EstadoPresupuesto @default(BORRADOR)
+  version         Int               @default(1)
+  presupuestoRaizId   String?
+  presupuestoOrigenId String?
   clienteId       String
   emisorId        String?
   plantillaId     String?
@@ -1255,6 +1260,10 @@ model Presupuesto {
   plantilla PlantillaImpresion? @relation(fields: [plantillaId], references: [id])
   vendedor  Usuario?            @relation(fields: [vendedorId], references: [id])
   ot        OrdenTrabajo?       @relation(fields: [otId], references: [id])
+  presupuestoRaiz   Presupuesto?  @relation("PresupuestoVersiones", fields: [presupuestoRaizId], references: [id], onDelete: SetNull)
+  revisiones        Presupuesto[] @relation("PresupuestoVersiones")
+  presupuestoOrigen Presupuesto?  @relation("PresupuestoDerivado", fields: [presupuestoOrigenId], references: [id], onDelete: SetNull)
+  derivados         Presupuesto[] @relation("PresupuestoDerivado")
   items     ItemPresupuesto[]
   factura   Factura?
   negociosEmbudo NegocioEmbudo[]
@@ -1263,6 +1272,8 @@ model Presupuesto {
   remitos        RemitoVenta[]
 
   @@index([otId])
+  @@index([presupuestoRaizId])
+  @@index([presupuestoOrigenId])
   @@map("presupuestos")
 }
 
@@ -2182,6 +2193,7 @@ model ContratoAlquiler {
   creadoPor Usuario?         @relation("ContratoAlquilerCreador", fields: [creadoPorId], references: [id])
   lineas    LineaAlquiler[]
   cuotas    CuotaAlquiler[]
+  actas     ActaEntregaAlquiler[]
 
   @@index([clienteId, estado])
   @@index([estado])
@@ -2214,6 +2226,7 @@ model LineaAlquiler {
   inventarioUnidad InventarioUnidad @relation(fields: [inventarioUnidadId], references: [id])
   equipo           Equipo?          @relation(fields: [equipoId], references: [id])
   cuotas           CuotaAlquiler[]
+  actas            ActaEntregaAlquiler[]
 
   @@index([contratoId])
   @@index([inventarioUnidadId])
@@ -2240,6 +2253,38 @@ model CuotaAlquiler {
   @@index([contratoId, periodo])
   @@index([estado, vencimiento])
   @@map("cuotas_alquiler")
+}
+
+model ActaEntregaAlquiler {
+  id                    String   @id @default(cuid())
+  numero                String   @unique
+  contratoId            String
+  lineaId               String
+  facturaId             String?
+  clienteNombre         String
+  clienteDni            String?
+  clienteDireccion      String?
+  clienteTelefono       String?
+  equipoNombre          String
+  numeroSerie           String?
+  fechaActa             DateTime
+  lugar                 String   @default("Formosa")
+  montoAlquiler         Float
+  periodoAlquiler       String
+  montoDepositoGarantia Float    @default(0)
+  observaciones         String?
+  creadoPorId           String?
+  creadoEn              DateTime @default(now())
+  actualizadoEn         DateTime @updatedAt
+
+  contrato  ContratoAlquiler @relation(fields: [contratoId], references: [id], onDelete: Cascade)
+  linea     LineaAlquiler    @relation(fields: [lineaId], references: [id], onDelete: Cascade)
+  factura   Factura?         @relation(fields: [facturaId], references: [id])
+  creadoPor Usuario?         @relation("ActaEntregaAlquilerCreador", fields: [creadoPorId], references: [id])
+
+  @@index([contratoId])
+  @@index([lineaId])
+  @@map("actas_entrega_alquiler")
 }
 
 model PlantillaNotificacion {

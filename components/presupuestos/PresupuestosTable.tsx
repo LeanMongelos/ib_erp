@@ -22,6 +22,7 @@ const ESTADOS = [
 interface PresupuestoRow {
   id: string
   numero: string
+  version?: number
   estado: string
   fechaEmision: string
   fechaVencimiento?: string | null
@@ -87,7 +88,12 @@ export function PresupuestosTable({ presupuestos }: { presupuestos: PresupuestoR
                   onClick={() => router.push(`/presupuestos/${p.id}`)}
                   className={`cursor-pointer hover:bg-orange-50/50 ${i % 2 === 0 ? 'bg-white' : 'bg-[#fafbfc]'}`}
                 >
-                  <td className="px-5 py-[13px] text-[12.5px] font-bold text-[#E8650A] border-b border-[#f4f5f7]">{p.numero}</td>
+                  <td className="px-5 py-[13px] text-[12.5px] font-bold text-[#E8650A] border-b border-[#f4f5f7]">
+                    {p.numero}
+                    {(p.version ?? 1) > 1 && (
+                      <span className="ml-1 text-[10px] font-semibold text-[#6b7280]">v{p.version}</span>
+                    )}
+                  </td>
                   <td className="px-5 py-[13px] text-[12.5px] font-semibold text-[#3a4150] border-b border-[#f4f5f7]">{p.cliente?.nombre ?? '—'}</td>
                   <td className="px-5 py-[13px] text-[12.5px] text-[#6b7280] border-b border-[#f4f5f7]">{formatFecha(p.fechaEmision)}</td>
                   <td className="px-5 py-[13px] text-[12.5px] text-[#6b7280] border-b border-[#f4f5f7]">{p.fechaVencimiento ? formatFecha(p.fechaVencimiento) : '—'}</td>

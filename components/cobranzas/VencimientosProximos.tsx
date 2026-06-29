@@ -104,7 +104,17 @@ export function VencimientosProximos() {
       })
       if (!res.ok) throw new Error(await mensajeErrorRespuesta(res, 'No se pudo facturar'))
       const factura = await res.json()
-      toast.success(`Factura ${factura.numero} creada — emití AFIP y registrá el cobro abajo`)
+      toast.success(`Factura ${factura.numero} creada — emití AFIP y registrá el cobro abajo`, {
+        action: puedeFacturarAlquiler
+          ? {
+              label: 'Ir a ACTA',
+              onClick: () => {
+                window.location.href = `/alquiler/contratos/${item.contratoId}`
+              },
+            }
+          : undefined,
+        description: 'Podés generar ACTAs de entrega desde el detalle del contrato.',
+      })
       cargar()
     } catch (e) {
       toast.error(mensajeErrorDesconocido(e, 'Error al facturar alquiler'))

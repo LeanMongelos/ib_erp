@@ -65,6 +65,34 @@ interface Props {
     repuestos?: { descripcion: string; cantidad: number; precioUnit: number }[]
   } | null
   plantillaPresupuesto: { id: string | null; nombre: string; origen: string }
+  editPrefill?: {
+    id: string
+    numero: string
+    version: number
+    otId?: string | null
+    clienteId: string
+    emisorId?: string | null
+    vigenciaDias: number
+    formaPago?: string | null
+    plazoEntrega?: string | null
+    garantia?: string | null
+    observaciones?: string | null
+    moneda?: string
+    cotizacionUsd?: number | null
+    alicuotaIvaPct: number
+    tasaFinanciacionPct: number
+    condicionPago?: string | null
+    items: {
+      descripcion: string
+      cantidad: number
+      precioUnit: number
+      alicuotaIvaPct?: number | null
+      inventarioId?: string | null
+      codigo?: string | null
+      fotoUrl?: string | null
+      inventario?: { tipoArticulo?: string | null; esSerializado?: boolean } | null
+    }[]
+  }
 }
 
 function itemsDesdeOt(ot: NonNullable<Props['otPrefill']>): ItemRow[] {
@@ -101,33 +129,50 @@ export function NuevoPresupuestoForm({
   negocioEmbudoId,
   otPrefill,
   plantillaPresupuesto,
+  editPrefill,
 }: Props) {
   const router = useRouter()
   const { alicuotas, defaultPct } = useAlicuotasIva()
+  const esEdicion = Boolean(editPrefill)
 
   const defEmisor = emisores.find((e) => e.predeterminado)?.id ?? emisores[0]?.id ?? ''
   const [clienteId, setClienteId] = useState(
-    otPrefill?.clienteId ?? clienteInicialId ?? clienteEventualId ?? '',
+    editPrefill?.clienteId ?? otPrefill?.clienteId ?? clienteInicialId ?? clienteEventualId ?? '',
   )
-  const [emisorId, setEmisorId] = useState(defEmisor)
-  const [alicuotaDocumentoPct, setAlicuotaDocumentoPct] = useState(21)
-  const [vigenciaDias, setVigenciaDias] = useState(otPrefill ? 5 : 15)
-  const [formaPago, setFormaPago] = useState('')
-  const [plazoEntrega, setPlazoEntrega] = useState('')
-  const [garantia, setGarantia] = useState(otPrefill ? '6 meses' : '')
+  const [emisorId, setEmisorId] = useState(editPrefill?.emisorId ?? defEmisor)
+  const [alicuotaDocumentoPct, setAlicuotaDocumentoPct] = useState(editPrefill?.alicuotaIvaPct ?? 21)
+  const [vigenciaDias, setVigenciaDias] = useState(editPrefill?.vigenciaDias ?? (otPrefill ? 5 : 15))
+  const [formaPago, setFormaPago] = useState(editPrefill?.formaPago ?? '')
+  const [plazoEntrega, setPlazoEntrega] = useState(editPrefill?.plazoEntrega ?? '')
+  const [garantia, setGarantia] = useState(editPrefill?.garantia ?? (otPrefill ? '6 meses' : ''))
   const [observaciones, setObservaciones] = useState(
-    otPrefill ? `Presupuesto vinculado a OT ${otPrefill.numero}` : '',
+    editPrefill?.observaciones ??
+      (otPrefill ? `Presupuesto vinculado a OT ${otPrefill.numero}` : ''),
   )
-  const [items, setItems] = useState<ItemRow[]>(() =>
-    otPrefill ? itemsDesdeOt(otPrefill) : [{ id: '1', descripcion: '', cantidad: 1, precioUnit: 0 }],
-  )
+  const [items, setItems] = useState<ItemRow[]>(() => {
+    if (editPrefill?.items.length) {
+      return editPrefill.items.map((item, idx) => ({
+        id: `edit-${idx}`,
+        descripcion: item.descripcion,
+        cantidad: item.cantidad,
+        precioUnit: item.precioUnit,
+        alicuotaIvaPct: item.alicuotaIvaPct ?? undefined,
+        inventarioId: item.inventarioId ?? undefined,
+        codigo: item.codigo ?? undefined,
+        fotoUrl: item.fotoUrl ?? undefined,
+        tipoArticulo: item.inventario?.tipoArticulo ?? undefined,
+        esSerializado: item.inventario?.esSerializado ?? undefined,
+      }))
+    }
+    return otPrefill ? itemsDesdeOt(otPrefill) : [{ id: '1', descripcion: '', cantidad: 1, precioUnit: 0 }]
+  })
   const [loading, setLoading] = useState(false)
   const plazoInicial = estadoInicialPlazos()
   const [presetPlazo, setPresetPlazo] = useState<PresetPlazoKey | 'custom'>(plazoInicial.presetPlazo)
   const [plazosCustom, setPlazosCustom] = useState(plazoInicial.plazosCustom)
-  const [tasaFinanciacionPct, setTasaFinanciacionPct] = useState(0)
-  const [moneda, setMoneda] = useState<MonedaDocumento>('ARS')
-  const [cotizacionUsd, setCotizacionUsd] = useState<number | null>(null)
+  const [tasaFinanciacionPct, setTasaFinanciacionPct] = useState(editPrefill?.tasaFinanciacionPct ?? 0)
+  const [moneda, setMoneda] = useState<MonedaDocumento>((editPrefill?.moneda as MonedaDocumento) ?? 'ARS')
+  const [cotizacionUsd, setCotizacionUsd] = useState<number | null>(editPrefill?.cotizacionUsd ?? null)
 
   useEffect(() => {
     setAlicuotaDocumentoPct(defaultPct)
@@ -195,6 +240,46 @@ export function NuevoPresupuestoForm({
 
     setLoading(true)
     try {
+      const payload = {
+        vigenciaDias,
+        formaPago: formaPago || undefined,
+        plazoEntrega: plazoEntrega || undefined,
+        garantia: garantia || undefined,
+        observaciones: observaciones || undefined,
+        alicuotaIvaPct: alicuotaDocumentoPct,
+        moneda,
+        cotizacionUsd: moneda === 'USD' ? cotizacionUsd : null,
+        ...(plazosActivos.length > 0
+          ? {
+              plazosCobranza: plazosActivos,
+              condicionPago: formatCondicionPago(plazosActivos),
+            }
+          : {}),
+        tasaFinanciacionPct,
+        interesFinanciacion,
+        items: items.filter((i) => i.descripcion).map((i) => ({
+          descripcion: i.descripcion,
+          cantidad: i.cantidad,
+          precioUnit: i.precioUnit,
+          alicuotaIvaPct: i.alicuotaIvaPct,
+          inventarioId: i.inventarioId ?? null,
+          codigo: i.codigo ?? undefined,
+          fotoUrl: i.fotoUrl ?? undefined,
+        })),
+      }
+
+      if (esEdicion && editPrefill) {
+        const res = await fetch(`/api/presupuestos/${editPrefill.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+        if (!res.ok) throw new Error(await mensajeErrorRespuesta(res, 'No se pudo guardar el presupuesto'))
+        toast.success('Presupuesto actualizado')
+        router.push(`/presupuestos/${editPrefill.id}`)
+        return
+      }
+
       const res = await fetch('/api/presupuestos', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -203,22 +288,7 @@ export function NuevoPresupuestoForm({
           otId: otPrefill?.id ?? null,
           emisorId: emisorId || null,
           plantillaId: plantillaPresupuesto.id ?? undefined,
-          vigenciaDias,
-          formaPago: formaPago || undefined,
-          plazoEntrega: plazoEntrega || undefined,
-          garantia: garantia || undefined,
-          observaciones: observaciones || undefined,
-          alicuotaIvaPct: alicuotaDocumentoPct,
-          moneda,
-          cotizacionUsd: moneda === 'USD' ? cotizacionUsd : null,
-          ...(plazosActivos.length > 0
-            ? {
-                plazosCobranza: plazosActivos,
-                condicionPago: formatCondicionPago(plazosActivos),
-              }
-            : {}),
-          tasaFinanciacionPct,
-          interesFinanciacion,
+          ...payload,
           items: items.filter((i) => i.descripcion).map((i) => ({
             descripcion: i.descripcion,
             cantidad: i.cantidad,
@@ -251,7 +321,17 @@ export function NuevoPresupuestoForm({
 
   return (
     <div className="max-w-4xl mx-auto flex flex-col gap-4">
-      {negocioEmbudoId && (
+      {esEdicion && editPrefill && (
+        <div className="bg-[#EFF6FF] border border-[#93C5FD] rounded-[10px] px-4 py-3">
+          <p className="text-[13px] font-bold text-[#1E40AF]">
+            Editando {editPrefill.numero} · versión {editPrefill.version}
+          </p>
+          <p className="text-[12px] text-[#3B82F6] mt-0.5">
+            Podés modificar ítems, plazos, vigencia y condiciones comerciales antes de enviar al cliente.
+          </p>
+        </div>
+      )}
+      {negocioEmbudoId && !esEdicion && (
         <div className="bg-[#FFF1E2] border border-[#FDBA74] rounded-[10px] px-4 py-3">
           <p className="text-[13px] font-bold text-[#C2540A]">Vinculado al embudo de ventas</p>
           <p className="text-[12px] text-[#9a3412] mt-0.5">
@@ -288,7 +368,7 @@ export function NuevoPresupuestoForm({
             value={clienteId}
             onChange={setClienteId}
             initialOptions={clientes}
-            disabled={!!otPrefill}
+            disabled={!!otPrefill || esEdicion}
           />
           {clienteId === clienteEventualId && (
             <p className="text-[11px] text-[#9aa1ab] col-span-2 -mt-2">
@@ -305,7 +385,7 @@ export function NuevoPresupuestoForm({
             label="Vigencia"
             value={String(vigenciaDias)}
             onChange={(e) => setVigenciaDias(Number(e.target.value))}
-            options={otPrefill ? VIGENCIA_DIAS_OT : VIGENCIA_DIAS}
+            options={otPrefill || editPrefill?.otId ? VIGENCIA_DIAS_OT : VIGENCIA_DIAS}
           />
           <Combobox
             label="Forma de pago"
@@ -327,7 +407,7 @@ export function NuevoPresupuestoForm({
             label="Garantía"
             value={garantia}
             onChange={setGarantia}
-            options={otPrefill ? GARANTIA_MESES_OT : GARANTIA}
+            options={otPrefill || editPrefill?.otId ? GARANTIA_MESES_OT : GARANTIA}
             placeholder="12 meses…"
             allowCustom
           />
@@ -486,7 +566,9 @@ export function NuevoPresupuestoForm({
 
       <div className="flex items-center justify-end gap-3">
         <Button variant="secondary" onClick={() => router.back()} disabled={loading}>Cancelar</Button>
-        <Button onClick={guardar} loading={loading}>Guardar presupuesto</Button>
+        <Button onClick={guardar} loading={loading}>
+          {esEdicion ? 'Guardar cambios' : 'Guardar presupuesto'}
+        </Button>
       </div>
     </div>
   )

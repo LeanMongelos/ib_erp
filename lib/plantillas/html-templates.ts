@@ -12,6 +12,7 @@ function leerHtml(nombre: string): string {
 
 export const HTML_PLANTILLA_PRESUPUESTO = leerHtml('html-presupuesto.html')
 export const HTML_PLANTILLA_FACTURA = leerHtml('html-factura.html')
+export const HTML_PLANTILLA_ACTA_ALQUILER = leerHtml('acta-alquiler-html.html')
 
 export function htmlDefaultPorTipo(tipo: 'FACTURA' | 'PRESUPUESTO'): string {
   return tipo === 'FACTURA' ? HTML_PLANTILLA_FACTURA : HTML_PLANTILLA_PRESUPUESTO

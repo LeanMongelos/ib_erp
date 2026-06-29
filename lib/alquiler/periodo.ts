@@ -30,3 +30,24 @@ export const ESTADO_CUOTA_LABEL: Record<string, string> = {
   VENCIDA: 'Vencida',
   ANULADA: 'Anulada',
 }
+
+const MESES_ES = [
+  'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
+]
+
+/** Convierte "2026-03" → "marzo 2026" */
+export function formatPeriodoLegible(periodo: string): string {
+  const [y, m] = periodo.split('-')
+  const idx = parseInt(m ?? '1', 10) - 1
+  if (idx < 0 || idx > 11 || !y) return periodo
+  return `${MESES_ES[idx]} ${y}`
+}
+
+/** "Formosa, 29 de junio de 2026" */
+export function formatFechaActaLugar(fecha: Date, lugar = 'Formosa'): string {
+  const dia = fecha.getDate()
+  const mes = MESES_ES[fecha.getMonth()]
+  const anio = fecha.getFullYear()
+  return `${lugar}, ${dia} de ${mes} de ${anio}`
+}

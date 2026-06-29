@@ -3,11 +3,12 @@ import { prisma } from '@/lib/prisma'
 import { requirePermission, handleApiError, ApiError } from '@/lib/api-auth'
 import { tienePermiso } from '@/lib/rbac'
 import { presupuestoUpdateSchema } from '@/lib/validation'
-import { calcularTotalesPresupuesto } from '@/lib/presupuestos/calcular-total-presupuesto'
 import { aplicarPreciosResueltosItems } from '@/lib/precios/aplicar-precios-documento'
 import { plain } from '@/lib/serialize'
 import { registrarAuditoria, getIp } from '@/lib/audit'
 import { resolverCotizacionUsdDocumento, CotizacionUsdFaltanteError } from '@/lib/moneda'
+import { formatCondicionPago, parsePlazosCobranza } from '@/lib/cobranzas/plazos'
+import { presupuestoEditable, recalcularPresupuestoDesdeItems } from '@/lib/presupuestos/revision'
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -56,15 +57,35 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
 
     const actor = await requirePermission('presupuestos.update')
-    const actual = await prisma.presupuesto.findUnique({ where: { id } })
+    const actual = await prisma.presupuesto.findUnique({
+      where: { id },
+      include: { factura: { select: { id: true } }, items: true },
+    })
     if (!actual) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
+    if (actual.factura) throw new ApiError(400, 'No se puede editar un presupuesto ya facturado')
+    if (actual.estado === 'CONVERTIDO') throw new ApiError(400, 'No se puede editar un presupuesto convertido')
 
     const enviando = data.estado === 'ENVIADO' && actual.estado !== 'ENVIADO'
     if (enviando && !tienePermiso(actor.permissions, 'presupuestos.send')) {
       throw new ApiError(403, 'No tenés permisos para enviar presupuestos')
     }
 
-    const { items, moneda: monedaPatch, cotizacionUsd: cotizacionPatch, ...resto } = data
+    const editandoContenido =
+      data.items !== undefined ||
+      data.condicionPago !== undefined ||
+      data.plazosCobranza !== undefined ||
+      data.tasaFinanciacionPct !== undefined ||
+      data.bonificacionPct !== undefined ||
+      data.alicuotaIvaPct !== undefined
+
+    if (editandoContenido && !presupuestoEditable(actual.estado, Boolean(actual.factura))) {
+      throw new ApiError(
+        400,
+        'Solo se pueden editar ítems y condiciones en presupuestos BORRADOR o ENVIADO. Creá una revisión para modificar uno aprobado.',
+      )
+    }
+
+    const { items, moneda: monedaPatch, cotizacionUsd: cotizacionPatch, plazosCobranza, ...resto } = data
 
     const monedaFinal = monedaPatch ?? actual.moneda
     let cotizacionUsd: number | null | undefined = cotizacionPatch
@@ -82,21 +103,30 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
 
     if (items) {
-      if (!['BORRADOR', 'ENVIADO'].includes(actual.estado)) {
-        throw new ApiError(400, 'Solo se pueden editar ítems en presupuestos BORRADOR o ENVIADO')
-      }
       const monedaItems = monedaPatch ?? actual.moneda
       const itemsConPrecio = await aplicarPreciosResueltosItems(items, {
         clienteId: actual.clienteId,
         moneda: monedaItems,
       })
-      const { itemsCalculados, subtotal, iva, interesFinanciacion, total } =
-        calcularTotalesPresupuesto({
+      const plazos =
+        plazosCobranza?.length
+          ? plazosCobranza
+          : data.condicionPago
+            ? parsePlazosCobranza(data.condicionPago)
+            : parsePlazosCobranza(actual.condicionPago)
+      const condicionPago =
+        data.condicionPago?.trim() ||
+        (plazos.length > 0 ? formatCondicionPago(plazos) : actual.condicionPago)
+
+      const { itemsCalculados, subtotal, iva, interesFinanciacion, total, alicuotaIvaPct } =
+        recalcularPresupuestoDesdeItems({
           items: itemsConPrecio,
-          bonificacionPct: actual.bonificacionPct ?? 0,
-          alicuotaIvaPct: actual.alicuotaIvaPct ?? 21,
-          condicionPago: actual.condicionPago,
-          tasaFinanciacionPct: actual.tasaFinanciacionPct ?? 0,
+          bonificacionPct: data.bonificacionPct ?? actual.bonificacionPct ?? 0,
+          alicuotaIvaPct: data.alicuotaIvaPct ?? actual.alicuotaIvaPct ?? 21,
+          condicionPago,
+          plazosCobranza: plazos,
+          tasaFinanciacionPct: data.tasaFinanciacionPct ?? actual.tasaFinanciacionPct ?? 0,
+          interesFinanciacion: data.interesFinanciacion ?? actual.interesFinanciacion ?? 0,
         })
       const p = await prisma.$transaction(async (tx) => {
         await tx.itemPresupuesto.deleteMany({ where: { presupuestoId: id } })
@@ -104,13 +134,26 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           where: { id },
           data: {
             ...resto,
+            condicionPago,
+            tasaFinanciacionPct: data.tasaFinanciacionPct ?? actual.tasaFinanciacionPct,
+            interesFinanciacion,
+            alicuotaIvaPct,
+            bonificacionPct: data.bonificacionPct ?? actual.bonificacionPct,
             ...(monedaPatch !== undefined ? { moneda: monedaFinal } : {}),
             ...(monedaPatch !== undefined || cotizacionPatch !== undefined
               ? { cotizacionUsd: cotizacionUsd ?? null }
               : {}),
+            ...(data.vigenciaDias !== undefined
+              ? {
+                  fechaVencimiento: (() => {
+                    const vence = new Date(actual.fechaEmision)
+                    vence.setDate(vence.getDate() + data.vigenciaDias!)
+                    return vence
+                  })(),
+                }
+              : {}),
             subtotal,
             iva,
-            interesFinanciacion,
             total,
             items: {
               create: itemsCalculados.map((i) => ({
@@ -141,13 +184,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (data.vigenciaDias !== undefined || data.garantia !== undefined) {
       const bloqueado = await prisma.presupuesto.findUnique({
         where: { id },
-        include: { factura: true },
+        include: { factura: true, ordenVenta: { include: { remitos: { take: 1 } } } },
       })
       if (bloqueado?.factura) {
         throw new ApiError(400, 'No se puede modificar vigencia/garantía: el presupuesto ya fue facturado')
       }
       if (bloqueado?.estado === 'CONVERTIDO') {
         throw new ApiError(400, 'No se puede modificar vigencia/garantía en un presupuesto convertido')
+      }
+      if ((bloqueado?.ordenVenta?.remitos?.length ?? 0) > 0) {
+        throw new ApiError(400, 'No se puede modificar vigencia/garantía: ya tiene remito generado')
       }
     }
 
