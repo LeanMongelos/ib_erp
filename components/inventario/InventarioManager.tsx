@@ -19,7 +19,7 @@ import { ProductoFotoField, subirFotoInventario } from '@/components/inventario/
 import { TIPOS_ARTICULO, TIPOS_KIT, MODOS_TRAZABILIDAD } from '@/lib/inventario-constants'
 import { InventarioUnidadesPanel } from '@/components/inventario/InventarioUnidadesPanel'
 import { TransferirStockModal } from '@/components/inventario/TransferirStockModal'
-import { StockPorDepositoPanel } from '@/components/inventario/StockPorDepositoPanel'
+import { StockPorDepositoPanel, type FilaStockDeposito } from '@/components/inventario/StockPorDepositoPanel'
 import { validarCodigoInterno } from '@/lib/inventario/codigo-interno'
 
 export interface KitItemForm {
@@ -76,6 +76,17 @@ type FormData = {
   precioUnit: string
   moneda: string
   kitItems: KitItemForm[]
+}
+
+type TabDetalleInventario = 'general' | 'stock' | 'unidades' | 'preventivo' | 'kit'
+
+type ContextoDetalleInventario = {
+  tabInicial: TabDetalleInventario
+  depositoId?: string | null
+  depositoNombre?: string
+  ubicacionDetalle?: string | null
+  unidadId?: string
+  numeroSerie?: string | null
 }
 
 const kitVacio = (): KitItemForm => ({
@@ -170,6 +181,7 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
   const fileRef = useRef<HTMLInputElement>(null)
   const stockFileRef = useRef<HTMLInputElement>(null)
   const csvFileRef = useRef<HTMLInputElement>(null)
+  const [detalleContexto, setDetalleContexto] = useState<ContextoDetalleInventario | null>(null)
 
   const [categoriasOpciones, setCategoriasOpciones] = useState(CATEGORIAS_INVENTARIO)
 
@@ -200,6 +212,66 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
       })
       .catch(() => {})
   }, [puedeVerStockDeposito])
+
+  function cerrarDetalleProducto() {
+    setModalAlta(false)
+    setEditando(null)
+    setFotoUrl(null)
+    setFotoPendiente(null)
+    setDetalleContexto(null)
+    const params = new URLSearchParams(searchParams.toString())
+    if (params.has('item') || params.has('tab')) {
+      params.delete('item')
+      params.delete('tab')
+      params.delete('unidad')
+      params.delete('deposito')
+      const q = params.toString()
+      router.replace(q ? `/inventario?${q}` : '/inventario', { scroll: false })
+    }
+  }
+
+  function abrirProducto(item: ItemInventario, ctx?: ContextoDetalleInventario | null) {
+    setDetalleContexto(ctx ?? null)
+    setEditando(item)
+    setForm(itemAForm(item))
+    setFotoUrl(item.fotoUrl ?? null)
+    setFotoPendiente(null)
+  }
+
+  function abrirDesdeFilaStock(fila: FilaStockDeposito) {
+    const item = items.find((i) => i.id === fila.inventarioId)
+    if (!item) {
+      toast.error('Producto no encontrado en el catálogo')
+      return
+    }
+    setVista('catalogo')
+    const trazabilidad = item.modoTrazabilidad && item.modoTrazabilidad !== 'NINGUNA'
+    abrirProducto(item, {
+      tabInicial: fila.unidadId || trazabilidad ? 'unidades' : 'stock',
+      depositoId: fila.depositoId,
+      depositoNombre: fila.depositoNombre,
+      ubicacionDetalle: fila.ubicacionDetalle,
+      unidadId: fila.unidadId,
+      numeroSerie: fila.numeroSerie,
+    })
+    toast.info(`Ubicación: ${fila.depositoNombre}${fila.ubicacionDetalle ? ` · ${fila.ubicacionDetalle}` : ''}`)
+  }
+
+  useEffect(() => {
+    const itemId = searchParams.get('item')
+    if (!itemId || items.length === 0 || editando?.id === itemId) return
+    const item = items.find((i) => i.id === itemId)
+    if (!item) return
+    const tabRaw = searchParams.get('tab')
+    const tab: TabDetalleInventario =
+      tabRaw === 'unidades' || tabRaw === 'stock' || tabRaw === 'general' ? tabRaw : 'unidades'
+    abrirProducto(item, {
+      tabInicial: tab,
+      unidadId: searchParams.get('unidad') ?? undefined,
+      depositoId: searchParams.get('deposito') ?? undefined,
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- abrir una vez por item en URL
+  }, [searchParams, items, editando?.id])
 
   const filtrados = useMemo(() => {
     let list = items
@@ -260,7 +332,7 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
       esSerializado: esEquipo ? form.esSerializado : false,
       requierePreventivo: esEquipo ? form.requierePreventivo : false,
       intervaloPreventivoDias: esEquipo ? intervalo : null,
-      modoTrazabilidad: esEquipo ? form.modoTrazabilidad : 'NINGUNA',
+      modoTrazabilidad: form.modoTrazabilidad,
       stock: editable ? undefined : stock,
       stockMinimo,
       stockMaximo,
@@ -319,8 +391,15 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
         body: JSON.stringify(payload),
       })
       if (!res.ok) throw new Error(await mensajeErrorRespuesta(res, 'No se pudo actualizar'))
+      const actualizado = (await res.json()) as ItemInventario
       toast.success('Producto actualizado')
-      setEditando(null)
+      if (detalleContexto) {
+        setEditando(actualizado)
+        setForm(itemAForm(actualizado))
+        setDetalleContexto({ ...detalleContexto, tabInicial: 'unidades' })
+      } else {
+        setEditando(null)
+      }
       await recargar()
     } catch (e) {
       toast.error(mensajeErrorDesconocido(e, 'No se pudo actualizar'))
@@ -449,7 +528,7 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
       )}
 
       {vista === 'stock-deposito' ? (
-        <StockPorDepositoPanel depositos={depositos} />
+        <StockPorDepositoPanel depositos={depositos} onSeleccionarFila={abrirDesdeFilaStock} />
       ) : (
         <>
       {faltantesCount > 0 && (
@@ -547,7 +626,7 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
               <Button variant="outline" size="sm" loading={importando} onClick={() => csvFileRef.current?.click()}>
                 <Upload size={14} /> Importar CSV
               </Button>
-              <Button variant="primary" size="sm" onClick={() => { setForm(formVacio()); setFotoUrl(null); setFotoPendiente(null); setModalAlta(true) }}>
+              <Button variant="primary" size="sm" onClick={() => { setForm(formVacio()); setFotoUrl(null); setFotoPendiente(null); setDetalleContexto(null); setModalAlta(true) }}>
                 <Plus size={14} /> Nuevo producto
               </Button>
             </>
@@ -583,8 +662,16 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
                       )}
                     </td>
                     <td className="px-5 py-[13px] border-b border-[#f4f5f7]">
-                      <p className="text-[12.5px] font-bold text-[#1f242c]">{item.nombre}</p>
-                      {item.descripcion && <p className="text-[11px] text-[#9aa1ab] mt-0.5 line-clamp-1">{item.descripcion}</p>}
+                      <button
+                        type="button"
+                        onClick={() => abrirProducto(item, {
+                          tabInicial: item.modoTrazabilidad && item.modoTrazabilidad !== 'NINGUNA' ? 'unidades' : 'stock',
+                        })}
+                        className="text-left w-full hover:text-[#E8650A] transition-colors"
+                      >
+                        <p className="text-[12.5px] font-bold text-[#1f242c]">{item.nombre}</p>
+                        {item.descripcion && <p className="text-[11px] text-[#9aa1ab] mt-0.5 line-clamp-1">{item.descripcion}</p>}
+                      </button>
                     </td>
                     <td className="px-5 py-[13px] text-[12px] border-b border-[#f4f5f7]">
                       <span className="font-semibold text-[#3a4150]">
@@ -615,7 +702,7 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
                     <td className="px-5 py-[13px] border-b border-[#f4f5f7]">
                       <div className="flex gap-1">
                         {puedeEditar && (
-                          <button type="button" onClick={() => { setEditando(item); setForm(itemAForm(item)); setFotoUrl(item.fotoUrl ?? null); setFotoPendiente(null) }} className="p-1.5 rounded hover:bg-gray-100 text-[#6b7280]" title="Editar">
+                          <button type="button" onClick={() => abrirProducto(item)} className="p-1.5 rounded hover:bg-gray-100 text-[#6b7280]" title="Editar">
                             <Pencil size={14} />
                           </button>
                         )}
@@ -666,7 +753,9 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
           onFotoChange={setFotoUrl}
           onArchivoPendiente={setFotoPendiente}
           puedeEditarUnidades={editando ? puedeEditar : puedeCrear}
-          onClose={() => { setModalAlta(false); setEditando(null); setFotoUrl(null); setFotoPendiente(null) }}
+          contextoUbicacion={detalleContexto}
+          initialTab={detalleContexto?.tabInicial}
+          onClose={cerrarDetalleProducto}
           onSave={editando ? guardarEdicion : guardarAlta}
         />
       )}
@@ -719,6 +808,8 @@ function ModalForm({
   onFotoChange,
   onArchivoPendiente,
   puedeEditarUnidades,
+  contextoUbicacion,
+  initialTab,
   onClose,
   onSave,
 }: {
@@ -734,17 +825,23 @@ function ModalForm({
   onFotoChange: (url: string | null) => void
   onArchivoPendiente: (file: File | null) => void
   puedeEditarUnidades: boolean
+  contextoUbicacion?: ContextoDetalleInventario | null
+  initialTab?: TabDetalleInventario
   onClose: () => void
   onSave: () => void
 }) {
   const esEquipo = form.tipoArticulo === 'EQUIPO'
   const muestraUnidades = esEquipo || form.modoTrazabilidad !== 'NINGUNA'
-  const [tab, setTab] = useState<'general' | 'stock' | 'unidades' | 'preventivo' | 'kit'>('general')
+  const [tab, setTab] = useState<TabDetalleInventario>(initialTab ?? 'general')
+
+  useEffect(() => {
+    if (initialTab) setTab(initialTab)
+  }, [initialTab, inventarioId])
 
   const tabs = [
     { id: 'general' as const, label: 'General' },
     { id: 'stock' as const, label: 'Stock y precio' },
-    ...(muestraUnidades ? [{ id: 'unidades' as const, label: 'SN/Lote' }] : []),
+    ...(muestraUnidades || contextoUbicacion ? [{ id: 'unidades' as const, label: 'SN/Lote' }] : []),
     ...(esEquipo ? [{ id: 'preventivo' as const, label: 'Preventivo' }] : []),
     ...(esEquipo ? [{ id: 'kit' as const, label: 'Kit' }] : []),
   ]
@@ -794,6 +891,25 @@ function ModalForm({
           </div>
         </div>
         <div className="p-5 flex flex-col gap-5">
+          {contextoUbicacion?.depositoNombre && (
+            <div className="rounded-[9px] border border-[#FFE4CC] bg-[#FFFBF5] px-4 py-3 text-[12px] text-[#7c4a1a]">
+              <p className="font-bold">Ubicación en stock</p>
+              <p className="mt-1">
+                Depósito: <span className="font-semibold">{contextoUbicacion.depositoNombre}</span>
+                {contextoUbicacion.ubicacionDetalle && (
+                  <> · {contextoUbicacion.ubicacionDetalle}</>
+                )}
+                {contextoUbicacion.numeroSerie && (
+                  <> · SN {contextoUbicacion.numeroSerie}</>
+                )}
+              </p>
+              {form.modoTrazabilidad === 'NINGUNA' && !esEquipo && (
+                <p className="mt-2 text-[11px]">
+                  Para cargar números de serie, activá <strong>Trazabilidad por unidad</strong> en General (modo Serie) y agregá unidades en la pestaña SN/Lote.
+                </p>
+              )}
+            </div>
+          )}
           {tab === 'general' && (
           <section>
             <h4 className="text-[12px] font-bold text-[#E8650A] mb-3 uppercase tracking-wide">Identificación</h4>
@@ -815,16 +931,14 @@ function ModalForm({
                   options={[...TIPOS_ARTICULO]}
                 />
               </div>
-              {esEquipo && (
-                <div className="sm:col-span-2">
-                  <Select
-                    label="Trazabilidad por unidad"
-                    value={form.modoTrazabilidad}
-                    onChange={(e) => setForm({ ...form, modoTrazabilidad: e.target.value })}
-                    options={[...MODOS_TRAZABILIDAD]}
-                  />
-                </div>
-              )}
+              <div className="sm:col-span-2">
+                <Select
+                  label="Trazabilidad por unidad"
+                  value={form.modoTrazabilidad}
+                  onChange={(e) => setForm({ ...form, modoTrazabilidad: e.target.value })}
+                  options={[...MODOS_TRAZABILIDAD]}
+                />
+              </div>
               {field('nombre', 'Nombre *', { required: true, span: true, autoComplete: 'off' })}
               <div className="flex flex-col gap-1.5">
                 <label className="text-[11.5px] font-semibold text-[#5b626d] uppercase">
@@ -903,16 +1017,26 @@ function ModalForm({
           </section>
           )}
 
-          {tab === 'unidades' && muestraUnidades && (
-            inventarioId ? (
-              <InventarioUnidadesPanel
-                inventarioId={inventarioId}
-                modoTrazabilidad={form.modoTrazabilidad}
-                puedeEditar={puedeEditarUnidades}
-              />
+          {tab === 'unidades' && (
+            muestraUnidades ? (
+              inventarioId ? (
+                <InventarioUnidadesPanel
+                  inventarioId={inventarioId}
+                  modoTrazabilidad={form.modoTrazabilidad}
+                  puedeEditar={puedeEditarUnidades}
+                  focusUnidadId={contextoUbicacion?.unidadId}
+                  prefillDepositoId={contextoUbicacion?.depositoId}
+                  prefillUbicacion={contextoUbicacion?.ubicacionDetalle}
+                  prefillNumeroSerie={contextoUbicacion?.numeroSerie}
+                />
+              ) : (
+                <p className="text-[12px] text-[#6b7280] py-4">
+                  Guardá el producto primero para cargar unidades con serie o lote.
+                </p>
+              )
             ) : (
               <p className="text-[12px] text-[#6b7280] py-4">
-                Guardá el producto primero para cargar unidades con serie o lote.
+                Activá <strong>Trazabilidad por unidad</strong> en General (modo Serie) y guardá el producto para cargar números de serie.
               </p>
             )
           )}

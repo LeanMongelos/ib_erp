@@ -24,6 +24,10 @@ interface Props {
   inventarioId: string
   modoTrazabilidad: string
   puedeEditar: boolean
+  focusUnidadId?: string | null
+  prefillDepositoId?: string | null
+  prefillUbicacion?: string | null
+  prefillNumeroSerie?: string | null
 }
 
 const formVacio = () => ({
@@ -34,7 +38,15 @@ const formVacio = () => ({
   ubicacionDetalle: '',
 })
 
-export function InventarioUnidadesPanel({ inventarioId, modoTrazabilidad, puedeEditar }: Props) {
+export function InventarioUnidadesPanel({
+  inventarioId,
+  modoTrazabilidad,
+  puedeEditar,
+  focusUnidadId,
+  prefillDepositoId,
+  prefillUbicacion,
+  prefillNumeroSerie,
+}: Props) {
   const [unidades, setUnidades] = useState<UnidadInventarioRow[]>([])
   const [depositos, setDepositos] = useState<Array<{ id: string; nombre: string; tipo?: string }>>([])
   const [loading, setLoading] = useState(false)
@@ -59,6 +71,23 @@ export function InventarioUnidadesPanel({ inventarioId, modoTrazabilidad, puedeE
       .then((data) => setDepositos(Array.isArray(data) ? data : []))
       .catch(() => {})
   }, [recargar])
+
+  useEffect(() => {
+    if (!focusUnidadId || unidades.length === 0) return
+    const u = unidades.find((x) => x.id === focusUnidadId)
+    if (u) iniciarEdicion(u)
+  }, [focusUnidadId, unidades])
+
+  useEffect(() => {
+    if (focusUnidadId || editandoId) return
+    if (!prefillDepositoId && !prefillUbicacion && !prefillNumeroSerie) return
+    setForm((prev) => ({
+      ...prev,
+      depositoId: prefillDepositoId ?? prev.depositoId,
+      ubicacionDetalle: prefillUbicacion ?? prev.ubicacionDetalle,
+      numeroSerie: prefillNumeroSerie ?? prev.numeroSerie,
+    }))
+  }, [focusUnidadId, editandoId, prefillDepositoId, prefillUbicacion, prefillNumeroSerie])
 
   async function guardarNueva() {
     setLoading(true)
@@ -228,7 +257,10 @@ export function InventarioUnidadesPanel({ inventarioId, modoTrazabilidad, puedeE
           </thead>
           <tbody>
             {unidades.map((u) => (
-              <tr key={u.id} className="border-t border-[#f4f5f7] text-[12px]">
+              <tr
+                key={u.id}
+                className={`border-t border-[#f4f5f7] text-[12px] ${u.id === focusUnidadId || u.id === editandoId ? 'bg-[#FFF4EC]' : ''}`}
+              >
                 <td className="px-3 py-2 font-mono">{u.numeroSerie ?? '—'}</td>
                 <td className="px-3 py-2">{u.lote ?? '—'}</td>
                 <td className="px-3 py-2">

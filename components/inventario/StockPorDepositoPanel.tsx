@@ -30,9 +30,10 @@ interface DepositoOption {
 
 interface Props {
   depositos: DepositoOption[]
+  onSeleccionarFila?: (fila: FilaStockDeposito) => void
 }
 
-export function StockPorDepositoPanel({ depositos }: Props) {
+export function StockPorDepositoPanel({ depositos, onSeleccionarFila }: Props) {
   const [filtroDeposito, setFiltroDeposito] = useState('')
   const [filas, setFilas] = useState<FilaStockDeposito[]>([])
   const [loading, setLoading] = useState(true)
@@ -100,6 +101,7 @@ export function StockPorDepositoPanel({ depositos }: Props) {
       <Card className="bg-[#FFFBF5] border-[#FFE4CC]">
         <p className="text-[12.5px] text-[#7c4a1a] leading-relaxed">
           Stock desglosado por depósito y ubicación. Productos serializados muestran cada unidad con SN/lote.
+          {onSeleccionarFila && ' Hacé clic en una fila para abrir el producto, ver la ubicación y cargar el número de serie.'}
         </p>
       </Card>
 
@@ -153,7 +155,7 @@ export function StockPorDepositoPanel({ depositos }: Props) {
           <table className="w-full">
             <thead>
               <tr>
-                {['Depósito', 'Producto', 'Código', 'Cant.', 'Ubicación', 'N° serie', 'Lote', 'Trazab.'].map((h) => (
+                {['Depósito', 'Producto', 'Código', 'Cant.', 'Ubicación', 'N° serie', 'Lote', 'Trazab.', ''].map((h) => (
                   <th
                     key={h}
                     className="px-4 py-3 text-left text-[10.5px] font-bold text-[#8a909a] tracking-[0.6px] uppercase border-b border-[#eef0f2]"
@@ -166,19 +168,23 @@ export function StockPorDepositoPanel({ depositos }: Props) {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-10 text-center text-[12.5px] text-[#9aa1ab]">
+                  <td colSpan={9} className="px-4 py-10 text-center text-[12.5px] text-[#9aa1ab]">
                     Cargando…
                   </td>
                 </tr>
               ) : filtradas.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-10 text-center text-[12.5px] text-[#9aa1ab]">
+                  <td colSpan={9} className="px-4 py-10 text-center text-[12.5px] text-[#9aa1ab]">
                     Sin stock en el filtro seleccionado
                   </td>
                 </tr>
               ) : (
                 filtradas.map((f, i) => (
-                  <tr key={f.unidadId ?? `${f.inventarioId}-${f.depositoId}-${i}`} className={i % 2 === 0 ? 'bg-white' : 'bg-[#fafbfc]'}>
+                  <tr
+                    key={f.unidadId ?? `${f.inventarioId}-${f.depositoId}-${i}`}
+                    className={`${i % 2 === 0 ? 'bg-white' : 'bg-[#fafbfc]'} ${onSeleccionarFila ? 'cursor-pointer hover:bg-[#FFF7ED]' : ''}`}
+                    onClick={() => onSeleccionarFila?.(f)}
+                  >
                     <td className="px-4 py-[11px] text-[12px] font-semibold border-b border-[#f4f5f7]">{f.depositoNombre}</td>
                     <td className="px-4 py-[11px] text-[12.5px] border-b border-[#f4f5f7]">{f.productoNombre}</td>
                     <td className="px-4 py-[11px] text-[12px] font-mono text-[#6b7280] border-b border-[#f4f5f7]">{f.sku ?? '—'}</td>
@@ -188,6 +194,9 @@ export function StockPorDepositoPanel({ depositos }: Props) {
                     <td className="px-4 py-[11px] text-[12px] border-b border-[#f4f5f7]">{f.lote ?? '—'}</td>
                     <td className="px-4 py-[11px] text-[11px] text-[#9aa1ab] border-b border-[#f4f5f7]">
                       {MODOS_TRAZABILIDAD.find((m) => m.value === f.modoTrazabilidad)?.label ?? f.modoTrazabilidad}
+                    </td>
+                    <td className="px-4 py-[11px] text-[11px] font-semibold text-[#E8650A] border-b border-[#f4f5f7]">
+                      {onSeleccionarFila ? 'Ver →' : ''}
                     </td>
                   </tr>
                 ))
