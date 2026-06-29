@@ -9,6 +9,7 @@ import {
   remitoPendientesEmision,
   type ItemRemitoEmisionCheck,
 } from '@/lib/remitos/validacion-emision'
+import { ensureFleteDesdeRemito } from '@/lib/fletes/sync-documentos'
 
 export type { ItemRemitoEmisionCheck } from '@/lib/remitos/validacion-emision'
 export {
@@ -251,6 +252,8 @@ export async function emitirRemitoVenta(remitoId: string) {
       })
     }
   })
+
+  await ensureFleteDesdeRemito(remitoId)
 
   return obtenerRemitoVenta(remitoId)
 }

@@ -8,7 +8,7 @@ const TRANSICIONES: Record<EstadoOT, EstadoOT[]> = {
   EN_PROCESO: ['CERRADA', 'CANCELADA'],
   VENCIDA: ['EN_PROCESO', 'CANCELADA'],
   CERRADA: [],
-  CANCELADA: [],
+  CANCELADA: ['ABIERTA'],
 }
 
 export function transicionesOTPermitidas(desde: EstadoOT): EstadoOT[] {

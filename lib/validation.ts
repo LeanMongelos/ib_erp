@@ -277,6 +277,7 @@ export const otUpdateSchema = z
   .object({
     estado:      estadoOTEnum.optional(),
     nota:        z.string().trim().max(500).optional(),
+    descripcion: z.string().trim().min(5, 'La descripción debe tener al menos 5 caracteres').max(2000).optional(),
     diagnostico: z.string().trim().max(2000).optional(),
     checklistSolucion: z.array(z.object({
       tarea: z.string().trim().min(1).max(200),
@@ -1114,4 +1115,33 @@ export const actaEntregaAlquilerUpdateSchema = z.object({
   montoDepositoGarantia: z.number().min(0).optional(),
   observaciones: z.string().trim().max(1000).optional().nullable(),
   facturaId: z.string().min(1).optional().nullable(),
+})
+
+// ============ FLETES ============
+
+export const tipoFleteEnum = z.enum(['ENTRADA', 'SALIDA'])
+export const estadoFleteEnum = z.enum(['BORRADOR', 'EN_TRANSITO', 'RECIBIDO', 'CANCELADO'])
+
+export const fleteCreateSchema = z.object({
+  tipo: tipoFleteEnum,
+  estado: estadoFleteEnum.optional(),
+  fechaEnvio: z.coerce.date().optional().nullable(),
+  fechaRecibido: z.coerce.date().optional().nullable(),
+  transportista: z.string().trim().max(120).optional().nullable(),
+  guiaSeguimiento: z.string().trim().max(120).optional().nullable(),
+  importe: z.number().nonnegative().optional().nullable(),
+  observaciones: z.string().trim().max(2000).optional().nullable(),
+  proveedorOrigenNombre: z.string().trim().max(200).optional().nullable(),
+  clienteNombre: z.string().trim().max(200).optional().nullable(),
+  facturaTransporte: z.string().trim().max(80).optional().nullable(),
+  ordenCompraId: z.string().min(1).optional().nullable(),
+  remitoVentaId: z.string().min(1).optional().nullable(),
+  facturaCompraId: z.string().min(1).optional().nullable(),
+  facturaId: z.string().min(1).optional().nullable(),
+  clienteId: z.string().min(1).optional().nullable(),
+  proveedorOrigenId: z.string().min(1).optional().nullable(),
+})
+
+export const fleteUpdateSchema = fleteCreateSchema.partial().extend({
+  tipo: tipoFleteEnum.optional(),
 })

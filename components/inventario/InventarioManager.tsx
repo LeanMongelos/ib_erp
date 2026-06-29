@@ -168,6 +168,7 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
   const [fotoUrl, setFotoUrl] = useState<string | null>(null)
   const [fotoPendiente, setFotoPendiente] = useState<File | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const stockFileRef = useRef<HTMLInputElement>(null)
   const csvFileRef = useRef<HTMLInputElement>(null)
 
   const [categoriasOpciones, setCategoriasOpciones] = useState(CATEGORIAS_INVENTARIO)
@@ -386,11 +387,12 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
     }
   }
 
-  async function importarArchivo(file: File, esCsv: boolean) {
+  async function importarArchivo(file: File, esCsv: boolean, soloStock = false) {
     setImportando(true)
     try {
       const fd = new FormData()
       fd.append('archivo', file)
+      if (soloStock) fd.append('modo', 'solo_stock')
       const res = await fetch('/api/inventario/import', {
         method: 'POST',
         credentials: 'include',
@@ -398,10 +400,16 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Error en la importación')
-      const omitidos = data.omitidos ? `, ${data.omitidos} omitidos` : ''
-      toast.success(`Importación: ${data.creados} creados, ${data.actualizados ?? 0} actualizados${omitidos}`)
+      if (soloStock) {
+        toast.success(
+          `Stock: ${data.actualizados ?? 0} actualizados, ${data.sinCambio ?? 0} sin cambio, ${data.omitidos ?? 0} omitidos`,
+        )
+      } else {
+        const omitidos = data.omitidos ? `, ${data.omitidos} omitidos` : ''
+        toast.success(`Importación: ${data.creados} creados, ${data.actualizados ?? 0} actualizados${omitidos}`)
+      }
       if (data.errores?.length) {
-        toast.warning(`${data.errores.length} fila(s) con error — revisá el detalle en consola`)
+        toast.warning(`${data.errores.length} fila(s) con aviso — revisá la consola`)
         console.warn('Errores importación inventario:', data.errores)
       }
       await recargar()
@@ -410,7 +418,8 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
     } finally {
       setImportando(false)
       if (esCsv && csvFileRef.current) csvFileRef.current.value = ''
-      if (!esCsv && fileRef.current) fileRef.current.value = ''
+      if (!esCsv && !soloStock && fileRef.current) fileRef.current.value = ''
+      if (soloStock && stockFileRef.current) stockFileRef.current.value = ''
     }
   }
 
@@ -504,6 +513,16 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
                 }}
               />
               <input
+                ref={stockFileRef}
+                type="file"
+                accept=".xlsx,.xls"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0]
+                  if (f) importarArchivo(f, false, true)
+                }}
+              />
+              <input
                 ref={csvFileRef}
                 type="file"
                 accept=".csv"
@@ -515,6 +534,15 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
               />
               <Button variant="outline" size="sm" loading={importando} onClick={() => fileRef.current?.click()}>
                 <Upload size={14} /> Importar Excel
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                loading={importando}
+                title="Actualiza solo el stock por código (SKU), sin cambiar nombre ni precios"
+                onClick={() => stockFileRef.current?.click()}
+              >
+                <Upload size={14} /> Sincronizar stock
               </Button>
               <Button variant="outline" size="sm" loading={importando} onClick={() => csvFileRef.current?.click()}>
                 <Upload size={14} /> Importar CSV

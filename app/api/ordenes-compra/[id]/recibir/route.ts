@@ -8,6 +8,7 @@ import { recepcionarItemsOC } from '@/lib/compras/recepcionar-oc'
 import { ocInclude } from '@/lib/compras/oc-include'
 import { registrarEventoRecepcionOc } from '@/lib/compras/oc-workflow/hooks'
 import { registrarAuditoria, getIp } from '@/lib/audit'
+import { ensureFleteDesdeOC } from '@/lib/fletes/sync-documentos'
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -79,6 +80,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       despues: data,
       ip: getIp(req),
     })
+
+    await ensureFleteDesdeOC(id)
 
     return NextResponse.json(plain(updated))
   } catch (error) {

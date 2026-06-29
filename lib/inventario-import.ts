@@ -9,6 +9,8 @@ export interface ResultadoImportInventario {
   creados: number
   actualizados: number
   kitsCreados: number
+  omitidos?: number
+  sinCambio?: number
   errores: { fila: number; mensaje: string }[]
 }
 
@@ -173,6 +175,64 @@ export async function importarFilasInventario(
 
   if (kits.length > 0) {
     await importarFilasKit(kits, resultado)
+  }
+
+  return resultado
+}
+
+/** Alinea stock por SKU sin modificar nombre, precio ni demás datos del catálogo. */
+export async function importarSoloStockFilas(
+  filas: InventarioImportRow[],
+  usuarioId?: string,
+): Promise<ResultadoImportInventario> {
+  const resultado: ResultadoImportInventario = {
+    creados: 0,
+    actualizados: 0,
+    kitsCreados: 0,
+    omitidos: 0,
+    sinCambio: 0,
+    errores: [],
+  }
+
+  for (let i = 0; i < filas.length; i++) {
+    const fila = filas[i]
+    const n = i + 2
+    const sku = fila.sku?.trim()
+    if (!sku) {
+      resultado.errores.push({ fila: n, mensaje: 'Fila sin código (SKU)' })
+      continue
+    }
+
+    try {
+      const existente = await prisma.inventario.findUnique({ where: { sku } })
+      if (!existente) {
+        resultado.omitidos = (resultado.omitidos ?? 0) + 1
+        resultado.errores.push({ fila: n, mensaje: `${sku}: no existe en inventario (omitido)` })
+        continue
+      }
+
+      const stockObjetivo = fila.stock
+      if (stockObjetivo === existente.stock) {
+        resultado.sinCambio = (resultado.sinCambio ?? 0) + 1
+        continue
+      }
+
+      const delta = stockObjetivo - existente.stock
+      await registrarMovimientoStock({
+        inventarioId: existente.id,
+        tipo: delta >= 0 ? 'ENTRADA' : 'SALIDA',
+        cantidad: Math.abs(delta),
+        motivo: 'Sincronización stock — Action Sales',
+        referencia: `import-stock:${sku}`,
+        usuarioId,
+      })
+      resultado.actualizados++
+    } catch (e) {
+      resultado.errores.push({
+        fila: n,
+        mensaje: e instanceof Error ? e.message : 'Error desconocido',
+      })
+    }
   }
 
   return resultado

@@ -25,6 +25,7 @@ import {
   Calendar,
   BarChart3,
   Repeat,
+  PackageSearch,
 } from 'lucide-react'
 
 const navItems = [
@@ -39,6 +40,7 @@ const navItems = [
   { label: 'Cobranzas',         href: '/cobranzas',                   icon: Banknote        },
   { label: 'Tesorería',         href: '/tesoreria',                   icon: Wallet          },
   { label: 'Compras',           href: '/compras',                     icon: ShoppingCart    },
+  { label: 'Fletes',            href: '/fletes',                      icon: PackageSearch   },
   { label: 'Alquiler',          href: '/alquiler',                    icon: Repeat          },
   { label: 'Clientes',          href: '/clientes',                    icon: Building2       },
   { label: 'Proveedores',       href: '/proveedores',                 icon: Truck           },

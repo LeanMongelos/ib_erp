@@ -17,6 +17,7 @@ export const ACTION_SALES_HEADERS = [
   'Sinónimo',
   'Perfil',
   'Archivo',
+  'stock',
 ] as const
 
 export const INVENTARIO_EXCEL_HEADERS = [
@@ -57,6 +58,7 @@ const ejemploActionSales = {
   'Sinónimo': '',
   'Perfil': 'COMPRAS - VENTAS',
   'Archivo': '',
+  stock: 0,
 }
 
 const tipoArticuloEnum = z.enum(['REPUESTO', 'CONSUMIBLE', 'ACCESORIO', 'BATERIA', 'EQUIPO'])
@@ -194,7 +196,7 @@ function mapFilaActionSales(raw: Record<string, unknown>): InventarioImportRow |
     marca: marca ?? null,
     categoria: perfil,
     tipoArticulo: inferirTipoArticulo(codigo, nombre, perfil),
-    stock: 0,
+    stock: parseEntero(mapped.stock, 0),
     stockMinimo: 0,
     alicuotaIvaPct: parseNumero(mapped.iva) ?? 21,
     descuentoPct: parseNumero(mapped.descuento) ?? 0,

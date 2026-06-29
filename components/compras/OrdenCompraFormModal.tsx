@@ -11,6 +11,7 @@ import { formatMonto } from '@/lib/utils'
 import { formatMontoMoneda } from '@/lib/compras/moneda-compra'
 import { mensajeErrorDesconocido, mensajeErrorJson } from '@/lib/errores'
 import { TimelineOrdenCompra } from '@/components/compras/TimelineOrdenCompra'
+import { FleteEnlaceDoc } from '@/components/fletes/FleteEnlaceDoc'
 import type { TipoCompraProveedor } from '@/types'
 
 const CLASIFICACIONES = [
@@ -385,7 +386,10 @@ export function OrdenCompraFormModal({
             </div>
 
             {esEdicion && ocId && (
-              <TimelineOrdenCompra ocId={ocId} />
+              <>
+                <FleteEnlaceDoc ordenCompraId={ocId} />
+                <TimelineOrdenCompra ocId={ocId} />
+              </>
             )}
 
             <div>

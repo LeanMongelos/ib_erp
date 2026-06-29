@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { addHours } from 'date-fns'
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { requireAuth, requirePermission, handleApiError, ApiError } from '@/lib/api-auth'
@@ -50,11 +51,20 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   try {
     const { id } = await params
     const body = await req.json()
-    const { estado, nota, diagnostico, checklistSolucion, tecnicoId, repuestos, crearPlanPreventivo } = otUpdateSchema.parse(body)
+    const { estado, nota, descripcion, diagnostico, checklistSolucion, tecnicoId, repuestos, crearPlanPreventivo } = otUpdateSchema.parse(body)
 
     const otActual = await prisma.ordenTrabajo.findUnique({
       where: { id },
-      select: { estado: true, numero: true, tipo: true, equipoId: true, clienteId: true, tecnicoId: true, diagnostico: true },
+      select: {
+        estado: true,
+        numero: true,
+        tipo: true,
+        equipoId: true,
+        clienteId: true,
+        tecnicoId: true,
+        diagnostico: true,
+        slaHoras: true,
+      },
     })
     if (!otActual) throw new ApiError(404, 'Orden de trabajo no encontrada')
 
@@ -64,10 +74,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
 
     const cerrando = estado === 'CERRADA' && otActual.estado !== 'CERRADA'
+    const reactivando = estado === 'ABIERTA' && otActual.estado === 'CANCELADA'
 
     const actor = await requireAuth()
     if (!tienePermiso(actor.permissions, 'servicio.update')) {
       throw new ApiError(403, 'No tenés permisos para realizar esta acción')
+    }
+    if (descripcion !== undefined && otActual.estado === 'CERRADA') {
+      throw new ApiError(400, 'No se puede editar la descripción de una OT cerrada')
     }
     if (cerrando && !tienePermiso(actor.permissions, 'servicio.close')) {
       throw new ApiError(403, 'No tenés permisos para cerrar órdenes de trabajo')
@@ -101,6 +115,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
 
     const updateData: Prisma.OrdenTrabajoUpdateInput = {}
+    if (descripcion !== undefined) {
+      updateData.descripcion = descripcion
+    }
     if (checklistSolucion !== undefined) {
       const { texto } = parseChecklistFromDiagnostico(otActual.diagnostico)
       const textoBase = diagnostico !== undefined ? diagnostico : texto
@@ -115,8 +132,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (estado !== undefined) {
       updateData.estado = estado
       updateData.fechaCierre = estado === 'CERRADA' ? new Date() : null
+      if (reactivando) {
+        updateData.slaVence = addHours(new Date(), otActual.slaHoras)
+      }
       updateData.historial = {
-        create: { estado, nota: nota ?? `Estado cambiado a ${estado}` },
+        create: {
+          estado,
+          nota: nota ?? (reactivando ? 'OT reactivada' : `Estado cambiado a ${estado}`),
+        },
       }
     }
 

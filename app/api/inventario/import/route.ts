@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requirePermission, handleApiError, ApiError } from '@/lib/api-auth'
 import { parsearInventarioWorkbook } from '@/lib/inventario-excel'
-import { importarFilasInventario } from '@/lib/inventario-import'
+import { importarFilasInventario, importarSoloStockFilas } from '@/lib/inventario-import'
 import { importarInventarioCsv } from '@/lib/inventario/import-csv'
 
 export const runtime = 'nodejs'
@@ -22,6 +22,8 @@ export async function POST(req: NextRequest) {
 
     const form = await req.formData()
     const archivo = form.get('archivo')
+    const modo = String(form.get('modo') ?? '').trim().toLowerCase()
+    const soloStock = modo === 'solo_stock' || modo === 'stock'
     if (!(archivo instanceof Blob)) {
       throw new ApiError(400, 'Subí un archivo CSV o Excel')
     }
@@ -45,7 +47,9 @@ export async function POST(req: NextRequest) {
     if (buffer.length > 5 * 1024 * 1024) throw new ApiError(400, 'Máximo 5 MB por archivo')
 
     const { productos, kits } = parsearInventarioWorkbook(buffer)
-    const resultado = await importarFilasInventario(productos, actor.id, kits)
+    const resultado = soloStock
+      ? await importarSoloStockFilas(productos, actor.id)
+      : await importarFilasInventario(productos, actor.id, kits)
 
     return NextResponse.json(resultado)
   } catch (error) {

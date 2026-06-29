@@ -61,10 +61,10 @@ function main() {
     fail(`Perfiles inesperados: ${[...perfiles].join(', ')}`)
   }
 
-  if (ACTION_SALES_HEADERS.length === 9) {
-    pass('Plantilla define 9 columnas Action Sales')
+  if (ACTION_SALES_HEADERS.length >= 9 && ACTION_SALES_HEADERS.includes('stock')) {
+    pass(`Plantilla Action Sales incluye columna stock (${ACTION_SALES_HEADERS.length} cols)`)
   } else {
-    fail('Headers incorrectos')
+    fail('Headers Action Sales incompletos')
   }
 
   console.log('')

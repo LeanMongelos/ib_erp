@@ -36,6 +36,7 @@ const ESTADO_LABEL: Record<EstadoOT, string> = {
 export function OTDetalle({ ot }: { ot: any }) {
   const router = useRouter()
   const parsedDiag = parseChecklistFromDiagnostico(ot.diagnostico)
+  const [descripcion, setDescripcion] = useState(ot.descripcion ?? '')
   const [diagnostico, setDiagnostico] = useState(parsedDiag.texto)
   const [checklist, setChecklist] = useState<ChecklistItemSolucion[]>(parsedDiag.checklist)
   const [repuestos, setRepuestos] = useState<any[]>(ot.repuestos ?? [])
@@ -46,6 +47,8 @@ export function OTDetalle({ ot }: { ot: any }) {
   const repuestosGuardados = (ot.repuestos ?? []).length
   const ordenesCompra: { id: string; numero: string; estado: string }[] = ot.ordenesCompra ?? []
   const otActiva = ot.estado !== 'CANCELADA' && ot.estado !== 'CERRADA'
+  const otCerrada = ot.estado === 'CERRADA'
+  const otCancelada = ot.estado === 'CANCELADA'
 
   async function cambiarEstado(nuevoEstado: string) {
     setEstadoMenu(false)
@@ -66,6 +69,29 @@ export function OTDetalle({ ot }: { ot: any }) {
       router.refresh()
     } catch (e) {
       toast.error(mensajeErrorDesconocido(e, 'No se pudo actualizar el estado'))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function guardarDescripcion() {
+    const texto = descripcion.trim()
+    if (texto.length < 5) {
+      toast.error('La descripción debe tener al menos 5 caracteres')
+      return
+    }
+    if (texto === (ot.descripcion ?? '').trim()) return
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/ots/${ot.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ descripcion: texto }),
+      })
+      if (!res.ok) throw new Error(await mensajeErrorRespuesta(res, 'No se pudo guardar la descripción'))
+      toast.success('Descripción actualizada')
+    } catch (e) {
+      toast.error(mensajeErrorDesconocido(e, 'No se pudo guardar la descripción'))
     } finally {
       setLoading(false)
     }
@@ -217,6 +243,16 @@ export function OTDetalle({ ot }: { ot: any }) {
                   : 'La OT está cerrada o cancelada'
               }
             />
+            {otCancelada && (
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => cambiarEstado('ABIERTA')}
+                disabled={loading}
+              >
+                Reactivar OT
+              </Button>
+            )}
             {/* Dropdown cambiar estado */}
             <div className="relative">
               <Button variant="secondary" size="sm" onClick={() => setEstadoMenu(!estadoMenu)}>
@@ -264,9 +300,20 @@ export function OTDetalle({ ot }: { ot: any }) {
         <div className="flex flex-col gap-3.5">
           {/* Descripción + Diagnóstico */}
           <div className="grid grid-cols-2 gap-3.5">
-            <Card>
+            <Card className="flex flex-col">
               <p className="text-[11px] font-bold text-[#8a909a] tracking-[0.6px] uppercase mb-2">Descripción del problema</p>
-              <p className="text-[12.5px] text-[#3a4150] leading-relaxed">{ot.descripcion}</p>
+              <textarea
+                value={descripcion}
+                onChange={(e) => setDescripcion(e.target.value)}
+                onBlur={guardarDescripcion}
+                rows={4}
+                readOnly={otCerrada}
+                placeholder="Describí el problema reportado…"
+                className="flex-1 text-[12.5px] text-[#3a4150] leading-relaxed bg-transparent border-none outline-none resize-none placeholder:text-gray-400 disabled:text-[#6b7280]"
+              />
+              {!otCerrada && (
+                <p className="text-[10px] text-[#9aa1ab] mt-1">Se guarda al salir del campo</p>
+              )}
             </Card>
             <Card className="flex flex-col">
               <p className="text-[11px] font-bold text-[#8a909a] tracking-[0.6px] uppercase mb-2">Diagnóstico</p>

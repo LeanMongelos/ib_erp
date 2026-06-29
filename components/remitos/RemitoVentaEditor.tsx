@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Select } from '@/components/ui/select'
 import { mensajeErrorDesconocido, mensajeErrorJson, mensajeErrorRespuesta } from '@/lib/errores'
+import { FleteEnlaceDoc } from '@/components/fletes/FleteEnlaceDoc'
 
 interface ItemRemito {
   id: string
@@ -139,6 +140,7 @@ export function RemitoVentaEditor({ remitoId }: { remitoId: string }) {
           <p className="text-[11px] font-bold uppercase text-[#9aa1ab] tracking-wide">Remito de venta</p>
           <h2 className="text-[20px] font-extrabold">{remito.numero}</h2>
           <p className="text-[13px] text-[#6b7280]">{remito.cliente.nombre} · {remito.estado}</p>
+          {remito.estado !== 'BORRADOR' && <FleteEnlaceDoc remitoVentaId={remito.id} />}
         </div>
         <div className="flex flex-wrap gap-2">
           {presupuestoId && (
