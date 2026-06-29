@@ -16,7 +16,7 @@ import { mensajeErrorDesconocido, mensajeErrorJson } from '@/lib/errores'
 import { Select } from '@/components/ui/select'
 import { VIGENCIA_DIAS, VIGENCIA_DIAS_OT, GARANTIA, GARANTIA_MESES_OT } from '@/lib/form-options'
 import { ClienteCombobox } from '@/components/clientes/ClienteCombobox'
-import { presupuestoEditable, presupuestoPuedeRevisar } from '@/lib/presupuestos/revision'
+import { presupuestoEditable, presupuestoPuedeRevisar } from '@/lib/presupuestos/revision-reglas'
 
 interface PresupuestoDetalleProps {
   presupuesto: {
