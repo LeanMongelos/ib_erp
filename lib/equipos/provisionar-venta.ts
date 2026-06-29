@@ -9,6 +9,7 @@ import { crearConNumeroUnico, siguienteNumeroOT } from '@/lib/sequences'
 import { registrarEntradaHistoria } from '@/lib/equipos/historia-clinica'
 import { registrarCicloInstalacionDesdeVenta } from '@/lib/tracking-automation'
 import { geocodificarClientePorId } from '@/lib/clientes/geocodificar-cliente'
+import { garantiaHastaDesdeTexto } from '@/lib/garantia'
 import type { TipoComponenteEquipo, TipoItemKitEquipo } from '@prisma/client'
 
 export interface ResultadoProvisionVenta {
@@ -40,6 +41,7 @@ export async function provisionarEquiposDesdeFactura(
     where: { id: facturaId },
     include: {
       cliente: true,
+      presupuesto: { select: { garantia: true } },
       items: {
         include: {
           inventarioUnidad: true,
@@ -54,6 +56,8 @@ export async function provisionarEquiposDesdeFactura(
   })
 
   if (!factura) throw new Error('Factura no encontrada')
+
+  const garantiaHastaPresupuesto = garantiaHastaDesdeTexto(factura.presupuesto?.garantia ?? null)
 
   await geocodificarClientePorId(factura.clienteId).catch(() => null)
 
@@ -117,6 +121,7 @@ export async function provisionarEquiposDesdeFactura(
           inventarioId: cat.id,
           origen: 'VENTA',
           estado: 'ACTIVO',
+          garantiaHasta: garantiaHastaPresupuesto,
         },
       })
 

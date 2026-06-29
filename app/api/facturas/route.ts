@@ -63,16 +63,39 @@ export async function POST(req: NextRequest) {
         include: { factura: true },
       })
       if (!pres) throw new ApiError(404, 'Presupuesto no encontrado')
-      if (pres.estado !== 'APROBADO') {
+      if (pres.estado !== 'APROBADO' && pres.estado !== 'CONVERTIDO') {
         throw new ApiError(400, 'El presupuesto debe estar aprobado para facturar')
       }
-      if (pres.factura) throw new ApiError(400, 'Este presupuesto ya fue facturado')
+      if (pres.factura && pres.factura.id !== undefined && !data.remitoId) {
+        throw new ApiError(400, 'Este presupuesto ya fue facturado')
+      }
       if (data.clienteId !== pres.clienteId) {
         throw new ApiError(400, 'El cliente debe coincidir con el del presupuesto')
       }
       if (pres.otId && !otId) otId = pres.otId
       if (!data.moneda) moneda = pres.moneda as typeof moneda
       if (cotizacionExplicita == null) cotizacionExplicita = pres.cotizacionUsd
+
+      if (!data.remitoId) {
+        const { mensajeFacturaRequiereRemito } = await import('@/lib/facturas/validar-flujo-remito')
+        const msg = await mensajeFacturaRequiereRemito({ presupuestoId: data.presupuestoId })
+        if (msg) throw new ApiError(400, msg)
+      }
+    }
+
+    let ordenVentaId = data.ordenVentaId ?? null
+    let remitoId = data.remitoId ?? null
+    let presupuestoId = data.presupuestoId ?? null
+
+    if (data.remitoId) {
+      const { itemsFacturaDesdeRemito } = await import('@/lib/remitos/venta')
+      const desdeRemito = await itemsFacturaDesdeRemito(data.remitoId)
+      if (data.clienteId !== desdeRemito.clienteId) {
+        throw new ApiError(400, 'El cliente debe coincidir con el del remito')
+      }
+      ordenVentaId = desdeRemito.ordenVentaId ?? ordenVentaId
+      presupuestoId = presupuestoId ?? desdeRemito.presupuestoId
+      remitoId = desdeRemito.remitoId
     }
 
     const itemsConPrecio = await aplicarPreciosResueltosItems(data.items, {
@@ -107,8 +130,8 @@ export async function POST(req: NextRequest) {
       if (facturaOt) throw new ApiError(400, 'Esta orden de trabajo ya fue facturada')
     }
 
-    if (data.presupuestoId && otId) {
-      const pres = await prisma.presupuesto.findUnique({ where: { id: data.presupuestoId } })
+    if (presupuestoId && otId) {
+      const pres = await prisma.presupuesto.findUnique({ where: { id: presupuestoId } })
       if (pres?.otId && pres.otId !== otId) {
         throw new ApiError(400, 'La OT no coincide con la del presupuesto')
       }
@@ -135,7 +158,9 @@ export async function POST(req: NextRequest) {
             emisorId,
             plantillaId,
             otId,
-            presupuestoId: data.presupuestoId ?? null,
+            presupuestoId,
+            ordenVentaId,
+            remitoId,
             condicionPago,
             observaciones: data.observaciones ?? null,
             puntoVenta: emisorId
@@ -168,17 +193,30 @@ export async function POST(req: NextRequest) {
       await sincronizarVencimientosCobranza(factura.id, plazos)
     }
 
-    if (data.presupuestoId) {
+    if (presupuestoId) {
       await prisma.presupuesto.update({
-        where: { id: data.presupuestoId },
+        where: { id: presupuestoId },
         data: { estado: 'CONVERTIDO' },
       })
       await sincronizarEmbudoAlFacturarPresupuesto(
-        data.presupuestoId,
+        presupuestoId,
         factura.id,
         factura.numero,
         actor.id,
       ).catch(() => null)
+    }
+
+    if (remitoId) {
+      await prisma.remitoVenta.update({
+        where: { id: remitoId },
+        data: { estado: 'FACTURADO' },
+      })
+    }
+    if (ordenVentaId) {
+      await prisma.ordenVenta.update({
+        where: { id: ordenVentaId },
+        data: { estado: 'FACTURADA' },
+      })
     }
 
     const facturaCompleta = await prisma.factura.findUnique({
@@ -191,12 +229,21 @@ export async function POST(req: NextRequest) {
       },
     })
 
+    if (presupuestoId && otId) {
+      const { aplicarGarantiaPresupuestoEquipoOt } = await import('@/lib/garantia')
+      await aplicarGarantiaPresupuestoEquipoOt({
+        presupuestoId,
+        otId,
+        usuarioId: actor.id,
+      }).catch(() => null)
+    }
+
     await registrarAuditoria({
       usuarioId: actor.id,
       accion: 'factura.create',
       entidad: 'Factura',
       entidadId: factura.id,
-      despues: data.presupuestoId ? { presupuestoId: data.presupuestoId } : undefined,
+      despues: presupuestoId ? { presupuestoId, remitoId, ordenVentaId } : undefined,
       ip: getIp(req),
     })
 

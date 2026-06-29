@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
     return new NextResponse(new Uint8Array(buffer), {
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'Content-Disposition': 'attachment; filename="plantilla-inventario-ibiomedica.xlsx"',
+        'Content-Disposition': 'attachment; filename="plantilla-catalogo-action-sales.xlsx"',
         'Cache-Control': 'no-store',
       },
     })

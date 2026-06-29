@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { FileText, Send, CheckCircle, Receipt, Kanban } from 'lucide-react'
+import { FileText, Send, CheckCircle, Receipt, Kanban, Truck, Save } from 'lucide-react'
 import { BotonGenerarOcDesde } from '@/components/compras/BotonGenerarOcDesde'
 import { OcsVinculadasLinks } from '@/components/compras/OcsVinculadasLinks'
 import { toast } from 'sonner'
@@ -13,6 +13,8 @@ import { BadgeEstadoPresupuesto } from '@/components/ui/badge'
 import { formatFecha } from '@/lib/utils'
 import { formatMontoMoneda, etiquetaMoneda } from '@/lib/moneda'
 import { mensajeErrorDesconocido, mensajeErrorJson } from '@/lib/errores'
+import { Select } from '@/components/ui/select'
+import { VIGENCIA_DIAS_OT, GARANTIA_MESES_OT } from '@/lib/form-options'
 
 interface PresupuestoDetalleProps {
   presupuesto: {
@@ -51,13 +53,46 @@ interface PresupuestoDetalleProps {
     factura?: { id: string; numero: string } | null
     negociosEmbudo?: Array<{ id: string; numero: number; etapa: string; vendedor: string }>
     ordenesCompra?: { id: string; numero: string; estado: string }[]
+    ordenVenta?: {
+      id: string
+      remitos: { id: string; numero: string; estado: string }[]
+    } | null
   }
 }
 
 export function PresupuestoDetalle({ presupuesto: p }: PresupuestoDetalleProps) {
   const router = useRouter()
   const [loading, setLoading] = useState('')
+  const [vigenciaDias, setVigenciaDias] = useState(String(p.vigenciaDias))
+  const [garantia, setGarantia] = useState(p.garantia ?? '')
   const moneda = p.moneda ?? 'ARS'
+
+  const yaRemitido = (p.ordenVenta?.remitos?.length ?? 0) > 0
+  const puedeEditarVigenciaGarantia = Boolean(p.otId) && !p.factura && !yaRemitido
+  const vigenciaGarantiaModificada =
+    Number(vigenciaDias) !== p.vigenciaDias || garantia !== (p.garantia ?? '')
+
+  async function guardarVigenciaGarantia() {
+    setLoading('vigencia')
+    try {
+      const res = await fetch(`/api/presupuestos/${p.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vigenciaDias: Number(vigenciaDias),
+          garantia: garantia.trim() || undefined,
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(mensajeErrorJson(data, 'No se pudo guardar vigencia/garantía'))
+      toast.success('Vigencia y garantía actualizadas')
+      router.refresh()
+    } catch (e: unknown) {
+      toast.error(mensajeErrorDesconocido(e, 'No se pudo guardar vigencia/garantía'))
+    } finally {
+      setLoading('')
+    }
+  }
 
   async function cambiarEstado(estado: string, perm: string) {
     setLoading(perm)
@@ -78,13 +113,13 @@ export function PresupuestoDetalle({ presupuesto: p }: PresupuestoDetalleProps) 
     }
   }
 
-  async function aprobarYFacturar() {
+  async function aprobarYGenerarRemito() {
     if (p.factura) {
       router.push('/facturacion')
       return
     }
 
-    setLoading('facturar')
+    setLoading('remito')
     try {
       if (p.estado !== 'APROBADO') {
         const res = await fetch(`/api/presupuestos/${p.id}`, {
@@ -95,17 +130,22 @@ export function PresupuestoDetalle({ presupuesto: p }: PresupuestoDetalleProps) 
         const data = await res.json().catch(() => ({}))
         if (!res.ok) throw new Error(mensajeErrorJson(data, 'No se pudo aprobar el presupuesto'))
       }
-      toast.success('Presupuesto aprobado — los datos se cargaron en facturación')
-      const q = p.otId ? `&otId=${p.otId}` : ''
-      router.push(`/facturacion/nueva?presupuestoId=${p.id}${q}`)
+      const resRemito = await fetch(`/api/presupuestos/${p.id}/remito`, {
+        method: 'POST',
+        credentials: 'include',
+      })
+      const remito = await resRemito.json().catch(() => ({}))
+      if (!resRemito.ok) throw new Error(mensajeErrorJson(remito, 'No se pudo crear el remito'))
+      toast.success('Orden de venta y remito creados — asigná las series')
+      router.push(`/remitos/${remito.id}`)
     } catch (e: unknown) {
-      toast.error(mensajeErrorDesconocido(e, 'No se pudo continuar a facturación'))
+      toast.error(mensajeErrorDesconocido(e, 'No se pudo continuar al remito'))
     } finally {
       setLoading('')
     }
   }
 
-  const puedeFacturar = !p.factura && ['BORRADOR', 'ENVIADO', 'APROBADO'].includes(p.estado)
+  const puedeRemitir = !p.factura && ['BORRADOR', 'ENVIADO', 'APROBADO'].includes(p.estado)
   const listoConvertir = !p.factura && ['ENVIADO', 'APROBADO'].includes(p.estado)
 
   return (
@@ -137,38 +177,82 @@ export function PresupuestoDetalle({ presupuesto: p }: PresupuestoDetalleProps) 
         <BadgeEstadoPresupuesto estado={p.estado} />
       </div>
 
+      {puedeEditarVigenciaGarantia && (
+        <Card className="border-[#FDE68A] bg-[#FFFBEB]">
+          <h3 className="text-[12px] font-bold text-[#92400E] uppercase mb-3">
+            Vigencia y garantía (presupuesto OT)
+          </h3>
+          <p className="text-[12px] text-[#78350F] mb-3">
+            Definí la vigencia del presupuesto y la garantía de la reparación antes de generar el remito.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-[11px] font-bold text-[#8a909a] uppercase block mb-1">
+                Vigencia del presupuesto
+              </label>
+              <Select
+                value={vigenciaDias}
+                onChange={(e) => setVigenciaDias(e.target.value)}
+                options={VIGENCIA_DIAS_OT}
+              />
+            </div>
+            <div>
+              <label className="text-[11px] font-bold text-[#8a909a] uppercase block mb-1">
+                Garantía de la reparación
+              </label>
+              <Select
+                value={garantia}
+                onChange={(e) => setGarantia(e.target.value)}
+                options={[{ value: '', label: 'Sin especificar' }, ...GARANTIA_MESES_OT]}
+              />
+            </div>
+          </div>
+          {vigenciaGarantiaModificada && (
+            <Button
+              variant="secondary"
+              size="sm"
+              className="mt-3"
+              onClick={guardarVigenciaGarantia}
+              loading={loading === 'vigencia'}
+            >
+              <Save size={14} /> Guardar cambios
+            </Button>
+          )}
+        </Card>
+      )}
+
       {listoConvertir && (
         <div className="bg-gradient-to-r from-[#FFF7ED] to-[#FFEDD5] border-2 border-[#E8650A] rounded-[12px] px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 shadow-sm">
           <div>
-            <p className="text-[14px] font-extrabold text-[#9A3412]">Convertir a factura</p>
+            <p className="text-[14px] font-extrabold text-[#9A3412]">Generar remito de venta</p>
             <p className="text-[12.5px] text-[#C2410C] mt-1">
-              Presupuesto {p.estado === 'APROBADO' ? 'aprobado' : 'enviado'} — abrí facturación con cliente, ítems y montos ya cargados.
+              Presupuesto {p.estado === 'APROBADO' ? 'aprobado' : 'enviado'} — creá la orden de venta, asigná series en el remito y luego facturá.
             </p>
           </div>
           <Button
             variant="primary"
             size="md"
             className="shrink-0 text-[13.5px] px-5"
-            onClick={aprobarYFacturar}
-            loading={loading === 'facturar'}
+            onClick={aprobarYGenerarRemito}
+            loading={loading === 'remito'}
           >
-            <Receipt size={18} />
-            Convertir a factura
+            <Truck size={18} />
+            Generar remito
           </Button>
         </div>
       )}
 
-      {puedeFacturar && !listoConvertir && (
+      {puedeRemitir && !listoConvertir && (
         <div className="bg-[#FFF7ED] border border-[#FDBA74] rounded-[10px] px-4 py-3 flex items-center justify-between gap-4">
           <div>
-            <p className="text-[13px] font-bold text-[#9A3412]">Listo para facturar</p>
+            <p className="text-[13px] font-bold text-[#9A3412]">Listo para remitir</p>
             <p className="text-[12px] text-[#C2410C] mt-0.5">
-              Al aprobar, se abre facturación con cliente, ítems y montos ya cargados.
+              Al aprobar, se crea la orden de venta y el remito para asignar números de serie.
             </p>
           </div>
-          <Button onClick={aprobarYFacturar} loading={loading === 'facturar'}>
-            <Receipt size={16} />
-            Aprobar y facturar
+          <Button onClick={aprobarYGenerarRemito} loading={loading === 'remito'}>
+            <Truck size={16} />
+            Aprobar y remitir
           </Button>
         </div>
       )}

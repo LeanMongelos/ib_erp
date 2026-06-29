@@ -19,7 +19,40 @@ async function getOT(id: string) {
       factura: { select: { id: true, numero: true } },
       presupuestos: {
         orderBy: { creadoEn: 'desc' },
-        include: { factura: { select: { id: true, numero: true } } },
+        include: {
+          factura: { select: { id: true, numero: true } },
+          ordenVenta: {
+            select: {
+              id: true,
+              numero: true,
+              estado: true,
+              remitos: {
+                orderBy: { creadoEn: 'desc' },
+                select: {
+                  id: true,
+                  numero: true,
+                  estado: true,
+                  items: {
+                    select: {
+                      descripcion: true,
+                      inventarioId: true,
+                      inventarioUnidadId: true,
+                      equipoId: true,
+                      numeroSerie: true,
+                      inventario: {
+                        select: {
+                          modoTrazabilidad: true,
+                          tipoArticulo: true,
+                          esSerializado: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
       },
       ordenesCompra: {
         select: { id: true, numero: true, estado: true },

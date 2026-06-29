@@ -342,6 +342,8 @@ export const facturaCreateSchema = z.object({
   cotizacionUsd:   z.number().positive().optional().nullable(),
   otId:            z.string().min(1).optional().nullable(),
   presupuestoId:   z.string().min(1).optional().nullable(),
+  ordenVentaId:    z.string().min(1).optional().nullable(),
+  remitoId:        z.string().min(1).optional().nullable(),
   condicionPago:   z.string().trim().max(60).optional(),
   plazosCobranza:  z.array(z.number().int().positive().max(730)).min(1).max(12).optional(),
   observaciones:   z.string().trim().max(2000).optional(),

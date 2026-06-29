@@ -151,6 +151,26 @@ interface Props {
   otPrefill: any | null
   presupuestoPrefill?: PresupuestoPrefill | null
   plantillaFactura: { id: string | null; nombre: string; origen: string }
+  remitoPrefill?: {
+    clienteId: string
+    presupuestoId: string
+    ordenVentaId?: string | null
+    remitoId: string
+    moneda: string
+    alicuotaIvaPct: number
+    items: Array<{
+      codigo?: string | null
+      descripcion: string
+      cantidad: number
+      precioUnit: number
+      bonificacionPct?: number
+      alicuotaIvaPct?: number | null
+      inventarioId?: string | null
+      numeroSerie?: string | null
+      inventarioUnidadId?: string | null
+      proximoPreventivo?: string | null
+    }>
+  } | null
 }
 
 export function NuevaFacturaForm({
@@ -158,6 +178,7 @@ export function NuevaFacturaForm({
   emisores,
   otPrefill,
   presupuestoPrefill,
+  remitoPrefill,
   plantillaFactura,
 }: Props) {
   const router = useRouter()
@@ -169,7 +190,7 @@ export function NuevaFacturaForm({
 
   const defEmisor = emisores.find((e) => e.predeterminado)?.id ?? emisores[0]?.id ?? ''
   const [clienteId, setClienteId] = useState(
-    presupuestoPrefill?.clienteId ?? otPrefill?.clienteId ?? '',
+    remitoPrefill?.clienteId ?? presupuestoPrefill?.clienteId ?? otPrefill?.clienteId ?? '',
   )
   const [emisorId, setEmisorId] = useState(presupuestoPrefill?.emisorId || defEmisor)
   const [tipo, setTipo] = useState<'A' | 'B' | 'C'>('B')
@@ -177,6 +198,22 @@ export function NuevaFacturaForm({
     presupuestoPrefill?.alicuotaIvaPct ?? 21,
   )
   const [items, setItems] = useState<ItemRow[]>(() => {
+    if (remitoPrefill?.items?.length) {
+      return remitoPrefill.items.map((i, idx) => ({
+        id: `remito-${idx}`,
+        descripcion: i.descripcion,
+        cantidad: i.cantidad,
+        precioUnit: i.precioUnit,
+        alicuotaIvaPct: i.alicuotaIvaPct ?? undefined,
+        inventarioId: i.inventarioId ?? undefined,
+        codigo: i.codigo ?? undefined,
+        numeroSerie: i.numeroSerie ?? undefined,
+        inventarioUnidadId: i.inventarioUnidadId ?? undefined,
+        proximoPreventivo: i.proximoPreventivo
+          ? new Date(i.proximoPreventivo).toISOString().slice(0, 10)
+          : undefined,
+      }))
+    }
     if (presupuestoPrefill?.items?.length) {
       return presupuestoPrefill.items.map((i) => ({
         id: i.id,
@@ -204,7 +241,7 @@ export function NuevaFacturaForm({
   const [plazosCustom, setPlazosCustom] = useState(plazoInicial.plazosCustom)
   const [tasaFinanciacionPct, setTasaFinanciacionPct] = useState(plazoInicial.tasaFinanciacionPct)
   const [moneda, setMoneda] = useState<MonedaDocumento>(
-    (presupuestoPrefill?.moneda as MonedaDocumento) ?? 'ARS',
+    (remitoPrefill?.moneda ?? presupuestoPrefill?.moneda) as MonedaDocumento ?? 'ARS',
   )
   const [cotizacionUsd, setCotizacionUsd] = useState<number | null>(
     presupuestoPrefill?.cotizacionUsd ?? null,
@@ -351,7 +388,9 @@ export function NuevaFacturaForm({
           tipo,
           estado: 'BORRADOR',
           otId: otPrefill?.id ?? presupuestoPrefill?.otId ?? null,
-          presupuestoId: presupuestoPrefill?.id ?? null,
+          presupuestoId: remitoPrefill?.presupuestoId ?? presupuestoPrefill?.id ?? null,
+          ordenVentaId: remitoPrefill?.ordenVentaId ?? null,
+          remitoId: remitoPrefill?.remitoId ?? null,
           plantillaId: plantillaFactura.id ?? undefined,
           observaciones: presupuestoPrefill?.observaciones ?? undefined,
           condicionPago:
@@ -402,7 +441,14 @@ export function NuevaFacturaForm({
 
   return (
     <div className="max-w-4xl mx-auto flex flex-col gap-4">
-      {!presupuestoPrefill && (
+      {remitoPrefill && (
+        <div className="bg-[#ECFDF5] border border-[#6EE7B7] rounded-[10px] px-4 py-3">
+          <p className="text-[13px] font-bold text-[#047857]">
+            Facturando desde remito emitido (series asignadas)
+          </p>
+        </div>
+      )}
+      {!presupuestoPrefill && !remitoPrefill && (
         <PresupuestoFacturacionPicker clienteId={clienteId || undefined} />
       )}
 

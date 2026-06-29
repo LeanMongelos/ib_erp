@@ -27,9 +27,38 @@ export const PLAZO_ENTREGA: FormOption[] = [
   { value: 'A confirmar', label: 'A confirmar' },
 ]
 
+export const VIGENCIA_DIAS: FormOption[] = [
+  ...Array.from({ length: 10 }, (_, i) => {
+    const n = i + 1
+    return { value: String(n), label: n === 1 ? '1 día' : `${n} días` }
+  }),
+  { value: '15', label: '15 días' },
+  { value: '30', label: '30 días' },
+  { value: '45', label: '45 días' },
+  { value: '60', label: '60 días' },
+  { value: '90', label: '90 días' },
+]
+
+/** Vigencia para presupuestos de OT (1–10 días). */
+export const VIGENCIA_DIAS_OT: FormOption[] = Array.from({ length: 10 }, (_, i) => {
+  const n = i + 1
+  return { value: String(n), label: n === 1 ? '1 día' : `${n} días` }
+})
+
+/** Garantía en meses (1–12) para presupuestos de OT. */
+export const GARANTIA_MESES: FormOption[] = Array.from({ length: 12 }, (_, i) => {
+  const n = i + 1
+  return { value: `${n} ${n === 1 ? 'mes' : 'meses'}`, label: `${n} ${n === 1 ? 'mes' : 'meses'}` }
+})
+
+/** Garantía OT: meses + opción explícita sin garantía. */
+export const GARANTIA_MESES_OT: FormOption[] = [
+  ...GARANTIA_MESES,
+  { value: 'Sin garantía', label: 'Sin garantía' },
+]
+
 export const GARANTIA: FormOption[] = [
-  { value: '6 meses', label: '6 meses' },
-  { value: '12 meses', label: '12 meses' },
+  ...GARANTIA_MESES,
   { value: '18 meses', label: '18 meses' },
   { value: '24 meses', label: '24 meses' },
   { value: '36 meses', label: '36 meses' },
@@ -37,14 +66,7 @@ export const GARANTIA: FormOption[] = [
   { value: 'Sin garantía', label: 'Sin garantía' },
 ]
 
-export const VIGENCIA_DIAS: FormOption[] = [
-  { value: '7', label: '7 días' },
-  { value: '15', label: '15 días' },
-  { value: '30', label: '30 días' },
-  { value: '45', label: '45 días' },
-  { value: '60', label: '60 días' },
-  { value: '90', label: '90 días' },
-]
+export const VIGENCIA_DIAS_LEGACY = VIGENCIA_DIAS
 
 export const MEDIO_PAGO: FormOption[] = [
   { value: 'TRANSFERENCIA', label: 'Transferencia' },

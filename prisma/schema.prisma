@@ -190,6 +190,21 @@ enum EstadoPresupuesto {
   CONVERTIDO
 }
 
+enum EstadoOrdenVenta {
+  CONFIRMADA
+  PARCIALMENTE_REMITIDA
+  REMITIDA
+  FACTURADA
+  CANCELADA
+}
+
+enum EstadoRemitoVenta {
+  BORRADOR
+  EMITIDO
+  FACTURADO
+  ANULADO
+}
+
 enum MedioPago {
   TRANSFERENCIA
   EFECTIVO
@@ -498,6 +513,8 @@ model Cliente {
   sucursales   ClienteSucursal[]
   ordenesCompra  OrdenCompra[]
   contratosAlquiler ContratoAlquiler[]
+  ordenesVenta   OrdenVenta[]
+  remitosVenta   RemitoVenta[]
 
   @@map("clientes")
 }
@@ -583,6 +600,7 @@ model Equipo {
   entradasHistoria HistoriaClinicaEntrada[]
   itemFacturaOrigen ItemFactura? @relation("FacturaItemEquipo")
   lineasAlquiler LineaAlquiler[]
+  itemsRemito    ItemRemito[]
 
   @@index([clienteId])
   @@index([sucursalId])
@@ -895,6 +913,8 @@ model Factura {
   plantillaId      String?
   presupuestoId    String?       @unique
   otId             String?       @unique
+  ordenVentaId     String?       @unique
+  remitoId         String?       @unique
   condicionPago    String?
   observaciones    String?
   // AFIP / fiscal
@@ -913,6 +933,8 @@ model Factura {
   plantilla     PlantillaImpresion? @relation(fields: [plantillaId], references: [id])
   presupuesto   Presupuesto?       @relation(fields: [presupuestoId], references: [id])
   ot            OrdenTrabajo?      @relation(fields: [otId], references: [id])
+  ordenVenta    OrdenVenta?        @relation(fields: [ordenVentaId], references: [id])
+  remito        RemitoVenta?       @relation(fields: [remitoId], references: [id])
   facturaOrigen Factura?           @relation("NotaCreditoOrigen", fields: [facturaOrigenId], references: [id])
   notasCredito  Factura[]          @relation("NotaCreditoOrigen")
   items         ItemFactura[]
@@ -972,6 +994,11 @@ model Inventario {
   precioUnit  Float?
   moneda      String   @default("ARS")
   categoria   String?
+  codigoBarras String? @map("codigo_barras")
+  sinonimo    String?
+  descuentoPct Float   @default(0) @map("descuento_pct")
+  perfil      String?
+  archivoRef  String? @map("archivo_ref")
   alicuotaIvaId String?
   fotoUrl     String?
   activo      Boolean  @default(true)
@@ -986,6 +1013,7 @@ model Inventario {
   accesoriosEquipo EquipoAccesorio[]
   repuestosOT      RepuestoOT[]
   itemsPresupuesto ItemPresupuesto[]
+  itemsRemito      ItemRemito[]
   kitComoEquipo    InventarioKitItem[] @relation("KitEquipoPadre")
   kitComoIncluido  InventarioKitItem[] @relation("KitEquipoHijo")
   itemsListaPrecios ListaPreciosItem[]
@@ -1015,6 +1043,7 @@ model InventarioUnidad {
   equipo               Equipo?      @relation("UnidadEquipo", fields: [equipoId], references: [id])
   itemFacturaReservado ItemFactura? @relation("UnidadVendida")
   lineasAlquiler LineaAlquiler[]
+  itemsRemito      ItemRemito[]
 
   @@unique([inventarioId, numeroSerie])
   @@index([inventarioId])
@@ -1230,6 +1259,8 @@ model Presupuesto {
   factura   Factura?
   negociosEmbudo NegocioEmbudo[]
   ordenesCompra  OrdenCompra[]
+  ordenVenta     OrdenVenta?
+  remitos        RemitoVenta[]
 
   @@index([otId])
   @@map("presupuestos")
@@ -1253,8 +1284,75 @@ model ItemPresupuesto {
 
   presupuesto Presupuesto @relation(fields: [presupuestoId], references: [id], onDelete: Cascade)
   inventario  Inventario? @relation(fields: [inventarioId], references: [id])
+  itemsRemito ItemRemito[]
 
   @@map("items_presupuesto")
+}
+
+// ============ ORDEN DE VENTA / REMITO (flujo comercial) ============
+
+model OrdenVenta {
+  id            String           @id @default(cuid())
+  numero        String           @unique
+  estado        EstadoOrdenVenta @default(CONFIRMADA)
+  presupuestoId String           @unique
+  clienteId     String
+  observaciones String?
+  creadoEn      DateTime         @default(now())
+
+  presupuesto Presupuesto   @relation(fields: [presupuestoId], references: [id])
+  cliente     Cliente       @relation(fields: [clienteId], references: [id])
+  remitos     RemitoVenta[]
+  factura     Factura?
+
+  @@index([clienteId])
+  @@map("ordenes_venta")
+}
+
+model RemitoVenta {
+  id            String            @id @default(cuid())
+  numero        String            @unique
+  estado        EstadoRemitoVenta @default(BORRADOR)
+  presupuestoId String?
+  ordenVentaId  String?
+  clienteId     String
+  fechaEmision  DateTime          @default(now())
+  observaciones String?
+  creadoEn      DateTime          @default(now())
+
+  ordenVenta         OrdenVenta?  @relation(fields: [ordenVentaId], references: [id])
+  presupuestoDirecto Presupuesto? @relation(fields: [presupuestoId], references: [id])
+  cliente     Cliente      @relation(fields: [clienteId], references: [id])
+  items       ItemRemito[]
+  factura     Factura?
+
+  @@index([clienteId])
+  @@index([presupuestoId])
+  @@index([ordenVentaId])
+  @@map("remitos_venta")
+}
+
+model ItemRemito {
+  id                 String  @id @default(cuid())
+  remitoId           String
+  orden              Int     @default(0)
+  presupuestoItemId  String?
+  inventarioId       String?
+  codigo             String?
+  descripcion        String
+  cantidad           Int     @default(1)
+  inventarioUnidadId String?
+  numeroSerie        String?
+  equipoId           String?
+
+  remito           RemitoVenta       @relation(fields: [remitoId], references: [id], onDelete: Cascade)
+  presupuestoItem  ItemPresupuesto?  @relation(fields: [presupuestoItemId], references: [id])
+  inventario       Inventario?       @relation(fields: [inventarioId], references: [id])
+  inventarioUnidad InventarioUnidad? @relation(fields: [inventarioUnidadId], references: [id])
+  equipo           Equipo?           @relation(fields: [equipoId], references: [id])
+
+  @@index([remitoId])
+  @@map("items_remito")
 }
 
 // ============ COBRANZAS (Fase 5) ============

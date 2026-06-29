@@ -24,8 +24,9 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     }
 
     return NextResponse.json({
-      redirect: `/facturacion/nueva?presupuestoId=${id}`,
+      redirect: `/presupuestos/${id}`,
       presupuestoId: id,
+      flujo: 'remito',
     })
   } catch (error) {
     return handleApiError(error)

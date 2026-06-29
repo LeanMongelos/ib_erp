@@ -6,7 +6,7 @@
 
 import { prisma, invalidatePrismaCache } from '@/lib/prisma'
 
-export type TipoSecuencia = 'PRESUPUESTO' | 'FACTURA' | 'REMITO'
+export type TipoSecuencia = 'PRESUPUESTO' | 'FACTURA' | 'REMITO' | 'ORDEN_VENTA'
 
 export interface DefSecuencia {
   clave: string
@@ -33,10 +33,10 @@ export function formatearNumero(prefijo: string, correlativo: number, padding: n
   return `${prefijo}${String(correlativo).padStart(padding, '0')}`
 }
 
-function defsAnuales(tipo: 'PRESUPUESTO' | 'REMITO', prefijoLetra: string, anio: number): DefSecuencia[] {
+function defsAnuales(tipo: 'PRESUPUESTO' | 'REMITO' | 'ORDEN_VENTA', prefijoLetra: string, anio: number): DefSecuencia[] {
   const prefijo = `${prefijoLetra}-${anio}-`
-  const claveBase = tipo === 'PRESUPUESTO' ? 'PRESUPUESTO' : 'REMITO'
-  const etiqueta = tipo === 'PRESUPUESTO' ? 'Presupuesto' : 'Remito'
+  const claveBase = tipo === 'PRESUPUESTO' ? 'PRESUPUESTO' : tipo === 'REMITO' ? 'REMITO' : 'ORDEN_VENTA'
+  const etiqueta = tipo === 'PRESUPUESTO' ? 'Presupuesto' : tipo === 'REMITO' ? 'Remito' : 'Orden de venta'
   return [{
     clave: `${claveBase}_${anio}`,
     etiqueta: `${etiqueta} ${anio}`,
@@ -52,6 +52,7 @@ export function defsSecuenciasPorDefecto(anio = anioActual()): DefSecuencia[] {
   return [
     ...defsAnuales('PRESUPUESTO', 'P', anio),
     ...defsAnuales('REMITO', 'R', anio),
+    ...defsAnuales('ORDEN_VENTA', 'OV', anio),
     ...(['A', 'B', 'C'] as const).map((subtipo) => ({
       clave: `FACTURA_${subtipo}`,
       etiqueta: `Factura ${subtipo} (número interno)`,
@@ -213,6 +214,10 @@ export function clavePresupuesto(anio = anioActual()) {
 
 export function claveRemito(anio = anioActual()) {
   return `REMITO_${anio}`
+}
+
+export function claveOrdenVenta(anio = anioActual()) {
+  return `ORDEN_VENTA_${anio}`
 }
 
 export function claveFactura(tipo: string) {

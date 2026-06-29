@@ -37,6 +37,8 @@ function filaCsvAInventarioRow(datos: {
     puntoPedido: null,
     precioUnit: datos.precio ?? null,
     alicuotaIvaPct: null,
+    descuentoPct: 0,
+    activo: true,
   }
 }
 

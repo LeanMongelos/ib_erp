@@ -117,7 +117,12 @@ export async function importarFilasInventario(
         puntoPedido: fila.puntoPedido ?? null,
         precioUnit: fila.precioUnit ?? null,
         alicuotaIvaId,
-        activo: true,
+        codigoBarras: fila.codigoBarras ?? null,
+        sinonimo: fila.sinonimo ?? null,
+        descuentoPct: fila.descuentoPct ?? 0,
+        perfil: fila.perfil ?? null,
+        archivoRef: fila.archivoRef ?? null,
+        activo: fila.activo ?? true,
       }
 
       if (fila.sku) {

@@ -10,8 +10,15 @@ import {
 import { requirePagePermission } from '@/lib/page-guard'
 import { obtenerPlantillaPredeterminadaResumen } from '@/lib/plantillas/resolver-plantilla'
 
-async function getData(otId?: string, presupuestoId?: string) {
+async function getData(otId?: string, presupuestoId?: string, remitoId?: string) {
   const clienteEventual = await ensureClienteEventual()
+
+  let remitoPrefill: Awaited<ReturnType<typeof import('@/lib/remitos/venta').itemsFacturaDesdeRemito>> | null = null
+  if (remitoId) {
+    const { itemsFacturaDesdeRemito } = await import('@/lib/remitos/venta')
+    remitoPrefill = await itemsFacturaDesdeRemito(remitoId)
+    presupuestoId = remitoPrefill.presupuestoId
+  }
 
   const [clientesRaw, emisores, ot, presupuesto] = await Promise.all([
     prisma.cliente.findMany({
@@ -67,17 +74,23 @@ async function getData(otId?: string, presupuestoId?: string) {
 
   const clientes = ordenarClientesConEventual(clientesRaw, clienteEventual.id)
 
-  return { clientes, emisores, ot, presupuesto }
+  return { clientes, emisores, ot, presupuesto, remitoPrefill }
 }
 
 export default async function NuevaFacturaPage({
   searchParams,
 }: {
-  searchParams: Promise<{ otId?: string; presupuestoId?: string }>
+  searchParams: Promise<{ otId?: string; presupuestoId?: string; remitoId?: string }>
 }) {
   await requirePagePermission('facturas.create')
   const params = await searchParams
-  let { otId, presupuestoId } = params
+  let { otId, presupuestoId, remitoId } = params
+
+  if (remitoId && !presupuestoId) {
+    const { itemsFacturaDesdeRemito } = await import('@/lib/remitos/venta')
+    const r = await itemsFacturaDesdeRemito(remitoId).catch(() => null)
+    if (r) presupuestoId = r.presupuestoId
+  }
 
   if (presupuestoId && !otId) {
     const pres = await prisma.presupuesto.findUnique({
@@ -87,14 +100,31 @@ export default async function NuevaFacturaPage({
     if (pres?.otId) otId = pres.otId
   }
 
-  const { clientes, emisores, ot, presupuesto } = await getData(otId, presupuestoId)
+  const { clientes, emisores, ot, presupuesto, remitoPrefill } = await getData(otId, presupuestoId, remitoId)
   const plantillaFactura = await obtenerPlantillaPredeterminadaResumen('FACTURA')
+
+  if (remitoId && !remitoPrefill) redirect('/facturacion')
 
   if (presupuestoId) {
     if (!presupuesto) redirect('/presupuestos')
     if (presupuesto.factura) redirect('/facturacion')
     if (presupuesto.estado !== 'APROBADO') {
       redirect(`/presupuestos/${presupuestoId}`)
+    }
+    if (!remitoId) {
+      const { mensajeFacturaRequiereRemito, remitoEmitidoPresupuesto } = await import(
+        '@/lib/facturas/validar-flujo-remito'
+      )
+      const msg = await mensajeFacturaRequiereRemito({ presupuestoId })
+      if (msg) {
+        const emitido = await remitoEmitidoPresupuesto(presupuestoId)
+        if (emitido) {
+          redirect(
+            `/facturacion/nueva?remitoId=${emitido.id}&presupuestoId=${presupuestoId}${otId ? `&otId=${otId}` : ''}`,
+          )
+        }
+        redirect(`/presupuestos/${presupuestoId}`)
+      }
     }
   }
 
@@ -103,7 +133,9 @@ export default async function NuevaFacturaPage({
     if (facturaOt) redirect(`/servicio-tecnico/${otId}`)
   }
 
-  const subtitle = presupuesto
+  const subtitle = remitoPrefill
+    ? `Desde remito · presupuesto ${presupuesto?.numero ?? ''}`
+    : presupuesto
     ? `Desde presupuesto ${presupuesto.numero}${ot ? ` · OT ${ot.numero}` : ''} · ${presupuesto.cliente.nombre}`
     : ot
       ? `Desde OT · ${ot.numero ?? ''}`
@@ -118,6 +150,7 @@ export default async function NuevaFacturaPage({
           emisores={plain(emisores)}
           otPrefill={ot ? plain(ot) : null}
           presupuestoPrefill={presupuesto ? plain(presupuesto) : null}
+          remitoPrefill={remitoPrefill ? plain(remitoPrefill) : null}
           plantillaFactura={plain(plantillaFactura)}
         />
       </div>

@@ -362,7 +362,7 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = 'plantilla-inventario-ibiomedica.xlsx'
+      a.download = 'plantilla-catalogo-action-sales.xlsx'
       a.click()
       URL.revokeObjectURL(url)
     } catch (e) {

@@ -138,10 +138,32 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       return NextResponse.json(plain(p))
     }
 
+    if (data.vigenciaDias !== undefined || data.garantia !== undefined) {
+      const bloqueado = await prisma.presupuesto.findUnique({
+        where: { id },
+        include: { factura: true },
+      })
+      if (bloqueado?.factura) {
+        throw new ApiError(400, 'No se puede modificar vigencia/garantía: el presupuesto ya fue facturado')
+      }
+      if (bloqueado?.estado === 'CONVERTIDO') {
+        throw new ApiError(400, 'No se puede modificar vigencia/garantía en un presupuesto convertido')
+      }
+    }
+
     const p = await prisma.presupuesto.update({
       where: { id },
       data: {
         ...resto,
+        ...(data.vigenciaDias !== undefined
+          ? {
+              fechaVencimiento: (() => {
+                const vence = new Date(actual.fechaEmision)
+                vence.setDate(vence.getDate() + data.vigenciaDias!)
+                return vence
+              })(),
+            }
+          : {}),
         ...(monedaPatch !== undefined ? { moneda: monedaFinal } : {}),
         ...(monedaPatch !== undefined || cotizacionPatch !== undefined
           ? { cotizacionUsd: cotizacionUsd ?? null }

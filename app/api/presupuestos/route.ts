@@ -29,10 +29,26 @@ export async function GET(req: NextRequest) {
             estado: 'APROBADO',
             factura: null,
             ...(clienteId ? { clienteId } : {}),
+            OR: [
+              { otId: null, ordenVenta: null },
+              { ordenVenta: { remitos: { some: { estado: 'EMITIDO' } } } },
+            ],
           }
         : undefined,
       orderBy: { creadoEn: 'desc' },
-      include: { cliente: { select: { nombre: true } } },
+      include: {
+        cliente: { select: { nombre: true } },
+        ordenVenta: {
+          select: {
+            remitos: {
+              where: { estado: 'EMITIDO' },
+              orderBy: { creadoEn: 'desc' },
+              take: 1,
+              select: { id: true, numero: true },
+            },
+          },
+        },
+      },
     })
     return NextResponse.json(plain(presupuestos))
   } catch (error) {

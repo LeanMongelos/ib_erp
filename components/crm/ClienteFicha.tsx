@@ -446,6 +446,7 @@ export function ClienteFicha({
 
             {tab === 'Equipos' && (
               <EquiposClientePanel
+                clienteId={cliente.id}
                 equipos={cliente.equipos}
                 puedeEditar={puedeEditar}
                 onNuevoEquipo={() => setModalEquipo(true)}
@@ -626,11 +627,13 @@ function Dato({ label, value, valueClass }: { label: string; value: string; valu
 }
 
 function EquiposClientePanel({
+  clienteId,
   equipos,
   puedeEditar,
   onNuevoEquipo,
   onRefresh,
 }: {
+  clienteId: string
   equipos: Equipo[]
   puedeEditar: boolean
   onNuevoEquipo: () => void
@@ -639,6 +642,7 @@ function EquiposClientePanel({
   const [editandoNotasId, setEditandoNotasId] = useState<string | null>(null)
   const [notasDraft, setNotasDraft] = useState('')
   const [notaHistoriaEquipoId, setNotaHistoriaEquipoId] = useState<string | null>(null)
+  const [facturasEquipoId, setFacturasEquipoId] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
   async function guardarNotas(equipoId: string) {
@@ -719,6 +723,13 @@ function EquiposClientePanel({
                 <Link href={`/servicio-tecnico/equipos/${e.id}`} className="text-[12px] text-[#E8650A] font-semibold hover:underline mr-2">
                   Ficha
                 </Link>
+                <button
+                  type="button"
+                  onClick={() => setFacturasEquipoId(e.id)}
+                  className="text-[12px] text-[#2563EB] font-semibold hover:underline"
+                >
+                  Facturas
+                </button>
                 {puedeEditar && (
                   <button
                     type="button"
@@ -744,6 +755,86 @@ function EquiposClientePanel({
           onSaved={() => { setNotaHistoriaEquipoId(null); onRefresh() }}
         />
       )}
+
+      {facturasEquipoId && (
+        <FacturasEquipoModal
+          clienteId={clienteId}
+          equipoId={facturasEquipoId}
+          equipoNombre={equipos.find((x) => x.id === facturasEquipoId)?.nombre ?? 'Equipo'}
+          onClose={() => setFacturasEquipoId(null)}
+        />
+      )}
+    </div>
+  )
+}
+
+function FacturasEquipoModal({
+  clienteId,
+  equipoId,
+  equipoNombre,
+  onClose,
+}: {
+  clienteId: string
+  equipoId: string
+  equipoNombre: string
+  onClose: () => void
+}) {
+  const [facturas, setFacturas] = useState<Array<{
+    id: string
+    numero: string
+    fechaEmision: string
+    total: number
+    items: Array<{ descripcion: string; numeroSerie?: string | null; subtotal: number }>
+  }>>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetch(`/api/clientes/${clienteId}/equipos/${equipoId}/facturas`, { credentials: 'include' })
+      .then((r) => r.json())
+      .then((data) => setFacturas(Array.isArray(data) ? data : []))
+      .catch(() => setFacturas([]))
+      .finally(() => setLoading(false))
+  }, [clienteId, equipoId])
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+      <div className="bg-white rounded-[12px] shadow-xl max-w-lg w-full max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="px-5 py-4 border-b border-[#f0f1f4] flex justify-between items-start">
+          <div>
+            <p className="text-[11px] font-bold uppercase text-[#8a909a]">Facturación del equipo</p>
+            <h3 className="text-[16px] font-extrabold">{equipoNombre}</h3>
+          </div>
+          <button type="button" onClick={onClose} className="text-[#9aa1ab] hover:text-[#1f242c]">✕</button>
+        </div>
+        <div className="p-5">
+          {loading ? (
+            <p className="text-[13px] text-[#6b7280]">Cargando…</p>
+          ) : facturas.length === 0 ? (
+            <p className="text-[13px] text-[#9aa1ab]">Sin facturas vinculadas a este equipo.</p>
+          ) : (
+            <ul className="space-y-3">
+              {facturas.map((f) => (
+                <li key={f.id} className="border border-[#f0f1f4] rounded-[8px] p-3">
+                  <Link href={`/facturacion?highlight=${f.id}`} className="text-[13px] font-bold text-[#E8650A] hover:underline">
+                    {f.numero}
+                  </Link>
+                  <p className="text-[11px] text-[#6b7280] mt-0.5">
+                    {new Date(f.fechaEmision).toLocaleDateString('es-AR')} · ${f.total.toLocaleString('es-AR')}
+                  </p>
+                  <ul className="mt-2 space-y-1">
+                    {f.items.map((it) => (
+                      <li key={it.descripcion} className="text-[12px] text-[#4B5563]">
+                        {it.descripcion}
+                        {it.numeroSerie && <span className="font-mono text-[#6b7280]"> · SN {it.numeroSerie}</span>}
+                      </li>
+                    ))}
+                  </ul>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
     </div>
   )
 }

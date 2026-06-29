@@ -69,6 +69,15 @@ export type EquipoFichaData = {
         emisor?: { razonSocial: string; cuit?: string | null } | null
       }
     } | null
+    unidadInventario?: {
+      id: string
+      numeroSerie: string | null
+      lote: string | null
+      estado: string
+      ubicacionDetalle?: string | null
+      deposito?: { id: string; nombre: string; tipo?: string | null } | null
+    } | null
+    inventario?: { id: string; nombre: string; sku?: string | null; modoTrazabilidad?: string } | null
     componentes?: Array<{
       id: string
       tipo: string
@@ -197,6 +206,25 @@ export function EquipoFichaContent({ data, compact }: { data: EquipoFichaData; c
           </>
         )}
       </FichaSection>
+
+      {(eq.unidadInventario || eq.inventario) && (
+        <FichaSection title="Stock / depósito" icon={<Package size={15} className="text-[#E8650A]" />}>
+          {eq.inventario && (
+            <FichaRow label="Producto catálogo" value={`${eq.inventario.nombre}${eq.inventario.sku ? ` (${eq.inventario.sku})` : ''}`} />
+          )}
+          {eq.unidadInventario ? (
+            <div className="grid grid-cols-2 gap-3">
+              <FichaRow label="N° serie (unidad)" value={eq.unidadInventario.numeroSerie} mono />
+              <FichaRow label="Estado unidad" value={eq.unidadInventario.estado} />
+              <FichaRow label="Depósito" value={eq.unidadInventario.deposito?.nombre} />
+              <FichaRow label="Ubicación en depósito" value={eq.unidadInventario.ubicacionDetalle} />
+              {eq.unidadInventario.lote && <FichaRow label="Lote" value={eq.unidadInventario.lote} mono />}
+            </div>
+          ) : (
+            <p className="text-[12px] text-[#9aa1ab]">Sin unidad de inventario vinculada a este equipo.</p>
+          )}
+        </FichaSection>
+      )}
 
       <FichaSection title="Datos técnicos" icon={<Wrench size={15} className="text-[#E8650A]" />}>
         <div className="grid grid-cols-2 gap-3">

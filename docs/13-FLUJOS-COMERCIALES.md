@@ -1,6 +1,6 @@
 # 13 — Flujos comerciales (OT, presupuesto, factura)
 
-## 1. Flujo OT → comercial (5 pasos UI)
+## 1. Flujo OT → comercial (6 pasos UI)
 
 Componente: `components/servicio-tecnico/OTFlujoComercial.tsx`  
 Página: `/servicio-tecnico/[id]`
@@ -10,35 +10,47 @@ stateDiagram-v2
   [*] --> Paso1_Presupuesto
   Paso1_Presupuesto --> Paso2_Aprobacion: enviar presupuesto
   Paso2_Aprobacion --> Paso3_Desarrollo: cliente aprueba
-  Paso3_Desarrollo --> Paso4_Facturacion: OT EN_PROCESO → reparación
-  Paso4_Facturacion --> Paso5_Finalizado: generar factura
-  Paso5_Finalizado --> [*]: OT CERRADA
+  Paso3_Desarrollo --> Paso4_Remito: reparación finalizada
+  Paso4_Remito --> Paso5_Facturacion: remito emitido
+  Paso5_Facturacion --> Paso6_Finalizado: generar factura
+  Paso6_Finalizado --> [*]: OT CERRADA
 ```
 
 | Paso | Acción usuario | API / ruta | Efecto |
 |------|----------------|------------|--------|
-| 1 | Crear presupuesto | `POST /api/presupuestos` `{ otId }` | `Presupuesto.otId` FK |
+| 1 | Crear presupuesto | `POST /api/presupuestos` `{ otId }` | `Presupuesto.otId` FK; vigencia 1–10 días y garantía 1–12 meses (editable antes del remito) |
 | 1 | Enviar | PATCH presupuesto → ENVIADO | — |
 | 2 | Aprobar | PATCH → APROBADO | Habilita paso 3 |
-| 3 | Iniciar reparación | PATCH `/api/ots/[id]` estado `EN_PROCESO` | — |
-| 4 | Generar factura | `/facturacion/nueva?presupuestoId=&otId=` | Valida presupuesto aprobado |
-| 5 | Finalizar | PATCH OT → `CERRADA` | Cierra ciclo |
+| 3 | Iniciar / finalizar reparación | PATCH `/api/ots/[id]` estado `EN_PROCESO` / `CERRADA` | — |
+| 4 | Generar remito | `POST /api/presupuestos/[id]/remito` | Crea `OrdenVenta` + `RemitoVenta` en borrador |
+| 4 | Asignar series | PATCH `/api/remitos-venta/[id]/items/[itemId]` | Vincula unidades/equipos por línea |
+| 4 | Emitir remito | `POST /api/remitos-venta/[id]/emitir` | Remito `EMITIDO`; reserva stock |
+| 5 | Generar factura | `/facturacion/nueva?remitoId=&otId=&presupuestoId=` | Ítems y series desde remito emitido |
+| 6 | Finalizar | PATCH OT → `CERRADA` | Cierra ciclo; garantía propagada al equipo |
 
 ### Reglas
 
 - Presupuesto desde OT precarga ítems/repuestos (`presupuestos/nuevo?otId=`).
 - Repuestos OT persisten vía PATCH `/api/ots/[id]` campo `repuestos`.
-- Factura valida en `POST /api/facturas` que presupuesto esté aprobado si viene ligado.
+- **No se factura directo desde presupuesto OT:** requiere remito emitido (`lib/facturas/validar-flujo-remito.ts`).
+- Vigencia/garantía del presupuesto OT se pueden editar en detalle hasta generar el remito.
+- Al facturar, la garantía se aplica al equipo (`lib/garantia.ts`): meses, “Sin garantía” (limpia fecha) o nota “Según fabricante”.
+- El botón “Emitir remito” en el wizard solo se habilita cuando todas las series obligatorias están asignadas.
 
-## 2. Presupuesto standalone
+## 2. Presupuesto standalone (sin OT)
+
+Flujo comercial estándar con remito cuando hay ítems de inventario serializados:
 
 | Estado | Transiciones |
 |--------|--------------|
 | BORRADOR | → ENVIADO |
 | ENVIADO | → APROBADO / RECHAZADO / VENCIDO |
-| APROBADO | → CONVERTIDO (al facturar) |
+| APROBADO | → remito → factura → CONVERTIDO |
 
-API: `app/api/presupuestos/[id]/route.ts`, `convertir/route.ts`.
+- Presupuestos **sin** `OrdenVenta` pueden facturarse directo (servicios / legacy).
+- Si ya existe `OrdenVenta` o remito, la factura debe crearse desde el remito emitido.
+
+API: `app/api/presupuestos/[id]/route.ts`, `remito/route.ts`, `convertir/route.ts`.
 
 ## 3. Facturación
 
@@ -58,12 +70,15 @@ PDF: plantilla predeterminada tipo FACTURA + `build-datos.ts`.
 
 ```
 OrdenTrabajo 1 ── * Presupuesto (otId)
-Presupuesto 1 ── 0..1 Factura (vía convertir / presupuestoId en factura)
+Presupuesto 1 ── 0..1 OrdenVenta
+OrdenVenta 1 ── * RemitoVenta
+RemitoVenta 1 ── 0..1 Factura
+Presupuesto 1 ── 0..1 Factura (vía remito o legacy sin OV)
 Cliente 1 ── * OT, Presupuesto, Factura
 Equipo 1 ── * OT, HistoriaClinicaEntrada
 ```
 
-Ver `prisma/schema.prisma`: `OrdenTrabajo`, `Presupuesto`, `Factura`, `RepuestoOT`.
+Ver `prisma/schema.prisma`: `OrdenTrabajo`, `Presupuesto`, `OrdenVenta`, `RemitoVenta`, `ItemRemito`, `Factura`, `RepuestoOT`.
 
 ## 5. Pantallas relacionadas
 
@@ -72,8 +87,9 @@ Ver `prisma/schema.prisma`: `OrdenTrabajo`, `Presupuesto`, `Factura`, `RepuestoO
 | `/servicio-tecnico/nueva` | `NuevaOTForm` |
 | `/servicio-tecnico/[id]` | `OTDetalle`, `OTFlujoComercial` |
 | `/presupuestos/nuevo` | `NuevoPresupuestoForm` |
-| `/presupuestos/[id]` | Detalle presupuesto |
-| `/facturacion/nueva` | `NuevaFacturaForm` |
+| `/presupuestos/[id]` | Detalle presupuesto (vigencia/garantía OT, generar remito) |
+| `/remitos/[id]` | `RemitoVentaEditor` — asignación de series |
+| `/facturacion/nueva` | `NuevaFacturaForm` (desde remito emitido o presupuesto legacy) |
 
 ## 6. Permisos mínimos por rol
 

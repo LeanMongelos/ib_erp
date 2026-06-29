@@ -18,7 +18,7 @@ import { InventarioPicker, type InventarioOption } from '@/components/inventario
 import { ClienteCombobox } from '@/components/clientes/ClienteCombobox'
 import { Select } from '@/components/ui/select'
 import { Combobox } from '@/components/ui/combobox'
-import { FORMA_PAGO, PLAZO_ENTREGA, GARANTIA, VIGENCIA_DIAS } from '@/lib/form-options'
+import { FORMA_PAGO, PLAZO_ENTREGA, GARANTIA, GARANTIA_MESES_OT, VIGENCIA_DIAS, VIGENCIA_DIAS_OT } from '@/lib/form-options'
 import {
   PlazosFinanciacionPanel,
   estadoInicialPlazos,
@@ -111,10 +111,10 @@ export function NuevoPresupuestoForm({
   )
   const [emisorId, setEmisorId] = useState(defEmisor)
   const [alicuotaDocumentoPct, setAlicuotaDocumentoPct] = useState(21)
-  const [vigenciaDias, setVigenciaDias] = useState(15)
+  const [vigenciaDias, setVigenciaDias] = useState(otPrefill ? 5 : 15)
   const [formaPago, setFormaPago] = useState('')
   const [plazoEntrega, setPlazoEntrega] = useState('')
-  const [garantia, setGarantia] = useState('')
+  const [garantia, setGarantia] = useState(otPrefill ? '6 meses' : '')
   const [observaciones, setObservaciones] = useState(
     otPrefill ? `Presupuesto vinculado a OT ${otPrefill.numero}` : '',
   )
@@ -228,8 +228,6 @@ export function NuevoPresupuestoForm({
             tipoArticulo: i.tipoArticulo ?? null,
             codigo: i.codigo ?? undefined,
             fotoUrl: i.fotoUrl ?? undefined,
-            numeroSerie: i.numeroSerie?.trim() || null,
-            proximoPreventivo: i.proximoPreventivo || null,
           })),
         }),
       })
@@ -307,7 +305,7 @@ export function NuevoPresupuestoForm({
             label="Vigencia"
             value={String(vigenciaDias)}
             onChange={(e) => setVigenciaDias(Number(e.target.value))}
-            options={VIGENCIA_DIAS}
+            options={otPrefill ? VIGENCIA_DIAS_OT : VIGENCIA_DIAS}
           />
           <Combobox
             label="Forma de pago"
@@ -329,7 +327,7 @@ export function NuevoPresupuestoForm({
             label="Garantía"
             value={garantia}
             onChange={setGarantia}
-            options={GARANTIA}
+            options={otPrefill ? GARANTIA_MESES_OT : GARANTIA}
             placeholder="12 meses…"
             allowCustom
           />
@@ -417,8 +415,8 @@ export function NuevoPresupuestoForm({
         <table className="w-full">
           <thead>
             <tr>
-              {['Descripción', 'Cant.', 'Precio unit.', 'IVA %', 'Serie / Preventivo', 'Subtotal', ''].map((h, i) => (
-                <th key={i} className={`px-5 py-2.5 text-[10px] font-bold text-[#8a909a] tracking-[0.5px] uppercase border-b border-[#f0f1f4] ${i > 0 && i < 6 ? 'text-right' : 'text-left'}`}>{h}</th>
+              {['Descripción', 'Cant.', 'Precio unit.', 'IVA %', 'Subtotal', ''].map((h, i) => (
+                <th key={i} className={`px-5 py-2.5 text-[10px] font-bold text-[#8a909a] tracking-[0.5px] uppercase border-b border-[#f0f1f4] ${i > 0 && i < 5 ? 'text-right' : 'text-left'}`}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -453,30 +451,6 @@ export function NuevoPresupuestoForm({
                       <option key={a.id} value={a.porcentaje}>{a.porcentaje}%</option>
                     ))}
                   </select>
-                </td>
-                <td className="px-5 py-3 border-b border-[#f4f5f7] text-right align-top">
-                  {item.tipoArticulo === 'EQUIPO' ? (
-                    <div className="flex flex-col gap-1 items-end">
-                      {item.esSerializado && (
-                        <input
-                          value={item.numeroSerie ?? ''}
-                          onChange={(e) => updateItem(i, 'numeroSerie', e.target.value)}
-                          placeholder="N° serie *"
-                          autoComplete="off"
-                          className="text-[11px] border border-[#e4e7eb] rounded px-1.5 py-0.5 w-28 text-right"
-                        />
-                      )}
-                      <input
-                        type="date"
-                        value={item.proximoPreventivo ?? ''}
-                        onChange={(e) => updateItem(i, 'proximoPreventivo', e.target.value)}
-                        title="Próximo preventivo"
-                        className="text-[11px] border border-[#e4e7eb] rounded px-1 py-0.5"
-                      />
-                    </div>
-                  ) : (
-                    <span className="text-[11px] text-[#9aa1ab]">—</span>
-                  )}
                 </td>
                 <td className="px-5 py-3 border-b border-[#f4f5f7] text-right text-[12.5px] font-bold">{formatMontoMoneda(item.cantidad * item.precioUnit, moneda)}</td>
                 <td className="px-5 py-3 border-b border-[#f4f5f7] text-right">

@@ -208,6 +208,17 @@ export async function getEquipoHistoriaCompleta(equipoId: string) {
           },
         },
       },
+      unidadInventario: {
+        select: {
+          id: true,
+          numeroSerie: true,
+          lote: true,
+          estado: true,
+          ubicacionDetalle: true,
+          deposito: { select: { id: true, nombre: true, tipo: true } },
+        },
+      },
+      inventario: { select: { id: true, nombre: true, sku: true, modoTrazabilidad: true } },
       accesorios: { include: { inventario: { select: { id: true, nombre: true, sku: true } } }, orderBy: { nombre: 'asc' } },
       componentes: { where: { activo: true }, orderBy: [{ venceEn: 'asc' }, { descripcion: 'asc' }] },
       planes: {
