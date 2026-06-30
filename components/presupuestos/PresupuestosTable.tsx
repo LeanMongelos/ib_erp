@@ -65,6 +65,9 @@ export function PresupuestosTable({ presupuestos }: { presupuestos: PresupuestoR
           </select>
         </div>
         <div className="flex-1" />
+        <Button variant="outline" onClick={() => router.push('/presupuestos/nuevo?modo=ocasional')}>
+          Venta ocasional
+        </Button>
         <Button onClick={() => router.push('/presupuestos/nuevo')}>
           <Plus size={16} strokeWidth={2.4} />
           Nuevo Presupuesto

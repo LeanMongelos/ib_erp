@@ -62,7 +62,7 @@ export function Sidebar({ stockBajoCount = null }: { stockBajoCount?: number | n
   return (
     <aside
       className={cn(
-        'h-full bg-[#0A0A0A] flex flex-col font-sans border-r border-[#1c1c1c]',
+        'h-full min-h-0 bg-[#0A0A0A] flex flex-col font-sans border-r border-[#1c1c1c]',
         'transition-[width,min-width] duration-200 ease-in-out overflow-hidden flex-shrink-0',
         sidebarHidden ? 'w-0 min-w-0 border-r-0' : 'w-[248px] min-w-[248px]',
       )}
@@ -70,7 +70,7 @@ export function Sidebar({ stockBajoCount = null }: { stockBajoCount?: number | n
       aria-hidden={sidebarHidden}
     >
       {/* Logo */}
-      <div className="flex items-center gap-[11px] px-[18px] pt-5 pb-[18px]">
+      <div className="flex shrink-0 items-center gap-[11px] px-[18px] pt-5 pb-[18px]">
         <Image
           src="/logo.png"
           alt="IB"
@@ -84,10 +84,13 @@ export function Sidebar({ stockBajoCount = null }: { stockBajoCount?: number | n
         </div>
       </div>
 
-      <div className="h-px bg-[#1c1c1c] mx-4 mb-2.5" />
+      <div className="h-px shrink-0 bg-[#1c1c1c] mx-4 mb-2.5" />
 
-      {/* Navegación */}
-      <nav className="flex flex-col flex-1 overflow-hidden" aria-label="Secciones del sistema">
+      {/* Navegación — scroll cuando hay muchos módulos */}
+      <nav
+        className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden overscroll-contain pb-2 [scrollbar-width:thin] [scrollbar-color:#2a2a2a_#0A0A0A]"
+        aria-label="Secciones del sistema"
+      >
         <p className="px-[18px] pb-2 text-[#4b5563] text-[10px] font-bold tracking-[1.2px] uppercase">
           Principal
         </p>
@@ -132,7 +135,7 @@ export function Sidebar({ stockBajoCount = null }: { stockBajoCount?: number | n
         href="https://lmdigitalsolutions.com.ar/"
         target="_blank"
         rel="noopener noreferrer"
-        className="m-3 p-3.5 bg-[#141414] rounded-[10px] border border-[#1f1f1f] flex items-center gap-2.5 hover:bg-[#1a1a1a] hover:border-[#2a2a2a] transition-colors"
+        className="m-3 shrink-0 p-3.5 bg-[#141414] rounded-[10px] border border-[#1f1f1f] flex items-center gap-2.5 hover:bg-[#1a1a1a] hover:border-[#2a2a2a] transition-colors"
       >
         <Image
           src="/1.png"

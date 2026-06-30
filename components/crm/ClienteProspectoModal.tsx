@@ -28,7 +28,9 @@ interface Props {
   open: boolean
   prefill: ProspectoPrefill
   onClose: () => void
-  onVinculado: (cliente: { id: string; nombre: string }) => void
+  onVinculado: (cliente: { id: string; nombre: string; condicionIva?: string | null }) => void
+  /** Presupuesto rápido: sin sucursales obligatorias, Consumidor Final por defecto */
+  variant?: 'prospecto' | 'ocasional'
 }
 
 export function parseProspectoDesdeConversacion(
@@ -46,7 +48,14 @@ export function parseProspectoDesdeConversacion(
   }
 }
 
-export function ClienteProspectoModal({ open, prefill, onClose, onVinculado }: Props) {
+export function ClienteProspectoModal({
+  open,
+  prefill,
+  onClose,
+  onVinculado,
+  variant = 'prospecto',
+}: Props) {
+  const esOcasional = variant === 'ocasional'
   const puedeCrear = useCan('clientes.create')
   const [modo, setModo] = useState<'crear' | 'vincular'>('crear')
   const [guardando, setGuardando] = useState(false)
@@ -75,9 +84,9 @@ export function ClienteProspectoModal({ open, prefill, onClose, onVinculado }: P
         direccion: '',
         ciudad: '',
       })
-      setSucursales([sucursalDraftVacia()])
+      setSucursales(esOcasional ? [] : [sucursalDraftVacia()])
     }
-  }, [open, prefill])
+  }, [open, prefill, esOcasional])
 
   if (!open) return null
 
@@ -95,7 +104,7 @@ export function ClienteProspectoModal({ open, prefill, onClose, onVinculado }: P
       const res = await fetch(`/api/clientes/${clienteExistenteId}`)
       const data = await res.json()
       if (!res.ok) throw new Error(mensajeErrorJson(data, 'Cliente no encontrado'))
-      onVinculado({ id: data.id, nombre: data.nombre })
+      onVinculado({ id: data.id, nombre: data.nombre, condicionIva: data.condicionIva })
       onClose()
     } catch (e) {
       toast.error(mensajeErrorDesconocido(e, 'No se pudo vincular el cliente'))
@@ -113,10 +122,12 @@ export function ClienteProspectoModal({ open, prefill, onClose, onVinculado }: P
       toast.error('El nombre debe tener al menos 2 caracteres')
       return
     }
-    const errSucursales = validarSucursalesDraft(sucursales)
-    if (errSucursales) {
-      toast.error(errSucursales)
-      return
+    if (!esOcasional) {
+      const errSucursales = validarSucursalesDraft(sucursales)
+      if (errSucursales) {
+        toast.error(errSucursales)
+        return
+      }
     }
     setGuardando(true)
     try {
@@ -131,6 +142,7 @@ export function ClienteProspectoModal({ open, prefill, onClose, onVinculado }: P
           telefono: form.telefono.trim() || undefined,
           direccion: form.direccion.trim() || undefined,
           ciudad: form.ciudad.trim() || undefined,
+          condicionIva: esOcasional ? 'Consumidor Final' : undefined,
           sucursales: sucursales.map((s) => ({
             nombre: s.nombre.trim(),
             direccion: s.direccion?.trim() || null,
@@ -145,7 +157,11 @@ export function ClienteProspectoModal({ open, prefill, onClose, onVinculado }: P
       const data = await res.json()
       if (!res.ok) throw new Error(mensajeErrorJson(data, 'No se pudo crear el cliente'))
       toast.success('Cliente creado')
-      onVinculado({ id: data.id, nombre: data.nombre })
+      onVinculado({
+        id: data.id,
+        nombre: data.nombre,
+        condicionIva: esOcasional ? 'Consumidor Final' : data.condicionIva,
+      })
       onClose()
     } catch (e) {
       toast.error(mensajeErrorDesconocido(e, 'No se pudo crear el cliente'))
@@ -162,15 +178,21 @@ export function ClienteProspectoModal({ open, prefill, onClose, onVinculado }: P
       <div className="bg-white rounded-[12px] w-full max-w-xl shadow-xl overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b border-[#e4e7eb]">
           <div>
-            <h3 className="text-[15px] font-bold text-[#1f242c]">Agregar como cliente</h3>
-            <p className="text-[12px] text-[#6b7280] mt-0.5">Prospecto: {prefill.nombre}</p>
+            <h3 className="text-[15px] font-bold text-[#1f242c]">
+              {esOcasional ? 'Cliente ocasional' : 'Agregar como cliente'}
+            </h3>
+            <p className="text-[12px] text-[#6b7280] mt-0.5">
+              {esOcasional
+                ? 'Datos mínimos para el PDF del presupuesto. Completá CUIT y sucursales al facturar si hace falta.'
+                : `Prospecto: ${prefill.nombre}`}
+            </p>
           </div>
           <button type="button" onClick={onClose} className="text-[#9aa1ab] hover:text-[#3a4150] p-1">
             <X size={18} />
           </button>
         </div>
 
-        <div className="px-5 pt-3 flex gap-2 border-b border-[#f0f1f4]">
+        <div className={`px-5 pt-3 flex gap-2 border-b border-[#f0f1f4] ${esOcasional ? 'hidden' : ''}`}>
           {(['crear', 'vincular'] as const).map((m) => (
             <button
               key={m}
@@ -218,14 +240,16 @@ export function ClienteProspectoModal({ open, prefill, onClose, onVinculado }: P
                 value={form.ciudad}
                 onChange={(e) => setF('ciudad', e.target.value)}
               />
-              <div className="pt-2 border-t border-[#eef0f2]">
-                <SucursalesEditor
-                  value={sucursales}
-                  onChange={setSucursales}
-                  tipoCliente={form.tipo}
-                  compact
-                />
-              </div>
+              {!esOcasional && (
+                <div className="pt-2 border-t border-[#eef0f2]">
+                  <SucursalesEditor
+                    value={sucursales}
+                    onChange={setSucursales}
+                    tipoCliente={form.tipo}
+                    compact
+                  />
+                </div>
+              )}
             </>
           )}
         </div>
@@ -239,7 +263,7 @@ export function ClienteProspectoModal({ open, prefill, onClose, onVinculado }: P
             loading={guardando}
             onClick={modo === 'vincular' ? vincularExistente : crearYVincular}
           >
-            {modo === 'vincular' ? 'Vincular' : 'Crear y vincular'}
+            {modo === 'vincular' ? 'Vincular' : esOcasional ? 'Crear y usar' : 'Crear y vincular'}
           </Button>
         </div>
       </div>

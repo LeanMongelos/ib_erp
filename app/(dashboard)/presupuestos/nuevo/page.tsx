@@ -13,11 +13,12 @@ import { obtenerPlantillaPredeterminadaResumen } from '@/lib/plantillas/resolver
 export default async function NuevoPresupuestoPage({
   searchParams,
 }: {
-  searchParams: Promise<{ otId?: string; clienteId?: string; negocioEmbudoId?: string }>
+  searchParams: Promise<{ otId?: string; clienteId?: string; negocioEmbudoId?: string; modo?: string }>
 }) {
   await requirePagePermission('presupuestos.create')
 
-  const { otId, clienteId: clienteIdParam, negocioEmbudoId } = await searchParams
+  const { otId, clienteId: clienteIdParam, negocioEmbudoId, modo } = await searchParams
+  const modoOcasional = modo === 'ocasional'
   const clienteEventual = await ensureClienteEventual()
 
   const ot = otId
@@ -68,7 +69,9 @@ export default async function NuevoPresupuestoPage({
 
   const subtitle = ot
     ? `Desde OT ${ot.numero} · ${ot.descripcion.slice(0, 60)}`
-    : 'Presupuestos · Nueva cotización'
+    : modoOcasional
+      ? 'Venta ocasional · Nueva cotización'
+      : 'Presupuestos · Nueva cotización'
 
   return (
     <>
@@ -82,6 +85,7 @@ export default async function NuevoPresupuestoPage({
           negocioEmbudoId={negocioEmbudoId}
           otPrefill={ot ? plain(ot) : null}
           plantillaPresupuesto={plain(plantillaPresupuesto)}
+          modoOcasional={modoOcasional}
         />
       </div>
     </>

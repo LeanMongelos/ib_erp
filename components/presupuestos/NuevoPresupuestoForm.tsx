@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Trash2, FileText } from 'lucide-react'
+import { Plus, Trash2, FileText, UserPlus, ChevronDown, ChevronUp } from 'lucide-react'
 import { toast } from 'sonner'
 import { Card, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -27,6 +27,7 @@ import {
 import { formatCondicionPago } from '@/lib/cobranzas/plazos'
 import { calcularInteresFinanciacion } from '@/lib/cobranzas/financiacion'
 import type { PresetPlazoKey } from '@/lib/cobranzas/plazos'
+import { ClienteProspectoModal } from '@/components/crm/ClienteProspectoModal'
 
 interface ItemRow {
   id: string
@@ -65,6 +66,7 @@ interface Props {
     repuestos?: { descripcion: string; cantidad: number; precioUnit: number }[]
   } | null
   plantillaPresupuesto: { id: string | null; nombre: string; origen: string }
+  modoOcasional?: boolean
   editPrefill?: {
     id: string
     numero: string
@@ -129,11 +131,21 @@ export function NuevoPresupuestoForm({
   negocioEmbudoId,
   otPrefill,
   plantillaPresupuesto,
+  modoOcasional = false,
   editPrefill,
 }: Props) {
   const router = useRouter()
   const { alicuotas, defaultPct } = useAlicuotasIva()
   const esEdicion = Boolean(editPrefill)
+  const [clientesExtra, setClientesExtra] = useState<ClienteOption[]>([])
+  const [modalClienteOcasional, setModalClienteOcasional] = useState(false)
+  const [mostrarAvanzado, setMostrarAvanzado] = useState(!modoOcasional)
+
+  const clientesOpciones = useMemo(() => {
+    const ids = new Set(clientes.map((c) => c.id))
+    const extra = clientesExtra.filter((c) => !ids.has(c.id))
+    return [...clientes, ...extra]
+  }, [clientes, clientesExtra])
 
   const defEmisor = emisores.find((e) => e.predeterminado)?.id ?? emisores[0]?.id ?? ''
   const [clienteId, setClienteId] = useState(
@@ -180,9 +192,9 @@ export function NuevoPresupuestoForm({
 
   useEffect(() => {
     if (!clienteId) return
-    const c = clientes.find((x) => x.id === clienteId)
+    const c = clientesOpciones.find((x) => x.id === clienteId)
     setAlicuotaDocumentoPct(resolverPorcentajeCliente(c, defaultPct))
-  }, [clienteId, clientes, defaultPct])
+  }, [clienteId, clientesOpciones, defaultPct])
 
   const totales = useMemo(
     () =>
@@ -215,6 +227,38 @@ export function NuevoPresupuestoForm({
   )
 
   const totalACobrar = totales.total + interesFinanciacion
+
+  const incluyeEquipo = useMemo(
+    () => items.some((i) => i.tipoArticulo === 'EQUIPO'),
+    [items],
+  )
+
+  const clienteSeleccionado = clientesOpciones.find((c) => c.id === clienteId)
+  const esClienteEventual =
+    Boolean(clienteEventualId && clienteId === clienteEventualId) ||
+    clienteSeleccionado?.nombre === 'Cliente Eventual'
+
+  function registrarClienteOcasional(cliente: {
+    id: string
+    nombre: string
+    condicionIva?: string | null
+    alicuotaIva?: { porcentaje: number } | null
+  }) {
+    setClientesExtra((prev) => {
+      if (prev.some((c) => c.id === cliente.id) || clientes.some((c) => c.id === cliente.id)) return prev
+      return [
+        ...prev,
+        {
+          id: cliente.id,
+          nombre: cliente.nombre,
+          condicionIva: cliente.condicionIva ?? 'Consumidor Final',
+          alicuotaIva: cliente.alicuotaIva ?? null,
+        },
+      ]
+    })
+    setClienteId(cliente.id)
+    setModalClienteOcasional(false)
+  }
 
   function addItem() {
     setItems([...items, { id: `new-${Date.now()}`, descripcion: '', cantidad: 1, precioUnit: 0 }])
@@ -349,6 +393,15 @@ export function NuevoPresupuestoForm({
           </p>
         </div>
       )}
+      {modoOcasional && !esEdicion && !otPrefill && (
+        <div className="bg-[#FFFBF5] border border-[#FFE4CC] rounded-[10px] px-4 py-3">
+          <p className="text-[13px] font-bold text-[#92400E]">Venta ocasional</p>
+          <p className="text-[12px] text-[#7c4a1a] mt-0.5 leading-relaxed">
+            Creá un cliente rápido con nombre y contacto para que el PDF muestre datos reales.
+            CUIT, sucursales y remito se completan al facturar si el presupuesto incluye equipos.
+          </p>
+        </div>
+      )}
       <Card>
         <div className="mb-4 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
           <h3 className="text-[13.5px] font-bold text-[#1f242c]">Datos del presupuesto</h3>
@@ -364,15 +417,35 @@ export function NuevoPresupuestoForm({
           </div>
         </div>
         <div className="grid grid-cols-2 gap-4">
-          <ClienteCombobox
-            value={clienteId}
-            onChange={setClienteId}
-            initialOptions={clientes}
-            disabled={!!otPrefill || esEdicion}
-          />
-          {clienteId === clienteEventualId && (
+          <div className="col-span-2 flex flex-col sm:flex-row sm:items-end gap-2">
+            <div className="flex-1 min-w-0">
+              <ClienteCombobox
+                value={clienteId}
+                onChange={setClienteId}
+                initialOptions={clientesOpciones}
+                disabled={!!otPrefill || esEdicion}
+              />
+            </div>
+            {!otPrefill && !esEdicion && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="shrink-0"
+                onClick={() => setModalClienteOcasional(true)}
+              >
+                <UserPlus size={14} /> Cliente ocasional
+              </Button>
+            )}
+          </div>
+          {esClienteEventual && !esEdicion && (
             <p className="text-[11px] text-[#9aa1ab] col-span-2 -mt-2">
-              Venta ocasional sin ficha completa. Podés cambiar el cliente antes de guardar.
+              Usando cliente genérico. Usá «Cliente ocasional» para que el PDF muestre el nombre real del comprador.
+            </p>
+          )}
+          {!esClienteEventual && clienteSeleccionado && modoOcasional && (
+            <p className="text-[11px] text-[#15803D] col-span-2 -mt-2">
+              Cliente «{clienteSeleccionado.nombre}» — listo para guardar y enviar PDF.
             </p>
           )}
           <Select
@@ -430,18 +503,30 @@ export function NuevoPresupuestoForm({
             </p>
           </div>
         </div>
-        <div className="mt-4 pt-4 border-t border-[#f0f1f4]">
-          <PlazosFinanciacionPanel
-            totalNeto={totales.total}
-            presetPlazo={presetPlazo}
-            onPresetPlazoChange={setPresetPlazo}
-            plazosCustom={plazosCustom}
-            onPlazosCustomChange={setPlazosCustom}
-            tasaFinanciacionPct={tasaFinanciacionPct}
-            onTasaFinanciacionPctChange={setTasaFinanciacionPct}
-            descripcion="Plazos de cobranza propuestos al cliente. La tasa mensual aplica interés proporcional a los días de cada cuota."
-          />
-        </div>
+        {(modoOcasional || mostrarAvanzado) && (
+          <div className="mt-4 pt-4 border-t border-[#f0f1f4]">
+            <PlazosFinanciacionPanel
+              totalNeto={totales.total}
+              presetPlazo={presetPlazo}
+              onPresetPlazoChange={setPresetPlazo}
+              plazosCustom={plazosCustom}
+              onPlazosCustomChange={setPlazosCustom}
+              tasaFinanciacionPct={tasaFinanciacionPct}
+              onTasaFinanciacionPctChange={setTasaFinanciacionPct}
+              descripcion="Plazos de cobranza propuestos al cliente. La tasa mensual aplica interés proporcional a los días de cada cuota."
+            />
+          </div>
+        )}
+        {modoOcasional && (
+          <button
+            type="button"
+            onClick={() => setMostrarAvanzado((v) => !v)}
+            className="mt-3 flex items-center gap-1 text-[11.5px] font-bold text-[#E8650A] hover:underline"
+          >
+            {mostrarAvanzado ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            {mostrarAvanzado ? 'Ocultar plazos de cobranza' : 'Mostrar plazos de cobranza e interés'}
+          </button>
+        )}
         <div className="mt-4 flex flex-col gap-1.5">
           <label className="text-[11.5px] font-semibold text-[#5b626d] tracking-wide uppercase">Observaciones</label>
           <textarea value={observaciones} onChange={(e) => setObservaciones(e.target.value)} rows={2}
@@ -453,6 +538,11 @@ export function NuevoPresupuestoForm({
       <Card padding={false}>
         <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <CardTitle>Ítems</CardTitle>
+          {incluyeEquipo && (
+            <p className="text-[11px] text-[#7c4a1a] bg-[#FFFBF5] border border-[#FFE4CC] rounded-[8px] px-2.5 py-1.5 max-w-md">
+              Incluye equipos: al facturar vas a necesitar sucursal de instalación y remito con series.
+            </p>
+          )}
           <div className="flex flex-col sm:flex-row gap-2 sm:items-center w-full sm:w-auto">
             <InventarioPicker
               className="w-full sm:w-72"
@@ -570,6 +660,14 @@ export function NuevoPresupuestoForm({
           {esEdicion ? 'Guardar cambios' : 'Guardar presupuesto'}
         </Button>
       </div>
+
+      <ClienteProspectoModal
+        open={modalClienteOcasional}
+        variant="ocasional"
+        prefill={{ nombre: '' }}
+        onClose={() => setModalClienteOcasional(false)}
+        onVinculado={registrarClienteOcasional}
+      />
     </div>
   )
 }
