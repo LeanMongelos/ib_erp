@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requirePermission, handleApiError, ApiError } from '@/lib/api-auth'
-import { buscarSiguienteCodigoInterno, extraerPrefijoCodigo } from '@/lib/inventario/siguiente-codigo'
+import { buscarSiguienteCodigoInterno } from '@/lib/inventario/siguiente-codigo-db'
+import { extraerPrefijoCodigo } from '@/lib/inventario/siguiente-codigo'
 import { plain } from '@/lib/serialize'
 
 export async function GET(req: NextRequest) {

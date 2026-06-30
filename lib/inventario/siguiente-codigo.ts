@@ -1,7 +1,6 @@
 /**
- * Correlativo de código interno (prefijo letras + número).
+ * Correlativo de código interno (prefijo letras + número) — solo lógica pura (client-safe).
  */
-import { prisma } from '@/lib/prisma'
 import { normalizarCodigoInterno, validarCodigoInterno } from '@/lib/inventario/codigo-interno'
 
 const RE_PREFIJO = /^([A-Z]{3,4})$/
@@ -66,38 +65,4 @@ export type SiguienteCodigoResult = {
   ultimo: string | null
   ultimoNumero: number
   siguiente: string
-}
-
-export async function buscarSiguienteCodigoInterno(prefijoRaw: string): Promise<SiguienteCodigoResult> {
-  const prefijo = extraerPrefijoCodigo(prefijoRaw)
-  if (!prefijo) {
-    throw new Error('El prefijo debe tener 3–4 letras (ej. HOE, ALQ)')
-  }
-
-  const candidatos = await prisma.inventario.findMany({
-    where: {
-      sku: { not: null, startsWith: prefijo, mode: 'insensitive' },
-    },
-    select: { sku: true },
-  })
-
-  let maxNum = 0
-  let digitosMax = 3
-  let ultimo: string | null = null
-
-  for (const row of candidatos) {
-    if (!row.sku) continue
-    const partes = parseCodigoInternoPartes(row.sku)
-    if (!partes || partes.prefijo !== prefijo) continue
-    if (partes.numero > maxNum) {
-      maxNum = partes.numero
-      digitosMax = partes.digitos
-      ultimo = partes.codigo
-    }
-  }
-
-  const nextNum = maxNum + 1
-  const siguiente = formatearCodigoCorrelativo(prefijo, nextNum, nextNum > 999 ? 4 : digitosMax)
-
-  return { prefijo, ultimo, ultimoNumero: maxNum, siguiente }
 }
