@@ -7,6 +7,7 @@ import {
   sincronizarStockDesdeUnidades,
   validarDepositoActivo,
   moverUnidadEntreDepositos,
+  validarNumeroSerieUnico,
 } from '@/lib/inventario/unidades'
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ uid: string }> }) {
@@ -29,11 +30,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ ui
         data.numeroSerie !== undefined ? (data.numeroSerie?.trim() || null) : prev.numeroSerie
       const lote = data.lote !== undefined ? (data.lote?.trim() || null) : prev.lote
 
-      if (numeroSerie && numeroSerie !== prev.numeroSerie) {
-        const dup = await tx.inventarioUnidad.findFirst({
-          where: { inventarioId: prev.inventarioId, numeroSerie, id: { not: uid } },
-        })
-        if (dup) throw new ApiError(409, `Ya existe otra unidad con el número de serie «${numeroSerie}»`)
+      if (data.numeroSerie !== undefined) {
+        await validarNumeroSerieUnico(numeroSerie, prev.inventario.modoTrazabilidad, {
+          inventarioId: prev.inventarioId,
+          unidadIdExcluir: uid,
+        }, tx)
       }
 
       const nuevoDepositoId =

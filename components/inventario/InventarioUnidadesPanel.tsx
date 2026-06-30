@@ -90,6 +90,10 @@ export function InventarioUnidadesPanel({
   }, [focusUnidadId, editandoId, prefillDepositoId, prefillUbicacion, prefillNumeroSerie])
 
   async function guardarNueva() {
+    if (muestraSerie && !form.numeroSerie.trim()) {
+      toast.error('Ingresá el número de serie')
+      return
+    }
     setLoading(true)
     try {
       const res = await fetch(`/api/inventario/${inventarioId}/unidades`, {
@@ -116,6 +120,10 @@ export function InventarioUnidadesPanel({
   }
 
   async function guardarEdicion(id: string) {
+    if (muestraSerie && !form.numeroSerie.trim()) {
+      toast.error('Ingresá el número de serie')
+      return
+    }
     setLoading(true)
     try {
       const res = await fetch(`/api/inventario/unidades/${id}`, {
@@ -180,7 +188,8 @@ export function InventarioUnidadesPanel({
     <div className="flex flex-col gap-4">
       <p className="text-[11px] text-[#6b7280]">
         Modo: <span className="font-semibold">{modo?.label ?? modoTrazabilidad}</span>. El stock se sincroniza con las unidades en estado «En stock».
-        {(muestraSerie || muestraLote) && ' Serie y lote son opcionales al ingresar; si cargás serie, debe ser única por producto.'}
+        {muestraSerie && ' El número de serie es obligatorio y único en todo el inventario.'}
+        {muestraLote && !muestraSerie && ' El lote es opcional al ingresar.'}
         {' '}Al cambiar el depósito de una unidad se registra una transferencia interna.
       </p>
 
@@ -188,10 +197,10 @@ export function InventarioUnidadesPanel({
         <div className="border border-[#eef0f2] rounded-[9px] p-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
           {muestraSerie && (
             <Input
-              label="N° serie (opcional)"
+              label="N° serie *"
               value={form.numeroSerie}
               onChange={(e) => setForm({ ...form, numeroSerie: e.target.value })}
-              placeholder="Opcional"
+              placeholder="Obligatorio · único en el ERP"
             />
           )}
           {muestraLote && (
@@ -261,7 +270,11 @@ export function InventarioUnidadesPanel({
                 key={u.id}
                 className={`border-t border-[#f4f5f7] text-[12px] ${u.id === focusUnidadId || u.id === editandoId ? 'bg-[#FFF4EC]' : ''}`}
               >
-                <td className="px-3 py-2 font-mono">{u.numeroSerie ?? '—'}</td>
+                <td className="px-3 py-2 font-mono">
+                  {u.numeroSerie ?? (
+                    <span className="text-red-500 font-semibold">Sin serie</span>
+                  )}
+                </td>
                 <td className="px-3 py-2">{u.lote ?? '—'}</td>
                 <td className="px-3 py-2">
                   {u.deposito ? (

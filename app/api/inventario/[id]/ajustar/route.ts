@@ -24,7 +24,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
 
     if (data.depositoId) {
-      const delta = data.tipo === 'SALIDA' ? -data.cantidad : data.cantidad
+      const esSalida = data.tipo === 'SALIDA' || data.tipo === 'AJUSTE_NEGATIVO'
+      const delta = esSalida ? -data.cantidad : data.cantidad
       await prisma.$transaction(async (tx) => {
         await ajustarStockDeposito(
           {
@@ -50,7 +51,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         )
       })
     } else {
-      if (data.tipo === 'SALIDA' && item.stock < data.cantidad) {
+      const esSalida = data.tipo === 'SALIDA' || data.tipo === 'AJUSTE_NEGATIVO'
+      if (esSalida && item.stock < data.cantidad) {
         throw new ApiError(400, `Stock insuficiente (disponible: ${item.stock})`)
       }
 

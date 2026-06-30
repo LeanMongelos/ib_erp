@@ -40,11 +40,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const data = inventarioUnidadCreateSchema.parse(await req.json())
 
     const unidad = await prisma.$transaction(async (tx) => {
-      await validarUnidadNueva(id, data, tx)
+      const { serie } = await validarUnidadNueva(id, data, tx)
       const creada = await tx.inventarioUnidad.create({
         data: {
           inventarioId: id,
-          numeroSerie: data.numeroSerie?.trim() || null,
+          numeroSerie: serie,
           lote: data.lote?.trim() || null,
           notas: data.notas?.trim() || null,
           fechaIngreso: data.fechaIngreso ?? new Date(),

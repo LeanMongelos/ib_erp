@@ -19,4 +19,6 @@ export interface AlertaInbox {
   mensaje: string
   href: string
   fecha: string
+  /** No se puede marcar como leída hasta que desaparezca la condición (p. ej. cargar SN). */
+  persistente?: boolean
 }

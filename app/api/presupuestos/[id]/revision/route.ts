@@ -7,7 +7,7 @@ import { registrarAuditoria, getIp } from '@/lib/audit'
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const actor = await requirePermission('presupuestos.create')
+    const actor = await requirePermission('presupuestos.update')
     const { id } = await params
     const body = await req.json().catch(() => ({}))
     const data = presupuestoRevisionSchema.parse(body)

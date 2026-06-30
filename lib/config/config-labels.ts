@@ -59,6 +59,7 @@ export const EVENTOS_NOTIFICACION: { value: string; label: string }[] = [
   { value: 'equipo.componente_vence', label: 'Componente de equipo por vencer' },
   { value: 'presupuesto.por_vencer', label: 'Presupuesto por vencer' },
   { value: 'stock.bajo_minimo', label: 'Stock bajo mínimo' },
+  { value: 'inventario.unidad_sin_serie', label: 'Equipos sin número de serie' },
   { value: 'crm.conversacion_sin_leer', label: 'Mensajes CRM sin leer' },
 ]
 

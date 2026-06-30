@@ -30,6 +30,7 @@ interface AlertaItem {
   href: string
   fecha: string
   leida: boolean
+  persistente?: boolean
 }
 
 const ICONO_CATEGORIA: Record<CategoriaAlerta, typeof Bell> = {
@@ -115,14 +116,16 @@ export function NotificationInboxBase({
     return () => document.removeEventListener('mousedown', onDoc)
   }, [])
 
-  async function marcarLeida(clave: string, href: string) {
-    await fetch('/api/notificaciones/inbox', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ claves: [clave] }),
-    })
+  async function abrirAlerta(item: AlertaItem) {
+    if (!item.persistente) {
+      await fetch('/api/notificaciones/inbox', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ claves: [item.clave] }),
+      })
+    }
     setOpen(false)
-    router.push(href)
+    router.push(item.href)
     cargar()
   }
 
@@ -196,7 +199,7 @@ export function NotificationInboxBase({
                 <button
                   key={item.clave}
                   type="button"
-                  onClick={() => marcarLeida(item.clave, item.href)}
+                  onClick={() => abrirAlerta(item)}
                   className="w-full text-left px-4 py-3 border-b border-[#f4f5f7] hover:bg-[#fafbfc] transition-colors flex gap-3"
                 >
                   <span className="relative shrink-0 mt-0.5">
@@ -213,6 +216,11 @@ export function NotificationInboxBase({
                   <span className="min-w-0 flex-1">
                     <span className="block text-[12.5px] font-bold text-[#1f242c] leading-snug">{item.titulo}</span>
                     <span className="block text-[11.5px] text-[#6b7280] mt-0.5 line-clamp-2">{item.mensaje}</span>
+                    {item.persistente && (
+                      <span className="block text-[10px] font-semibold text-[#E8650A] mt-1">
+                        Pendiente hasta cargar el N° serie
+                      </span>
+                    )}
                   </span>
                 </button>
               )

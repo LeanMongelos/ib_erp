@@ -5,6 +5,7 @@ import { plain } from '@/lib/serialize'
 import { prisma } from '@/lib/prisma'
 import { generarAlertasInbox, marcarAlertasLeidas, marcarTodasLeidas } from '@/lib/notificaciones/generar-inbox'
 import { filtrarAlertasPorScope, parseInboxScope } from '@/lib/notificaciones/inbox-scope'
+import { esAlertaInventarioPersistente } from '@/lib/inventario/unidades-sin-serie'
 import { listarNotificacionesOcInbox, type AlertaInboxConLeida } from '@/lib/compras/oc-workflow/inbox'
 import { marcarNotificacionesOcLeidasPorClaves } from '@/lib/compras/oc-workflow/notificaciones'
 import type { AlertaInbox } from '@/lib/notificaciones/generar-inbox-types'
@@ -19,7 +20,7 @@ function mergeInboxItems(
   const porClave = new Map<string, InboxItem>()
 
   for (const a of computadas) {
-    porClave.set(a.clave, { ...a, leida: leidasSet.has(a.clave) })
+    porClave.set(a.clave, { ...a, leida: a.persistente ? false : leidasSet.has(a.clave) })
   }
   for (const n of persistidas) {
     porClave.set(n.clave, n)
@@ -70,7 +71,7 @@ export async function PATCH(req: NextRequest) {
         scope,
       )
       const persistidas = scope === 'crm' ? [] : await listarNotificacionesOcInbox(user.id)
-      const clavesComputadas = alertas.map((a) => a.clave)
+      const clavesComputadas = alertas.filter((a) => !a.persistente).map((a) => a.clave)
       const clavesPersistidas = persistidas.filter((n) => !n.leida).map((n) => n.clave)
       await marcarTodasLeidas(user.id, clavesComputadas)
       await marcarNotificacionesOcLeidasPorClaves(clavesPersistidas, user.id)
@@ -79,7 +80,9 @@ export async function PATCH(req: NextRequest) {
 
     if (body.claves?.length) {
       const ocClaves = body.claves.filter((c) => c.startsWith('notif-oc:'))
-      const otras = body.claves.filter((c) => !c.startsWith('notif-oc:'))
+      const otras = body.claves.filter(
+        (c) => !c.startsWith('notif-oc:') && !esAlertaInventarioPersistente(c),
+      )
       if (otras.length) await marcarAlertasLeidas(user.id, otras)
       if (ocClaves.length) await marcarNotificacionesOcLeidasPorClaves(ocClaves, user.id)
       return NextResponse.json({ ok: true })

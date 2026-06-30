@@ -8,6 +8,7 @@ import { tienePermiso } from '@/lib/rbac'
 import { getAlertasComponentesEquipos } from '@/lib/equipos/historia-clinica'
 import { consultarAlertasCompra, UMBRAL_AP_PROXIMO_DIAS, type AlertaCompra } from '@/lib/compras/alertas-compra'
 import { consultarAlertasAlquiler } from '@/lib/compras/alquiler-recordatorio'
+import { alertasUnidadesSinSerie } from '@/lib/inventario/unidades-sin-serie'
 import { listarGruposCuotasAlquilerCobranza, claveAlertaAlquilerCobranza, hrefAlertaAlquilerCobranza, tituloAlertaAlquilerCobranza, mensajeAlertaAlquilerCobranza } from '@/lib/alquiler/alertas-cobranza'
 import { formatFecha, formatMonto } from '@/lib/utils'
 import type { AlertaInbox, PrioridadAlerta } from '@/lib/notificaciones/generar-inbox-types'
@@ -399,6 +400,13 @@ export async function generarAlertasInbox(opts?: GenerarInboxOptions): Promise<A
         fecha: ahora.toISOString(),
       })
     }
+  }
+
+  if (
+    reglaActiva(reglas, 'inventario.unidad_sin_serie') &&
+    puedeVerModulo(permisos, 'inventario.read')
+  ) {
+    alertas.push(...(await alertasUnidadesSinSerie()))
   }
 
   if (reglaActiva(reglas, 'presupuesto.por_vencer')) {

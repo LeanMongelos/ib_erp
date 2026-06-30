@@ -1577,6 +1577,7 @@ enum TipoMovimientoStock {
   ENTRADA
   SALIDA
   AJUSTE
+  AJUSTE_NEGATIVO
   TRANSFERENCIA
 }
 

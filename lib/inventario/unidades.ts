@@ -20,6 +20,50 @@ export function requiereLote(modo: ModoTrazabilidad): boolean {
   return modo === 'LOTE' || modo === 'SERIE_Y_LOTE'
 }
 
+function normalizarSerie(numeroSerie?: string | null): string | null {
+  const serie = numeroSerie?.trim() || null
+  return serie
+}
+
+/** Valida SN obligatorio (modo serie), unicidad global case-insensitive. */
+export async function validarNumeroSerieUnico(
+  numeroSerie: string | null | undefined,
+  modoTrazabilidad: ModoTrazabilidad,
+  opts: { inventarioId?: string; unidadIdExcluir?: string },
+  db?: DbClient,
+): Promise<string | null> {
+  const client = db ?? prisma
+  const serie = normalizarSerie(numeroSerie)
+
+  if (!serie) {
+    if (requiereSerie(modoTrazabilidad)) {
+      throw new ApiError(400, 'El número de serie es obligatorio para productos serializados')
+    }
+    return null
+  }
+
+  const dup = await client.inventarioUnidad.findFirst({
+    where: {
+      numeroSerie: { equals: serie, mode: 'insensitive' },
+      ...(opts.unidadIdExcluir ? { id: { not: opts.unidadIdExcluir } } : {}),
+    },
+    select: {
+      id: true,
+      inventario: { select: { id: true, nombre: true } },
+    },
+  })
+
+  if (dup) {
+    const donde =
+      dup.inventario.id === opts.inventarioId
+        ? ' en este producto'
+        : ` en «${dup.inventario.nombre}»`
+    throw new ApiError(409, `El número de serie «${serie}» ya está registrado${donde}`)
+  }
+
+  return serie
+}
+
 export async function validarDepositoActivo(depositoId: string | null | undefined, db?: DbClient) {
   if (!depositoId) return null
   const client = db ?? prisma
@@ -65,19 +109,16 @@ export async function validarUnidadNueva(
     throw new ApiError(400, 'Este producto no tiene trazabilidad por unidad habilitada')
   }
 
-  const serie = data.numeroSerie?.trim() || null
-
-  if (serie) {
-    const dup = await client.inventarioUnidad.findFirst({
-      where: { inventarioId, numeroSerie: serie },
-      select: { id: true },
-    })
-    if (dup) throw new ApiError(409, `Ya existe una unidad con el número de serie «${serie}» en este producto`)
-  }
+  const serie = await validarNumeroSerieUnico(
+    data.numeroSerie,
+    inv.modoTrazabilidad,
+    { inventarioId },
+    client,
+  )
 
   await validarDepositoActivo(data.depositoId, client)
 
-  return inv
+  return { inv, serie }
 }
 
 export async function marcarUnidadVendida(

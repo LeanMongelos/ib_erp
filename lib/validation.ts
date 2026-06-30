@@ -776,7 +776,7 @@ export const inventarioCreateSchema = z.object({
 
 export const inventarioAjusteSchema = z.object({
   cantidad: z.number().int().positive('La cantidad debe ser mayor a 0'),
-  tipo:     z.enum(['ENTRADA', 'SALIDA', 'AJUSTE']),
+  tipo:     z.enum(['ENTRADA', 'SALIDA', 'AJUSTE', 'AJUSTE_NEGATIVO']),
   motivo:   z.string().trim().max(200).optional(),
   depositoId: z.string().min(1).optional(),
   ubicacionDetalle: z.string().trim().max(200).optional().nullable(),

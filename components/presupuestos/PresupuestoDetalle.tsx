@@ -106,6 +106,7 @@ export function PresupuestoDetalle({
       const res = await fetch(`/api/presupuestos/${p.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           vigenciaDias: Number(vigenciaDias),
           garantia: garantia.trim() || undefined,
@@ -128,6 +129,7 @@ export function PresupuestoDetalle({
       const res = await fetch(`/api/presupuestos/${p.id}/revision`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           ...(clienteId ? { clienteId } : {}),
           motivo: clienteId ? 'Copia para otro cliente' : 'Nueva revisión comercial',
@@ -151,6 +153,7 @@ export function PresupuestoDetalle({
       const res = await fetch(`/api/presupuestos/${p.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ estado }),
       })
       const data = await res.json().catch(() => ({}))

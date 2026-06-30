@@ -316,10 +316,12 @@ export function NuevoPresupuestoForm({
         const res = await fetch(`/api/presupuestos/${editPrefill.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify(payload),
         })
         if (!res.ok) throw new Error(await mensajeErrorRespuesta(res, 'No se pudo guardar el presupuesto'))
         toast.success('Presupuesto actualizado')
+        router.refresh()
         router.push(`/presupuestos/${editPrefill.id}`)
         return
       }
@@ -371,7 +373,7 @@ export function NuevoPresupuestoForm({
             Editando {editPrefill.numero} · versión {editPrefill.version}
           </p>
           <p className="text-[12px] text-[#3B82F6] mt-0.5">
-            Podés modificar ítems, plazos, vigencia y condiciones comerciales antes de enviar al cliente.
+            Podés modificar ítems, precios, plazos y condiciones. Los precios que cargues se guardan tal cual.
           </p>
         </div>
       )}

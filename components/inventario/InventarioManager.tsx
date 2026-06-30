@@ -4,7 +4,7 @@ import { useMemo, useRef, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import {
-  AlertTriangle, Download, Package, Plus, RefreshCw, Search, Upload, Pencil, SlidersHorizontal, ArrowLeftRight,
+  AlertTriangle, Download, Package, Plus, RefreshCw, Search, Upload, Pencil, SlidersHorizontal, ArrowLeftRight, Trash2,
 } from 'lucide-react'
 import Link from 'next/link'
 import { Card } from '@/components/ui/card'
@@ -175,7 +175,8 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
   const [form, setForm] = useState<FormData>(formVacio())
   const [loading, setLoading] = useState(false)
   const [ajusteCant, setAjusteCant] = useState('1')
-  const [ajusteTipo, setAjusteTipo] = useState<'ENTRADA' | 'SALIDA' | 'AJUSTE'>('ENTRADA')
+  const [ajusteTipo, setAjusteTipo] = useState<'ENTRADA' | 'SALIDA' | 'AJUSTE' | 'AJUSTE_NEGATIVO'>('ENTRADA')
+  const [ajusteMotivo, setAjusteMotivo] = useState('')
   const [fotoUrl, setFotoUrl] = useState<string | null>(null)
   const [fotoPendiente, setFotoPendiente] = useState<File | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -421,14 +422,39 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ cantidad, tipo: ajusteTipo }),
+        body: JSON.stringify({
+          cantidad,
+          tipo: ajusteTipo,
+          motivo: ajusteMotivo.trim() || undefined,
+        }),
       })
       if (!res.ok) throw new Error(await mensajeErrorRespuesta(res, 'No se pudo ajustar el stock'))
       toast.success('Stock actualizado')
       setAjustando(null)
+      setAjusteMotivo('')
       await recargar()
     } catch (e) {
       toast.error(mensajeErrorDesconocido(e, 'No se pudo ajustar el stock'))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function desactivarProducto(item: ItemInventario) {
+    const msg =
+      item.stock > 0
+        ? `«${item.nombre}» tiene ${item.stock} u. en stock. Se ocultará del catálogo activo pero el historial se conserva. ¿Dar de baja?`
+        : `¿Dar de baja «${item.nombre}»? Dejará de aparecer en el catálogo (productos obsoletos o discontinuados).`
+    if (!confirm(msg)) return
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/inventario/${item.id}`, { method: 'DELETE', credentials: 'include' })
+      if (!res.ok) throw new Error(await mensajeErrorRespuesta(res, 'No se pudo dar de baja el producto'))
+      toast.success('Producto dado de baja')
+      if (editando?.id === item.id) cerrarDetalleProducto()
+      await recargar()
+    } catch (e) {
+      toast.error(mensajeErrorDesconocido(e, 'No se pudo dar de baja el producto'))
     } finally {
       setLoading(false)
     }
@@ -721,6 +747,16 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
                             <ArrowLeftRight size={14} />
                           </button>
                         )}
+                        {puedeEditar && (
+                          <button
+                            type="button"
+                            onClick={() => desactivarProducto(item)}
+                            className="p-1.5 rounded hover:bg-red-50 text-red-400 hover:text-red-600"
+                            title="Dar de baja producto"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -765,17 +801,32 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
           <div className="bg-white rounded-[14px] w-full max-w-sm shadow-xl p-5" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-[14px] font-bold mb-1">Ajustar stock</h3>
             <p className="text-[12px] text-[#6b7280] mb-4">{ajustando.nombre} · actual: {ajustando.stock}</p>
+            {ajustando.modoTrazabilidad && ajustando.modoTrazabilidad !== 'NINGUNA' ? (
+              <p className="text-[12px] text-[#7c4a1a] bg-[#FFFBF5] border border-[#FFE4CC] rounded-[8px] px-3 py-2 mb-3">
+                Producto serializado: ajustá unidades en la ficha del producto (pestaña SN/Lote).
+              </p>
+            ) : (
             <div className="flex flex-col gap-3">
               <select value={ajusteTipo} onChange={(e) => setAjusteTipo(e.target.value as typeof ajusteTipo)} className="border border-[#e4e7eb] rounded-[9px] px-3 py-2 text-[13px]">
                 <option value="ENTRADA">Entrada (+)</option>
                 <option value="SALIDA">Salida (−)</option>
-                <option value="AJUSTE">Ajuste (+)</option>
+                <option value="AJUSTE">Ajuste positivo (+)</option>
+                <option value="AJUSTE_NEGATIVO">Ajuste negativo (−)</option>
               </select>
-              <input value={ajusteCant} onChange={(e) => setAjusteCant(e.target.value)} type="number" min={1} className="border border-[#e4e7eb] rounded-[9px] px-3 py-2 text-[13px]" />
+              <input value={ajusteCant} onChange={(e) => setAjusteCant(e.target.value)} type="number" min={1} className="border border-[#e4e7eb] rounded-[9px] px-3 py-2 text-[13px]" placeholder="Cantidad" />
+              <input
+                value={ajusteMotivo}
+                onChange={(e) => setAjusteMotivo(e.target.value)}
+                className="border border-[#e4e7eb] rounded-[9px] px-3 py-2 text-[13px]"
+                placeholder="Motivo (opcional): obsoleto, rotura…"
+              />
             </div>
+            )}
             <div className="flex justify-end gap-2 mt-4">
-              <Button variant="secondary" onClick={() => setAjustando(null)}>Cancelar</Button>
+              <Button variant="secondary" onClick={() => { setAjustando(null); setAjusteMotivo('') }}>Cancelar</Button>
+              {(!ajustando.modoTrazabilidad || ajustando.modoTrazabilidad === 'NINGUNA') && (
               <Button variant="primary" loading={loading} onClick={guardarAjuste}>Aplicar</Button>
+              )}
             </div>
           </div>
         </div>

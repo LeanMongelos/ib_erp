@@ -3,7 +3,6 @@ import { prisma } from '@/lib/prisma'
 import { requirePermission, handleApiError, ApiError } from '@/lib/api-auth'
 import { tienePermiso } from '@/lib/rbac'
 import { presupuestoUpdateSchema } from '@/lib/validation'
-import { aplicarPreciosResueltosItems } from '@/lib/precios/aplicar-precios-documento'
 import { plain } from '@/lib/serialize'
 import { registrarAuditoria, getIp } from '@/lib/audit'
 import { resolverCotizacionUsdDocumento, CotizacionUsdFaltanteError } from '@/lib/moneda'
@@ -103,11 +102,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
 
     if (items) {
-      const monedaItems = monedaPatch ?? actual.moneda
-      const itemsConPrecio = await aplicarPreciosResueltosItems(items, {
-        clienteId: actual.clienteId,
-        moneda: monedaItems,
-      })
+      // En edición respetar precios enviados por el usuario (no re-resolver lista de precios).
+      const itemsConPrecio = items
       const plazos =
         plazosCobranza?.length
           ? plazosCobranza

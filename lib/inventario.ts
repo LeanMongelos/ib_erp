@@ -10,7 +10,7 @@ type DbClient = Prisma.TransactionClient | typeof prisma
 export async function registrarMovimientoStock(
   opts: {
     inventarioId: string
-    tipo: 'ENTRADA' | 'SALIDA' | 'AJUSTE' | 'TRANSFERENCIA'
+    tipo: 'ENTRADA' | 'SALIDA' | 'AJUSTE' | 'AJUSTE_NEGATIVO' | 'TRANSFERENCIA'
     cantidad: number
     motivo?: string
     referencia?: string
@@ -26,7 +26,7 @@ export async function registrarMovimientoStock(
     if (!item) throw new Error('Ítem de inventario no encontrado')
 
     const delta =
-      opts.tipo === 'SALIDA'
+      opts.tipo === 'SALIDA' || opts.tipo === 'AJUSTE_NEGATIVO'
         ? -opts.cantidad
         : opts.tipo === 'TRANSFERENCIA'
           ? 0
