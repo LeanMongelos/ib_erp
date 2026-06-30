@@ -30,7 +30,7 @@ export default async function EditarPresupuestoPage({ params }: { params: Promis
   })
   if (!presupuesto) notFound()
   if (!presupuestoEditable(presupuesto.estado, Boolean(presupuesto.factura))) {
-    redirect(`/presupuestos/${id}`)
+    redirect(`/presupuestos/${id}?editar=bloqueado`)
   }
 
   const clienteEventual = await ensureClienteEventual()

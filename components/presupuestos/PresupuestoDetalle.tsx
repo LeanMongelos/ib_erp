@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { FileText, Send, CheckCircle, Receipt, Kanban, Truck, Save, Copy, GitBranch, Pencil } from 'lucide-react'
 import { BotonGenerarOcDesde } from '@/components/compras/BotonGenerarOcDesde'
@@ -85,7 +85,14 @@ export function PresupuestoDetalle({
   clientesCopia = [],
 }: PresupuestoDetalleProps) {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [loading, setLoading] = useState('')
+
+  useEffect(() => {
+    if (searchParams.get('editar') !== 'bloqueado') return
+    toast.info('Este presupuesto no se puede editar directamente. Usá «Nueva revisión» para cambiar ítems o precios.')
+    router.replace(`/presupuestos/${p.id}`)
+  }, [searchParams, router, p.id])
   const [vigenciaDias, setVigenciaDias] = useState(String(p.vigenciaDias))
   const [garantia, setGarantia] = useState(p.garantia ?? '')
   const [copiarAbierto, setCopiarAbierto] = useState(false)
@@ -93,10 +100,13 @@ export function PresupuestoDetalle({
   const moneda = p.moneda ?? 'ARS'
 
   const yaRemitido = (p.ordenVenta?.remitos?.length ?? 0) > 0
+  const tieneOrdenVenta = Boolean(p.ordenVenta)
   const puedeEditarCondiciones =
-    !p.factura && !yaRemitido && p.estado !== 'CONVERTIDO'
+    !p.factura && !yaRemitido && p.estado !== 'CONVERTIDO' && presupuestoEditable(p.estado, Boolean(p.factura))
   const puedeEditarForm = presupuestoEditable(p.estado, Boolean(p.factura))
-  const puedeRevisar = presupuestoPuedeRevisar(p.estado, Boolean(p.factura))
+  const puedeRevisar =
+    presupuestoPuedeRevisar(p.estado, Boolean(p.factura)) && !(tieneOrdenVenta && !p.factura)
+  const requiereRevisionParaItems = !p.factura && !puedeEditarForm
   const vigenciaGarantiaModificada =
     Number(vigenciaDias) !== p.vigenciaDias || garantia !== (p.garantia ?? '')
 
@@ -236,13 +246,25 @@ export function PresupuestoDetalle({
         <BadgeEstadoPresupuesto estado={p.estado} />
       </div>
 
+      {requiereRevisionParaItems && (
+        <div className="bg-[#EFF6FF] border border-[#93C5FD] rounded-[10px] px-4 py-3">
+          <p className="text-[13px] font-bold text-[#1E40AF]">Para cambiar ítems o precios</p>
+          <p className="text-[12px] text-[#3B82F6] mt-0.5">
+            Este presupuesto está {p.estado.toLowerCase()}. Usá «Nueva revisión» para generar una copia editable en borrador.
+            {tieneOrdenVenta && !p.factura
+              ? ' Ya tiene orden de venta: completá o anulá el remito antes de revisar.'
+              : ''}
+          </p>
+        </div>
+      )}
+
       {puedeEditarCondiciones && (
         <Card className="border-[#FDE68A] bg-[#FFFBEB]">
           <h3 className="text-[12px] font-bold text-[#92400E] uppercase mb-3">
             Vigencia y condiciones comerciales
           </h3>
           <p className="text-[12px] text-[#78350F] mb-3">
-            Ajustá vigencia, garantía y plazos antes de enviar o remitir. Si ya fue aprobado, usá «Nueva revisión».
+            Ajustá vigencia y garantía antes de enviar o remitir.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
@@ -357,12 +379,12 @@ export function PresupuestoDetalle({
         </Button>
         {puedeEditarForm && (
           <Button variant="secondary" onClick={() => router.push(`/presupuestos/${p.id}/editar`)}>
-            <Pencil size={16} /> Editar
+            <Pencil size={16} /> Editar ítems
           </Button>
         )}
         {puedeRevisar && (
           <Button
-            variant="outline"
+            variant={requiereRevisionParaItems ? 'secondary' : 'outline'}
             onClick={() => crearRevision()}
             loading={loading === 'revision'}
           >

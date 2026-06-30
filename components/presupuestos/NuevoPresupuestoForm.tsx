@@ -179,22 +179,26 @@ export function NuevoPresupuestoForm({
     return otPrefill ? itemsDesdeOt(otPrefill) : [{ id: '1', descripcion: '', cantidad: 1, precioUnit: 0 }]
   })
   const [loading, setLoading] = useState(false)
-  const plazoInicial = estadoInicialPlazos()
+  const plazoInicial = estadoInicialPlazos(
+    editPrefill?.condicionPago,
+    editPrefill?.tasaFinanciacionPct ?? 0,
+  )
   const [presetPlazo, setPresetPlazo] = useState<PresetPlazoKey | 'custom'>(plazoInicial.presetPlazo)
   const [plazosCustom, setPlazosCustom] = useState(plazoInicial.plazosCustom)
-  const [tasaFinanciacionPct, setTasaFinanciacionPct] = useState(editPrefill?.tasaFinanciacionPct ?? 0)
+  const [tasaFinanciacionPct, setTasaFinanciacionPct] = useState(plazoInicial.tasaFinanciacionPct)
   const [moneda, setMoneda] = useState<MonedaDocumento>((editPrefill?.moneda as MonedaDocumento) ?? 'ARS')
   const [cotizacionUsd, setCotizacionUsd] = useState<number | null>(editPrefill?.cotizacionUsd ?? null)
 
   useEffect(() => {
+    if (esEdicion) return
     setAlicuotaDocumentoPct(defaultPct)
-  }, [defaultPct])
+  }, [defaultPct, esEdicion])
 
   useEffect(() => {
-    if (!clienteId) return
+    if (esEdicion || !clienteId) return
     const c = clientesOpciones.find((x) => x.id === clienteId)
     setAlicuotaDocumentoPct(resolverPorcentajeCliente(c, defaultPct))
-  }, [clienteId, clientesOpciones, defaultPct])
+  }, [clienteId, clientesOpciones, defaultPct, esEdicion])
 
   const totales = useMemo(
     () =>
@@ -317,7 +321,10 @@ export function NuevoPresupuestoForm({
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          body: JSON.stringify(payload),
+          body: JSON.stringify({
+            ...payload,
+            emisorId: emisorId || null,
+          }),
         })
         if (!res.ok) throw new Error(await mensajeErrorRespuesta(res, 'No se pudo guardar el presupuesto'))
         toast.success('Presupuesto actualizado')

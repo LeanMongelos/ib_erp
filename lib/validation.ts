@@ -392,6 +392,7 @@ export const presupuestoRevisionSchema = z.object({
 
 export const presupuestoUpdateSchema = z.object({
   estado:          estadoPresupuestoEnum.optional(),
+  emisorId:        z.string().min(1).optional().nullable(),
   moneda:          monedaDocumentoEnum.optional(),
   cotizacionUsd:   z.number().positive().optional().nullable(),
   condicionPago:   z.string().trim().max(60).optional(),
