@@ -580,6 +580,7 @@ export function NuevaFacturaForm({
               className="w-full sm:w-72"
               clienteId={clienteId || undefined}
               monedaDocumento={moneda}
+              excluirAlquiler
               onSelect={(item: InventarioOption | null) => {
                 if (!item) return
                 const itemMoneda = (item.moneda ?? 'ARS') as MonedaDocumento

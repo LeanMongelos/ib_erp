@@ -146,6 +146,7 @@ export async function POST(req: NextRequest) {
             iva,
             total,
             fechaVencimiento: vence,
+            estado: 'ENVIADO',
             items: {
               create: itemsCalculados.map((i) => ({
                 codigo: i.codigo ?? null,

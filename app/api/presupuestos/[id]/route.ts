@@ -8,6 +8,7 @@ import { registrarAuditoria, getIp } from '@/lib/audit'
 import { resolverCotizacionUsdDocumento, CotizacionUsdFaltanteError } from '@/lib/moneda'
 import { formatCondicionPago, parsePlazosCobranza } from '@/lib/cobranzas/plazos'
 import { presupuestoEditable, recalcularPresupuestoDesdeItems } from '@/lib/presupuestos/revision'
+import { estadoPresupuestoTrasGuardarCompleto } from '@/lib/presupuestos/completitud'
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -124,12 +125,19 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           tasaFinanciacionPct: data.tasaFinanciacionPct ?? actual.tasaFinanciacionPct ?? 0,
           interesFinanciacion: data.interesFinanciacion ?? actual.interesFinanciacion ?? 0,
         })
+      const estadoAuto = estadoPresupuestoTrasGuardarCompleto(actual.estado, {
+        estado: actual.estado,
+        total,
+        clienteId: actual.clienteId,
+        items: itemsCalculados,
+      })
       const p = await prisma.$transaction(async (tx) => {
         await tx.itemPresupuesto.deleteMany({ where: { presupuestoId: id } })
         return tx.presupuesto.update({
           where: { id },
           data: {
             ...resto,
+            ...(estadoAuto ? { estado: estadoAuto as 'ENVIADO' } : {}),
             condicionPago,
             tasaFinanciacionPct: data.tasaFinanciacionPct ?? actual.tasaFinanciacionPct,
             interesFinanciacion,
@@ -174,6 +182,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       await registrarAuditoria({
         usuarioId: actor.id, accion: 'presupuesto.update', entidad: 'Presupuesto', entidadId: id, despues: data, ip: getIp(req),
       })
+      if (estadoAuto === 'ENVIADO') {
+        void import('@/lib/presupuestos/notify-cliente-enviado').then(({ notifyClientePresupuestoEnviado }) =>
+          notifyClientePresupuestoEnviado(id).catch(() => null),
+        )
+      }
       return NextResponse.json(plain(p))
     }
 

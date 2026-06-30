@@ -6,6 +6,16 @@ import { plain } from '@/lib/serialize'
 import { registrarMovimientoStock } from '@/lib/inventario'
 import { sincronizarKitInventario } from '@/lib/inventario-kit'
 import { trazabilidadActiva } from '@/lib/inventario/unidades'
+import { isEquipoCatalogo } from '@/lib/inventario/tipo-articulo'
+import { buscarInventarioFlex } from '@/lib/inventario/buscar-productos'
+
+const inventarioInclude = {
+  alicuotaIva: { select: { id: true, porcentaje: true, nombre: true } },
+  kitComoEquipo: {
+    orderBy: { orden: 'asc' as const },
+    include: { hijo: { select: { id: true, nombre: true, sku: true } } },
+  },
+}
 
 export async function GET(req: NextRequest) {
   try {
@@ -14,26 +24,13 @@ export async function GET(req: NextRequest) {
     const q = searchParams.get('q')?.trim()
     const limit = Math.min(Number(searchParams.get('limit') ?? 50), 200)
 
-    const items = await prisma.inventario.findMany({
-      where: {
-        activo: true,
-        ...(q
-          ? {
-              OR: [
-                { nombre: { contains: q, mode: 'insensitive' } },
-                { sku: { contains: q, mode: 'insensitive' } },
-                { categoria: { contains: q, mode: 'insensitive' } },
-              ],
-            }
-          : {}),
-      },
-      include: {
-        alicuotaIva: { select: { id: true, porcentaje: true, nombre: true } },
-        kitComoEquipo: { orderBy: { orden: 'asc' }, include: { hijo: { select: { id: true, nombre: true, sku: true } } } },
-      },
-      orderBy: { nombre: 'asc' },
-      take: q ? limit : undefined,
-    })
+    const items = q
+      ? await buscarInventarioFlex(q, limit, inventarioInclude)
+      : await prisma.inventario.findMany({
+          where: { activo: true },
+          include: inventarioInclude,
+          orderBy: { nombre: 'asc' },
+        })
     return NextResponse.json(plain(items))
   } catch (error) {
     return handleApiError(error)
@@ -47,7 +44,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const data = inventarioCreateSchema.parse(body)
     const { kitItems, stock: stockInicial, ...resto } = data
-    const esEquipo = resto.tipoArticulo === 'EQUIPO'
+    const esEquipo = isEquipoCatalogo(resto.tipoArticulo)
 
     const item = await prisma.inventario.create({
       data: {

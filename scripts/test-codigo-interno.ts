@@ -2,6 +2,11 @@
  * Tests código interno inventario (lib/inventario/codigo-interno.ts).
  */
 import { validarCodigoInterno, normalizarCodigoInterno } from '../lib/inventario/codigo-interno'
+import {
+  incrementarCodigoInterno,
+  formatearCodigoCorrelativo,
+  extraerPrefijoCodigo,
+} from '../lib/inventario/siguiente-codigo'
 import { inventarioCreateSchema } from '../lib/validation'
 
 const errors: string[] = []
@@ -49,6 +54,20 @@ function main() {
   } catch {
     pass('inventarioCreateSchema rechaza código inválido')
   }
+
+  if (extraerPrefijoCodigo('HOE098') === 'HOE') pass('extraer prefijo HOE098')
+  else fail('extraerPrefijoCodigo HOE098')
+
+  const inc = incrementarCodigoInterno('HOE098')
+  if (inc.ok && inc.codigo === 'HOE099') pass('incrementar HOE098 → HOE099')
+  else fail('incrementarCodigoInterno HOE098')
+
+  const incPref = incrementarCodigoInterno('HOE')
+  if (incPref.ok && incPref.codigo === 'HOE001') pass('incrementar prefijo HOE → HOE001')
+  else fail('incrementar prefijo HOE')
+
+  if (formatearCodigoCorrelativo('ALQ', 4) === 'ALQ004') pass('formatear ALQ004')
+  else fail('formatearCodigoCorrelativo ALQ')
 
   console.log('')
   if (errors.length > 0) {

@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { tienePermiso } from '@/lib/rbac'
+import { buscarInventarioIds } from '@/lib/inventario/buscar-productos'
 import type { ResultadoBusqueda } from '@/lib/busqueda-global-types'
 
 export type { TipoResultadoBusqueda, ResultadoBusqueda } from '@/lib/busqueda-global-types'
@@ -91,20 +92,16 @@ export async function buscarEnErp(q: string, permisos: string[] = []): Promise<R
     })
       : Promise.resolve([]),
     can('inventario.read')
-      ? prisma.inventario.findMany({
-      where: {
-        OR: [
-          { nombre: contiene(term) },
-          { sku: contiene(term) },
-          { descripcion: contiene(term) },
-          { marca: contiene(term) },
-          { modelo: contiene(term) },
-        ],
-      },
-      select: { id: true, nombre: true, sku: true, tipoArticulo: true },
-      take: LIMITE,
-      orderBy: { nombre: 'asc' },
-    })
+      ? (async () => {
+          const ids = await buscarInventarioIds(term, LIMITE)
+          if (ids.length === 0) return []
+          const items = await prisma.inventario.findMany({
+            where: { id: { in: ids } },
+            select: { id: true, nombre: true, sku: true, tipoArticulo: true },
+          })
+          const byId = new Map(items.map((i) => [i.id, i]))
+          return ids.map((id) => byId.get(id)).filter((i): i is NonNullable<typeof i> => i != null)
+        })()
       : Promise.resolve([]),
     can('servicio.read')
       ? prisma.equipo.findMany({

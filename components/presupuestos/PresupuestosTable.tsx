@@ -8,11 +8,15 @@ import { Button } from '@/components/ui/button'
 import { BadgeEstadoPresupuesto } from '@/components/ui/badge'
 import { formatFecha } from '@/lib/utils'
 import { formatMontoMoneda } from '@/lib/moneda'
+import {
+  estadoPresupuestoParaUi,
+  esPresupuestoPendiente,
+} from '@/lib/presupuestos/completitud'
 
 const ESTADOS = [
   { value: 'TODOS', label: 'Todos' },
-  { value: 'BORRADOR', label: 'Borrador' },
-  { value: 'ENVIADO', label: 'Enviado' },
+  { value: 'BORRADOR', label: 'Borrador (incompleto)' },
+  { value: 'ENVIADO', label: 'Pendiente' },
   { value: 'APROBADO', label: 'Aprobado' },
   { value: 'CONVERTIDO', label: 'Convertido' },
   { value: 'RECHAZADO', label: 'Rechazado' },
@@ -28,7 +32,9 @@ interface PresupuestoRow {
   fechaVencimiento?: string | null
   total: number
   moneda?: string
+  clienteId?: string
   cliente?: { nombre: string }
+  items?: Array<{ descripcion?: string | null; cantidad?: number; precioUnit?: number }>
 }
 
 export function PresupuestosTable({ presupuestos }: { presupuestos: PresupuestoRow[] }) {
@@ -39,7 +45,14 @@ export function PresupuestosTable({ presupuestos }: { presupuestos: PresupuestoR
   const filtered = presupuestos.filter((p) => {
     const q = search.toLowerCase()
     const matchSearch = !search || p.numero.toLowerCase().includes(q) || (p.cliente?.nombre ?? '').toLowerCase().includes(q)
-    const matchEstado = estado === 'TODOS' || p.estado === estado
+    const uiEstado = estadoPresupuestoParaUi(p)
+    const matchEstado =
+      estado === 'TODOS' ||
+      (estado === 'BORRADOR'
+        ? uiEstado === 'BORRADOR'
+        : estado === 'ENVIADO'
+          ? uiEstado === 'ENVIADO'
+          : uiEstado === estado)
     return matchSearch && matchEstado
   })
 
@@ -101,7 +114,9 @@ export function PresupuestosTable({ presupuestos }: { presupuestos: PresupuestoR
                   <td className="px-5 py-[13px] text-[12.5px] text-[#6b7280] border-b border-[#f4f5f7]">{formatFecha(p.fechaEmision)}</td>
                   <td className="px-5 py-[13px] text-[12.5px] text-[#6b7280] border-b border-[#f4f5f7]">{p.fechaVencimiento ? formatFecha(p.fechaVencimiento) : '—'}</td>
                   <td className="px-5 py-[13px] text-[12.5px] font-bold text-[#1f242c] border-b border-[#f4f5f7]">{formatMontoMoneda(p.total, p.moneda ?? 'ARS')}</td>
-                  <td className="px-5 py-[13px] border-b border-[#f4f5f7]"><BadgeEstadoPresupuesto estado={p.estado} /></td>
+                  <td className="px-5 py-[13px] border-b border-[#f4f5f7]">
+                    <BadgeEstadoPresupuesto estado={p.estado} presupuesto={p} />
+                  </td>
                 </tr>
               ))}
               {filtered.length === 0 && (

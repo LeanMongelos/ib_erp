@@ -5,6 +5,7 @@ export const TIPOS_ARTICULO = [
   { value: 'ACCESORIO', label: 'Accesorio suelto' },
   { value: 'BATERIA', label: 'Batería suelta' },
   { value: 'EQUIPO', label: 'Equipo (serializado · venta → cliente)' },
+  { value: 'ALQUILER', label: 'Equipo (serializado · alquiler → contrato)' },
 ] as const
 
 export type TipoArticuloInventarioValue = (typeof TIPOS_ARTICULO)[number]['value']
@@ -49,6 +50,7 @@ export const ESTADOS_UNIDAD_INVENTARIO = [
 
 export const ORIGEN_EQUIPO_LABEL: Record<string, string> = {
   VENTA: 'Venta',
+  ALQUILER: 'Alquiler',
   EXTERNO: 'Externo',
   MANUAL_ST: 'Alta ST',
 }

@@ -8,7 +8,7 @@ export type EstadoEquipo = 'ACTIVO' | 'EN_REPARACION' | 'BAJA'
 
 export type TipoOT = 'CORRECTIVO' | 'PREVENTIVO' | 'INSTALACION' | 'CALIBRACION' | 'GARANTIA'
 
-export type TipoArticuloInventario = 'REPUESTO' | 'CONSUMIBLE' | 'ACCESORIO' | 'BATERIA' | 'EQUIPO'
+export type TipoArticuloInventario = 'REPUESTO' | 'CONSUMIBLE' | 'ACCESORIO' | 'BATERIA' | 'EQUIPO' | 'ALQUILER'
 
 export type EstadoOT = 'ABIERTA' | 'EN_PROCESO' | 'CERRADA' | 'VENCIDA' | 'CANCELADA'
 

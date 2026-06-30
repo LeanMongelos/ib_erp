@@ -3,6 +3,7 @@
  */
 import { prisma } from '@/lib/prisma'
 import { registrarMovimientoStock } from '@/lib/inventario'
+import { isEquipoCatalogo } from '@/lib/inventario/tipo-articulo'
 import type { InventarioImportRow, KitImportRow } from '@/lib/inventario-excel'
 
 export interface ResultadoImportInventario {
@@ -35,8 +36,8 @@ export async function importarFilasKit(
         resultado.errores.push({ fila: n, mensaje: `Equipo padre SKU ${fila.parentSku} no encontrado` })
         continue
       }
-      if (padre.tipoArticulo !== 'EQUIPO') {
-        resultado.errores.push({ fila: n, mensaje: `${fila.parentSku} no es tipo EQUIPO` })
+      if (!isEquipoCatalogo(padre.tipoArticulo)) {
+        resultado.errores.push({ fila: n, mensaje: `${fila.parentSku} no es tipo EQUIPO ni ALQUILER` })
         continue
       }
 
@@ -103,6 +104,7 @@ export async function importarFilasInventario(
     const n = i + 2
     try {
       const alicuotaIvaId = await resolverAlicuotaId(fila.alicuotaIvaPct ?? null)
+      const esCatalogoEquipo = isEquipoCatalogo(fila.tipoArticulo)
       const dataBase = {
         nombre: fila.nombre,
         descripcion: fila.descripcion ?? null,
@@ -111,9 +113,12 @@ export async function importarFilasInventario(
         tipoArticulo: fila.tipoArticulo,
         marca: fila.marca ?? null,
         modelo: fila.modelo ?? null,
-        esSerializado: fila.esSerializado,
-        requierePreventivo: fila.requierePreventivo,
-        intervaloPreventivoDias: fila.intervaloPreventivoDias ?? null,
+        esSerializado: esCatalogoEquipo ? true : fila.esSerializado,
+        requierePreventivo: esCatalogoEquipo ? (fila.requierePreventivo ?? true) : fila.requierePreventivo,
+        intervaloPreventivoDias: esCatalogoEquipo
+          ? (fila.intervaloPreventivoDias ?? 180)
+          : (fila.intervaloPreventivoDias ?? null),
+        modoTrazabilidad: esCatalogoEquipo ? ('SERIE' as const) : undefined,
         stockMinimo: fila.stockMinimo,
         stockMaximo: fila.stockMaximo ?? null,
         puntoPedido: fila.puntoPedido ?? null,

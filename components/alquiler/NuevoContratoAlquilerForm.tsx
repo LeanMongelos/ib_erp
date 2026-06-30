@@ -24,7 +24,12 @@ interface ClienteOption {
 interface UnidadOption {
   id: string
   numeroSerie: string | null
-  inventario: { nombre: string; marca: string | null; modelo: string | null }
+  inventario: {
+    nombre: string
+    marca: string | null
+    modelo: string | null
+    precioUnit: number | null
+  }
 }
 
 interface LineaForm {
@@ -75,9 +80,20 @@ export function NuevoContratoAlquilerForm({ clientes }: { clientes: ClienteOptio
 
   function seleccionarUnidad(idx: number, u: UnidadOption) {
     const label = `${u.inventario.nombre}${u.numeroSerie ? ` · ${u.numeroSerie}` : ''}`
+    const montoSugerido =
+      u.inventario.precioUnit != null && u.inventario.precioUnit > 0
+        ? String(u.inventario.precioUnit)
+        : ''
     setLineas((prev) =>
       prev.map((l, i) =>
-        i === idx ? { ...l, inventarioUnidadId: u.id, unidadLabel: label } : l,
+        i === idx
+          ? {
+              ...l,
+              inventarioUnidadId: u.id,
+              unidadLabel: label,
+              montoMensual: montoSugerido || l.montoMensual,
+            }
+          : l,
       ),
     )
     setOpcionesUnidad((prev) => ({ ...prev, [idx]: [] }))

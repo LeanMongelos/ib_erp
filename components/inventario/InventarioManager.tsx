@@ -21,6 +21,14 @@ import { InventarioUnidadesPanel } from '@/components/inventario/InventarioUnida
 import { TransferirStockModal } from '@/components/inventario/TransferirStockModal'
 import { StockPorDepositoPanel, type FilaStockDeposito } from '@/components/inventario/StockPorDepositoPanel'
 import { validarCodigoInterno } from '@/lib/inventario/codigo-interno'
+import { CodigoInternoField } from '@/components/inventario/CodigoInternoField'
+import {
+  inferirTipoArticuloDesdeCodigo,
+  isEquipoAlquiler,
+  isEquipoCatalogo,
+  isEquipoVenta,
+} from '@/lib/inventario/tipo-articulo'
+import { textoContieneBusqueda } from '@/lib/texto-busqueda'
 
 export interface KitItemForm {
   nombre: string
@@ -129,7 +137,7 @@ function itemAForm(item: ItemInventario): FormData {
     esSerializado: item.esSerializado ?? false,
     requierePreventivo: item.requierePreventivo ?? false,
     intervaloPreventivoDias: item.intervaloPreventivoDias != null ? String(item.intervaloPreventivoDias) : '180',
-    modoTrazabilidad: item.modoTrazabilidad ?? (item.tipoArticulo === 'EQUIPO' && item.esSerializado ? 'SERIE' : 'NINGUNA'),
+    modoTrazabilidad: item.modoTrazabilidad ?? (isEquipoCatalogo(item.tipoArticulo) && item.esSerializado ? 'SERIE' : 'NINGUNA'),
     stock: String(item.stock),
     stockMinimo: String(item.stockMinimo),
     stockMaximo: item.stockMaximo != null ? String(item.stockMaximo) : '',
@@ -279,13 +287,13 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
     if (soloBajo) {
       list = list.filter((i) => i.stock <= i.stockMinimo)
     }
-    const q = busqueda.trim().toLowerCase()
+    const q = busqueda.trim()
     if (!q) return list
-    return list.filter(
-      (i) =>
-        i.nombre.toLowerCase().includes(q) ||
-        (i.sku?.toLowerCase().includes(q) ?? false) ||
-        (i.categoria?.toLowerCase().includes(q) ?? false),
+    return list.filter((i) =>
+      textoContieneBusqueda(
+        [i.nombre, i.sku, i.categoria, i.descripcion, i.marca, i.modelo],
+        q,
+      ),
     )
   }, [items, busqueda, soloBajo])
 
@@ -309,7 +317,7 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
     const intervalo = form.intervaloPreventivoDias.trim() ? Number(form.intervaloPreventivoDias) : null
     if (!form.nombre.trim()) throw new Error('El nombre es obligatorio')
     if (Number.isNaN(stock) || stock < 0) throw new Error('Stock inválido')
-    const esEquipo = form.tipoArticulo === 'EQUIPO'
+    const esEquipo = isEquipoCatalogo(form.tipoArticulo)
 
     let sku: string | undefined
     if (!editable) {
@@ -710,7 +718,7 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
                       {item.stock}
                     </td>
                     <td className="px-5 py-[13px] text-[11px] text-[#6b7280] border-b border-[#f4f5f7]">
-                      {item.tipoArticulo === 'EQUIPO' && item.requierePreventivo
+                      {isEquipoCatalogo(item.tipoArticulo) && item.requierePreventivo
                         ? `${item.intervaloPreventivoDias ?? 180} d`
                         : '—'}
                       {(item.kitComoEquipo?.length ?? 0) > 0 && (
@@ -881,7 +889,9 @@ function ModalForm({
   onClose: () => void
   onSave: () => void
 }) {
-  const esEquipo = form.tipoArticulo === 'EQUIPO'
+  const esEquipo = isEquipoCatalogo(form.tipoArticulo)
+  const esAlquiler = isEquipoAlquiler(form.tipoArticulo)
+  const esVenta = isEquipoVenta(form.tipoArticulo)
   const muestraUnidades = esEquipo || form.modoTrazabilidad !== 'NINGUNA'
   const [tab, setTab] = useState<TabDetalleInventario>(initialTab ?? 'general')
 
@@ -923,7 +933,13 @@ function ModalForm({
       <div className="bg-white rounded-[14px] w-full max-w-2xl shadow-xl max-h-[92vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="px-5 py-4 border-b border-[#eef0f2]">
           <h3 className="text-[14px] font-bold">{titulo}</h3>
-          <p className="text-[11.5px] text-[#6b7280] mt-1">Tipo «Equipo» habilita kit clínico y flujo automático de preventivo al facturar.</p>
+          <p className="text-[11.5px] text-[#6b7280] mt-1">
+            {esAlquiler
+              ? 'Tipo «Alquiler»: parque serializado para contratos mensuales (código ALQ…). Kit y preventivo al activar contrato.'
+              : esVenta
+                ? 'Tipo «Equipo»: kit clínico y preventivo automático al facturar venta.'
+                : 'Equipo serializado (venta o alquiler) habilita kit clínico y plan preventivo.'}
+          </p>
           <div className="flex flex-wrap gap-1 mt-3">
             {tabs.map((t) => (
               <button
@@ -971,17 +987,32 @@ function ModalForm({
                   value={form.tipoArticulo}
                   onChange={(e) => {
                     const t = e.target.value
+                    const catalogo = isEquipoCatalogo(t)
                     setForm({
                       ...form,
                       tipoArticulo: t,
-                      esSerializado: t === 'EQUIPO' ? true : form.esSerializado,
-                      requierePreventivo: t === 'EQUIPO' ? true : form.requierePreventivo,
-                      modoTrazabilidad: t === 'EQUIPO' ? 'SERIE' : 'NINGUNA',
+                      esSerializado: catalogo ? true : form.esSerializado,
+                      requierePreventivo: catalogo ? true : form.requierePreventivo,
+                      modoTrazabilidad: catalogo ? 'SERIE' : 'NINGUNA',
                     })
                   }}
                   options={[...TIPOS_ARTICULO]}
                 />
               </div>
+              <CodigoInternoField
+                value={form.sku}
+                required={esAlta}
+                disabled={loading}
+                autoSugerir={esAlta}
+                tipoArticulo={form.tipoArticulo}
+                onChange={(sku, extras) =>
+                  setForm({
+                    ...form,
+                    sku,
+                    ...(extras ?? {}),
+                  })
+                }
+              />
               <div className="sm:col-span-2">
                 <Select
                   label="Trazabilidad por unidad"
@@ -991,27 +1022,6 @@ function ModalForm({
                 />
               </div>
               {field('nombre', 'Nombre *', { required: true, span: true, autoComplete: 'off' })}
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[11.5px] font-semibold text-[#5b626d] uppercase">
-                  Código interno{esAlta ? ' *' : ''}
-                </label>
-                <input
-                  type="text"
-                  required={esAlta}
-                  value={form.sku}
-                  onChange={(e) => {
-                    const v = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8)
-                    setForm({ ...form, sku: v })
-                  }}
-                  maxLength={8}
-                  autoComplete="off"
-                  placeholder="HOE098"
-                  className="border border-[#e4e7eb] rounded-[9px] px-3 py-2 text-[13px] font-mono uppercase"
-                />
-                <p className="text-[10.5px] text-[#9aa1ab] leading-snug">
-                  3–4 letras + 3–4 números (mín. HOE098 · máx. ABCD1234). Identificador único en stock.
-                </p>
-              </div>
               {field('marca', 'Marca', { autoComplete: 'off' })}
               {field('modelo', 'Modelo', { autoComplete: 'off' })}
               <div className="sm:col-span-2">
@@ -1054,7 +1064,7 @@ function ModalForm({
               {field('stockMinimo', 'Stock mínimo', { type: 'number' })}
               {field('stockMaximo', 'Stock máximo', { type: 'number' })}
               {field('puntoPedido', 'Punto de pedido', { type: 'number' })}
-              {field('precioUnit', 'Precio unitario referencia', { type: 'number' })}
+              {field('precioUnit', esAlquiler ? 'Cuota mensual referencia (ARS)' : 'Precio unitario referencia', { type: 'number' })}
               <Select
                 label="Moneda del precio"
                 value={form.moneda}
@@ -1095,15 +1105,19 @@ function ModalForm({
           {tab === 'preventivo' && esEquipo && (
             <>
               <section>
-                <h4 className="text-[12px] font-bold text-[#E8650A] mb-3 uppercase tracking-wide">Preventivo (post-venta)</h4>
+                <h4 className="text-[12px] font-bold text-[#E8650A] mb-3 uppercase tracking-wide">
+                  {esAlquiler ? 'Preventivo (post-entrega en alquiler)' : 'Preventivo (post-venta)'}
+                </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <label className="flex items-center gap-2 text-[13px] sm:col-span-2">
                     <input type="checkbox" checked={form.esSerializado} onChange={(e) => setForm({ ...form, esSerializado: e.target.checked })} />
-                    Requiere número de serie al vender
+                    {esAlquiler ? 'Requiere número de serie en el parque' : 'Requiere número de serie al vender'}
                   </label>
                   <label className="flex items-center gap-2 text-[13px] sm:col-span-2">
                     <input type="checkbox" checked={form.requierePreventivo} onChange={(e) => setForm({ ...form, requierePreventivo: e.target.checked })} />
-                    Generar plan preventivo y OT al emitir factura
+                    {esAlquiler
+                      ? 'Generar plan preventivo y OT al activar contrato de alquiler'
+                      : 'Generar plan preventivo y OT al emitir factura'}
                   </label>
                   {field('intervaloPreventivoDias', 'Intervalo preventivo (días)', { type: 'number' })}
                 </div>

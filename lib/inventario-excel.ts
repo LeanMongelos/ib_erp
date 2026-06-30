@@ -61,7 +61,7 @@ const ejemploActionSales = {
   stock: 0,
 }
 
-const tipoArticuloEnum = z.enum(['REPUESTO', 'CONSUMIBLE', 'ACCESORIO', 'BATERIA', 'EQUIPO'])
+const tipoArticuloEnum = z.enum(['REPUESTO', 'CONSUMIBLE', 'ACCESORIO', 'BATERIA', 'EQUIPO', 'ALQUILER'])
 const tipoItemKitEnum = z.enum(['ACCESORIO_ESPECIFICO', 'ACCESORIO_GENERICO', 'BATERIA', 'COMPONENTE', 'REPUESTO_INCLUIDO'])
 const tipoComponenteEnum = z.enum(['BATERIA', 'FILTRO', 'CALIBRACION', 'SENSOR', 'OTRO'])
 
@@ -160,6 +160,7 @@ function parseDescripcionAdicional(text: string): { marca?: string; descripcion?
 function inferirTipoArticulo(codigo: string, nombre: string, perfil: string | null): z.infer<typeof tipoArticuloEnum> {
   const n = nombre.toLowerCase()
   const c = codigo.toUpperCase()
+  if (c.startsWith('ALQ')) return 'ALQUILER'
   if (n.includes('desfibr') || n.includes('monitor') || n.includes('ventilador') || n.includes('bomba de infusi')) {
     return 'EQUIPO'
   }

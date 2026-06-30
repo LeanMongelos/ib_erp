@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requirePermission, handleApiError } from '@/lib/api-auth'
+import { requirePermission, handleApiError, ApiError } from '@/lib/api-auth'
 import { contratoAlquilerCreateSchema, estadoContratoAlquilerEnum } from '@/lib/validation'
 import { crearConNumeroUnico, siguienteNumeroContratoAlquiler } from '@/lib/sequences'
 import { registrarAuditoria, getIp } from '@/lib/audit'
@@ -44,6 +44,22 @@ export async function POST(req: NextRequest) {
     const body = await req.json()
     const data = contratoAlquilerCreateSchema.parse(body)
     const { lineas, ...base } = data
+
+    for (const l of lineas) {
+      const unidad = await prisma.inventarioUnidad.findUnique({
+        where: { id: l.inventarioUnidadId },
+        include: { inventario: { select: { nombre: true, tipoArticulo: true } } },
+      })
+      if (!unidad) {
+        throw new ApiError(400, 'Unidad de inventario no encontrada')
+      }
+      if (unidad.inventario.tipoArticulo !== 'ALQUILER') {
+        throw new ApiError(
+          400,
+          `«${unidad.inventario.nombre}» no pertenece al parque de alquiler (tipo ALQUILER)`,
+        )
+      }
+    }
 
     const contrato = await crearConNumeroUnico(
       siguienteNumeroContratoAlquiler,

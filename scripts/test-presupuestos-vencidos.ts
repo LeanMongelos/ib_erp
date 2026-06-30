@@ -5,6 +5,10 @@ import {
   presupuestoDebeMarcarseVencido,
   ESTADOS_PRESUPUESTO_SUJETOS_VENCIMIENTO,
 } from '../lib/presupuestos/vencimiento'
+import {
+  estadoPresupuestoParaUi,
+  presupuestoEsIncompleto,
+} from '../lib/presupuestos/completitud'
 
 const errors: string[] = []
 
@@ -66,6 +70,26 @@ function main() {
   if (presupuestoDebeMarcarseVencido('VENCIDO', ayer, ahora)) {
     fail('VENCIDO no debe re-procesarse')
   }
+
+  const completo = {
+    estado: 'BORRADOR',
+    total: 1000,
+    clienteId: 'c1',
+    items: [{ descripcion: 'Monitor', cantidad: 1, precioUnit: 1000 }],
+  }
+  if (presupuestoEsIncompleto(completo)) fail('presupuesto completo no es incompleto')
+  else pass('borrador completo detectado')
+
+  if (estadoPresupuestoParaUi(completo) !== 'ENVIADO') fail('borrador completo → UI Pendiente')
+  else pass('borrador completo muestra Pendiente')
+
+  if (estadoPresupuestoParaUi({ ...completo, estado: 'ENVIADO', fechaVencimiento: ayer }) !== 'VENCIDO') {
+    fail('ENVIADO vencido → UI Vencido')
+  } else pass('ENVIADO vencido en UI')
+
+  if (!presupuestoEsIncompleto({ estado: 'BORRADOR', total: 0, clienteId: 'c1', items: [] })) {
+    fail('sin ítems debe ser incompleto')
+  } else pass('sin ítems = borrador incompleto')
 
   console.log('')
   if (errors.length > 0) {

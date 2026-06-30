@@ -17,6 +17,7 @@ import { Select } from '@/components/ui/select'
 import { VIGENCIA_DIAS, VIGENCIA_DIAS_OT, GARANTIA, GARANTIA_MESES_OT } from '@/lib/form-options'
 import { ClienteCombobox } from '@/components/clientes/ClienteCombobox'
 import { presupuestoEditable, presupuestoPuedeRevisar } from '@/lib/presupuestos/revision-reglas'
+import { presupuestoEsIncompleto } from '@/lib/presupuestos/completitud'
 
 interface PresupuestoDetalleProps {
   presupuesto: {
@@ -243,8 +244,17 @@ export function PresupuestoDetalle({
           )}
           <OcsVinculadasLinks ordenes={p.ordenesCompra ?? []} />
         </div>
-        <BadgeEstadoPresupuesto estado={p.estado} />
+        <BadgeEstadoPresupuesto estado={p.estado} presupuesto={p} />
       </div>
+
+      {presupuestoEsIncompleto(p) && p.estado === 'BORRADOR' && (
+        <div className="bg-[#F3F4F6] border border-[#E5E7EB] rounded-[10px] px-4 py-3">
+          <p className="text-[13px] font-bold text-[#374151]">Borrador incompleto</p>
+          <p className="text-[12px] text-[#6B7280] mt-0.5">
+            Faltan ítems, cliente o importes. Completá el presupuesto para que pase a estado Pendiente.
+          </p>
+        </div>
+      )}
 
       {requiereRevisionParaItems && (
         <div className="bg-[#EFF6FF] border border-[#93C5FD] rounded-[10px] px-4 py-3">
@@ -404,7 +414,7 @@ export function PresupuestoDetalle({
           disabled={p.items.length === 0}
           disabledTitle="El presupuesto no tiene ítems"
         />
-        {p.estado === 'BORRADOR' && (
+        {p.estado === 'BORRADOR' && !presupuestoEsIncompleto(p) && (
           <Button variant="secondary" onClick={() => cambiarEstado('ENVIADO', 'enviar')} loading={loading === 'enviar'}>
             <Send size={16} /> Enviar al cliente
           </Button>

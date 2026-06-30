@@ -8,6 +8,39 @@
 
 import { z } from 'zod'
 import { codigoInternoOpcionalSchema, codigoInternoSchema } from '@/lib/inventario/codigo-interno'
+import { isCodigoParqueAlquiler } from '@/lib/inventario/tipo-articulo'
+
+const tipoArticuloInventarioEnum = z.enum(['REPUESTO', 'CONSUMIBLE', 'ACCESORIO', 'BATERIA', 'EQUIPO', 'ALQUILER'])
+
+function validarCoherenciaTipoCodigoInventario(
+  data: { sku?: string | null; tipoArticulo?: string | null },
+  ctx: z.RefinementCtx,
+) {
+  const sku = (data.sku ?? '').trim().toUpperCase()
+  const tipo = data.tipoArticulo
+  if (!sku || !tipo) return
+  if (isCodigoParqueAlquiler(sku) && tipo !== 'ALQUILER') {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Los códigos ALQ* corresponden al tipo Alquiler',
+      path: ['tipoArticulo'],
+    })
+  }
+  if (tipo === 'ALQUILER' && !isCodigoParqueAlquiler(sku)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Los productos de alquiler deben usar código interno ALQ… (ej. ALQ004)',
+      path: ['sku'],
+    })
+  }
+  if (tipo === 'EQUIPO' && isCodigoParqueAlquiler(sku)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'El prefijo ALQ está reservado para el parque de alquiler',
+      path: ['sku'],
+    })
+  }
+}
 import '@/lib/zod-es'
 import { monedaDocumentoEnum } from '@/lib/moneda'
 import { validarListaSucursales } from '@/lib/clientes/validar-sucursales'
@@ -319,7 +352,7 @@ export const itemFacturaSchema = z.object({
   bonificacionPct:  z.number().min(0).max(100).optional(),
   inventarioId:     z.string().min(1).optional().nullable(),
   /** Solo validación UI↔API; no se persiste en FacturaItem. */
-  tipoArticulo:     z.enum(['REPUESTO', 'CONSUMIBLE', 'ACCESORIO', 'BATERIA', 'EQUIPO']).optional().nullable(),
+  tipoArticulo:     tipoArticuloInventarioEnum.optional().nullable(),
   alicuotaIvaPct:   z.number().min(0).max(100).optional().nullable(),
   numeroSerie:      z.string().trim().max(80).optional().nullable(),
   proximoPreventivo: z.coerce.date().optional().nullable(),
@@ -753,11 +786,11 @@ export const inventarioKitItemSchema = z.object({
   orden:            z.number().int().nonnegative().optional(),
 })
 
-export const inventarioCreateSchema = z.object({
+const inventarioFieldsSchema = z.object({
   nombre:       z.string().trim().min(2, 'El nombre debe tener al menos 2 caracteres'),
   descripcion:  z.string().trim().max(300).optional(),
   sku:          codigoInternoSchema,
-  tipoArticulo: z.enum(['REPUESTO', 'CONSUMIBLE', 'ACCESORIO', 'BATERIA', 'EQUIPO']).default('REPUESTO'),
+  tipoArticulo: tipoArticuloInventarioEnum.default('REPUESTO'),
   marca:        z.string().trim().max(80).optional().nullable(),
   modelo:       z.string().trim().max(80).optional().nullable(),
   esSerializado: z.boolean().default(false),
@@ -774,6 +807,8 @@ export const inventarioCreateSchema = z.object({
   alicuotaIvaId: z.string().min(1).optional().nullable(),
   kitItems:     z.array(inventarioKitItemSchema).optional(),
 })
+
+export const inventarioCreateSchema = inventarioFieldsSchema.superRefine(validarCoherenciaTipoCodigoInventario)
 
 export const inventarioAjusteSchema = z.object({
   cantidad: z.number().int().positive('La cantidad debe ser mayor a 0'),
@@ -801,11 +836,14 @@ export const inventarioTransferenciaSchema = z
     path: ['cantidad'],
   })
 
-export const inventarioUpdateSchema = inventarioCreateSchema.partial().extend({
-  activo: z.boolean().optional(),
-  sku: codigoInternoOpcionalSchema.optional(),
-  kitItems: z.array(inventarioKitItemSchema).optional(),
-})
+export const inventarioUpdateSchema = inventarioFieldsSchema
+  .partial()
+  .extend({
+    activo: z.boolean().optional(),
+    sku: codigoInternoOpcionalSchema.optional(),
+    kitItems: z.array(inventarioKitItemSchema).optional(),
+  })
+  .superRefine(validarCoherenciaTipoCodigoInventario)
 
 export const inventarioUnidadCreateSchema = z.object({
   numeroSerie: z.string().trim().max(80).optional().nullable(),

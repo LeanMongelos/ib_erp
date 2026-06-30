@@ -34,6 +34,8 @@ interface Props {
   disabled?: boolean
   clienteId?: string
   monedaDocumento?: string
+  /** Oculta ítems del parque de alquiler (presupuesto / factura venta). */
+  excluirAlquiler?: boolean
 }
 
 export function InventarioPicker({
@@ -43,6 +45,7 @@ export function InventarioPicker({
   disabled,
   clienteId,
   monedaDocumento = 'ARS',
+  excluirAlquiler = false,
 }: Props) {
   const [q, setQ] = useState('')
   const [items, setItems] = useState<InventarioOption[]>([])
@@ -76,7 +79,9 @@ export function InventarioPicker({
           credentials: 'include',
         })
         const data = await res.json()
-        if (Array.isArray(data)) setItems(data)
+        if (Array.isArray(data)) {
+          setItems(excluirAlquiler ? data.filter((i) => i.tipoArticulo !== 'ALQUILER') : data)
+        }
       } catch {
         setItems([])
       } finally {
@@ -84,7 +89,7 @@ export function InventarioPicker({
       }
     }, 280)
     return () => window.clearTimeout(t)
-  }, [q])
+  }, [q, excluirAlquiler])
 
   async function resolverPrecioItem(item: InventarioOption): Promise<InventarioOption> {
     if (!clienteId) return item

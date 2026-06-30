@@ -5,6 +5,7 @@ import { formatMonto } from '@/lib/utils'
 import { plain } from '@/lib/serialize'
 import { requirePagePermission } from '@/lib/page-guard'
 import { actualizarPresupuestosVencidos } from '@/lib/presupuestos/actualizar-vencidos'
+import { esPresupuestoPendiente } from '@/lib/presupuestos/completitud'
 import { ExportPresupuestosPendientesButton } from '@/components/presupuestos/ExportPresupuestosPendientesButton'
 import { tienePermiso } from '@/lib/rbac'
 
@@ -12,7 +13,10 @@ async function getPresupuestos() {
   await actualizarPresupuestosVencidos()
   return prisma.presupuesto.findMany({
     orderBy: { creadoEn: 'desc' },
-    include: { cliente: { select: { nombre: true } } },
+    include: {
+      cliente: { select: { nombre: true } },
+      items: { select: { descripcion: true, cantidad: true, precioUnit: true } },
+    },
   })
 }
 
@@ -25,7 +29,7 @@ export default async function PresupuestosPage() {
 
   const total = presupuestos.reduce((a, p) => a + Number(p.total), 0)
   const aprobados = presupuestos.filter((p) => p.estado === 'APROBADO').length
-  const pendientes = presupuestos.filter((p) => ['BORRADOR', 'ENVIADO'].includes(p.estado)).length
+  const pendientes = presupuestos.filter((p) => esPresupuestoPendiente(p)).length
 
   return (
     <>

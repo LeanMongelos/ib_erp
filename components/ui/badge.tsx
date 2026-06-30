@@ -1,5 +1,9 @@
 import { cn } from '@/lib/utils'
 import { type EstadoOT, type EstadoFactura } from '@/types'
+import {
+  estadoPresupuestoParaUi,
+  type PresupuestoCompletitudInput,
+} from '@/lib/presupuestos/completitud'
 
 interface BadgeProps {
   children: React.ReactNode
@@ -74,16 +78,23 @@ export function BadgeEstadoFactura({ estado }: { estado: EstadoFactura }) {
   return <Badge variant={variant}>{label}</Badge>
 }
 
-export function BadgeEstadoPresupuesto({ estado }: { estado: string }) {
+export function BadgeEstadoPresupuesto({
+  estado,
+  presupuesto,
+}: {
+  estado: string
+  presupuesto?: PresupuestoCompletitudInput & { fechaVencimiento?: Date | string | null }
+}) {
+  const key = presupuesto ? estadoPresupuestoParaUi({ ...presupuesto, estado }) : estado
   const map: Record<string, { variant: BadgeProps['variant']; label: string }> = {
     BORRADOR:   { variant: 'gray',    label: 'Borrador' },
-    ENVIADO:    { variant: 'info',    label: 'Enviado' },
+    ENVIADO:    { variant: 'info',    label: 'Pendiente' },
     APROBADO:   { variant: 'success', label: 'Aprobado' },
     RECHAZADO:  { variant: 'danger',  label: 'Rechazado' },
     VENCIDO:    { variant: 'warning', label: 'Vencido' },
     CONVERTIDO: { variant: 'success', label: 'Convertido' },
   }
-  const { variant, label } = map[estado] ?? { variant: 'gray', label: estado }
+  const { variant, label } = map[key] ?? { variant: 'gray', label: key }
   return <Badge variant={variant}>{label}</Badge>
 }
 

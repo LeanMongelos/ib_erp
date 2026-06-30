@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { calcularVencimientoCuota, formatPeriodo } from '@/lib/alquiler/periodo'
 import { resolverUbicacionLineaAlquiler } from '@/lib/alquiler/resolver-ubicacion-linea'
+import { aplicarKitYPreventivoEquipo } from '@/lib/equipos/aplicar-kit-preventivo-equipo'
 
 export async function activarContratoAlquiler(contratoId: string, usuarioId?: string | null) {
   return prisma.$transaction(async (tx) => {
@@ -23,7 +24,14 @@ export async function activarContratoAlquiler(contratoId: string, usuarioId?: st
           where: { activa: true },
           include: {
             inventarioUnidad: {
-              include: { inventario: true, equipo: true },
+              include: {
+                inventario: {
+                  include: {
+                    kitComoEquipo: { orderBy: { orden: 'asc' }, include: { hijo: true } },
+                  },
+                },
+                equipo: true,
+              },
             },
           },
         },
@@ -60,6 +68,11 @@ export async function activarContratoAlquiler(contratoId: string, usuarioId?: st
         throw new Error(`La unidad ${serie} ya está en un contrato activo`)
       }
 
+      const inv = unidad.inventario
+      if (inv.tipoArticulo !== 'ALQUILER') {
+        throw new Error(`«${inv.nombre}» no es producto de alquiler (tipo ALQUILER / código ALQ*)`)
+      }
+
       const ubicacion = await resolverUbicacionLineaAlquiler(linea, contrato.cliente)
       const { lat, lng } = ubicacion
 
@@ -86,7 +99,6 @@ export async function activarContratoAlquiler(contratoId: string, usuarioId?: st
           },
         })
       } else {
-        const inv = unidad.inventario
         const nuevoEquipo = await tx.equipo.create({
           data: {
             nombre: inv.nombre,
@@ -104,6 +116,27 @@ export async function activarContratoAlquiler(contratoId: string, usuarioId?: st
           },
         })
         equipoId = nuevoEquipo.id
+
+        await aplicarKitYPreventivoEquipo({
+          db: tx,
+          equipoId: nuevoEquipo.id,
+          clienteId: contrato.clienteId,
+          inventario: inv,
+          referencia: `contrato alquiler ${contrato.numero}`,
+          fechaBase: linea.fechaEntrega ?? fechaInicio,
+        })
+
+        await tx.historiaClinicaEntrada.create({
+          data: {
+            equipoId: nuevoEquipo.id,
+            tipo: 'INSTALACION',
+            titulo: `Equipo en alquiler — ${contrato.numero}`,
+            contenido: `Alta desde parque ALQ${unidad.numeroSerie ? ` · Serie ${unidad.numeroSerie}` : ''}`,
+            referenciaId: contrato.id,
+            usuarioId: usuarioId ?? null,
+          },
+        })
+
         await tx.inventarioUnidad.update({
           where: { id: unidad.id },
           data: { equipoId: nuevoEquipo.id },

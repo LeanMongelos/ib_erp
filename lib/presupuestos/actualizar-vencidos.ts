@@ -5,8 +5,31 @@
 
 import { prisma } from '@/lib/prisma'
 import { criterioPresupuestosVencidos } from '@/lib/presupuestos/vencimiento'
+import { presupuestoEsIncompleto } from '@/lib/presupuestos/completitud'
+
+/** Borradores completos (legacy) → ENVIADO antes de marcar vencidos. */
+export async function promoverPresupuestosBorradorCompletos(): Promise<number> {
+  const borradores = await prisma.presupuesto.findMany({
+    where: { estado: 'BORRADOR' },
+    include: { items: { select: { descripcion: true, cantidad: true, precioUnit: true } } },
+  })
+
+  let count = 0
+  for (const p of borradores) {
+    if (!presupuestoEsIncompleto(p)) {
+      await prisma.presupuesto.update({
+        where: { id: p.id },
+        data: { estado: 'ENVIADO' },
+      })
+      count++
+    }
+  }
+  return count
+}
 
 export async function actualizarPresupuestosVencidos(): Promise<number> {
+  await promoverPresupuestosBorradorCompletos()
+
   const result = await prisma.presupuesto.updateMany({
     where: criterioPresupuestosVencidos(),
     data: { estado: 'VENCIDO' },

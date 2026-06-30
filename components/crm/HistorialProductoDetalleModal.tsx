@@ -54,7 +54,7 @@ export function HistorialProductoDetalleModal({ itemFacturaId, onClose }: Props)
   const item = data?.item
   const inv = data?.inventario
   const eq = data?.equipo
-  const esEquipo = inv?.tipoArticulo === 'EQUIPO' || Boolean(eq)
+  const esEquipo = inv?.tipoArticulo === 'EQUIPO' || inv?.tipoArticulo === 'ALQUILER' || Boolean(eq)
 
   return (
     <div

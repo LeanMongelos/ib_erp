@@ -1,29 +1,21 @@
 /**
  * Al emitir / entregar una factura: crea Equipo en cliente, kit clínico y preventivo programado.
  */
-import { addDays, addMonths } from 'date-fns'
 import { prisma } from '@/lib/prisma'
 import { registrarMovimientoStock } from '@/lib/inventario'
 import { marcarUnidadVendida, trazabilidadActiva } from '@/lib/inventario/unidades'
-import { crearConNumeroUnico, siguienteNumeroOT } from '@/lib/sequences'
 import { registrarEntradaHistoria } from '@/lib/equipos/historia-clinica'
 import { registrarCicloInstalacionDesdeVenta } from '@/lib/tracking-automation'
 import { geocodificarClientePorId } from '@/lib/clientes/geocodificar-cliente'
 import { garantiaHastaDesdeTexto } from '@/lib/garantia'
-import type { TipoComponenteEquipo, TipoItemKitEquipo } from '@prisma/client'
+import { aplicarKitYPreventivoEquipo } from '@/lib/equipos/aplicar-kit-preventivo-equipo'
+import { isEquipoVenta } from '@/lib/inventario/tipo-articulo'
 
 export interface ResultadoProvisionVenta {
   equiposCreados: number
   planesCreados: number
   otsCreadas: number
   errores: string[]
-}
-
-function mapTipoComponente(tipoItem: TipoItemKitEquipo, explicito?: TipoComponenteEquipo | null): TipoComponenteEquipo {
-  if (explicito) return explicito
-  if (tipoItem === 'BATERIA') return 'BATERIA'
-  if (tipoItem === 'COMPONENTE') return 'OTRO'
-  return 'OTRO'
 }
 
 export async function provisionarEquiposDesdeFactura(
@@ -63,7 +55,7 @@ export async function provisionarEquiposDesdeFactura(
 
   for (const item of factura.items) {
     const cat = item.inventario
-    if (!cat || cat.tipoArticulo !== 'EQUIPO') continue
+    if (!cat || !isEquipoVenta(cat.tipoArticulo)) continue
     if (item.equipoGeneradoId) continue
 
     if (item.cantidad !== 1) {
@@ -90,9 +82,6 @@ export async function provisionarEquiposDesdeFactura(
           continue
         }
       }
-
-      const intervalo = cat.intervaloPreventivoDias ?? 180
-      const proximoPreventivo = item.proximoPreventivo ?? addDays(new Date(), intervalo)
 
       let sucursalInstalacion: { id: string; nombre: string; direccion: string | null; ciudad: string | null } | null = null
       if (item.sucursalInstalacionId) {
@@ -130,70 +119,15 @@ export async function provisionarEquiposDesdeFactura(
         await geocodificarSucursalPorId(sucursalInstalacion.id).catch(() => null)
       }
 
-      for (const k of cat.kitComoEquipo) {
-        if (k.tipoItem === 'BATERIA' || k.tipoItem === 'COMPONENTE') {
-          const venceEn = k.mesesVencimiento ? addMonths(new Date(), k.mesesVencimiento) : null
-          await prisma.equipoComponente.create({
-            data: {
-              equipoId: equipo.id,
-              tipo: mapTipoComponente(k.tipoItem, k.tipoComponente),
-              descripcion: k.nombre,
-              numeroSerie: k.hijo?.sku ?? null,
-              instaladoEn: new Date(),
-              venceEn,
-              notas: k.notas,
-            },
-          })
-        } else {
-          await prisma.equipoAccesorio.create({
-            data: {
-              equipoId: equipo.id,
-              nombre: k.nombre,
-              inventarioId: k.inventarioHijoId,
-              cantidad: k.cantidad,
-              obligatorio: k.obligatorio,
-              notas: k.notas ?? (k.tipoItem === 'ACCESORIO_ESPECIFICO' ? 'Accesorio específico del equipo' : 'Accesorio genérico'),
-            },
-          })
-        }
-      }
-
-      if (cat.requierePreventivo) {
-        await prisma.planMantenimiento.create({
-          data: {
-            equipoId: equipo.id,
-            descripcion: `Preventivo — ${cat.nombre}${cat.marca ? ` ${cat.marca}` : ''}`,
-            intervaloDias: intervalo,
-            proximoServicio: proximoPreventivo,
-            estado: 'PROGRAMADO',
-            notas: `Generado automáticamente desde factura ${factura.numero}`,
-          },
-        })
-        resultado.planesCreados++
-
-        await crearConNumeroUnico(siguienteNumeroOT, (numero) =>
-          prisma.ordenTrabajo.create({
-            data: {
-              numero,
-              tipo: 'PREVENTIVO',
-              descripcion: `Mantenimiento preventivo programado — ${equipo.nombre}`,
-              clienteId: factura.clienteId,
-              equipoId: equipo.id,
-              estado: 'ABIERTA',
-              prioridad: 'NORMAL',
-              slaHoras: 168,
-              slaVence: addDays(proximoPreventivo, 7),
-              historial: {
-                create: {
-                  estado: 'ABIERTA',
-                  nota: `OT preventiva generada por venta (factura ${factura.numero}). Fecha objetivo: ${proximoPreventivo.toISOString().slice(0, 10)}`,
-                },
-              },
-            },
-          }),
-        )
-        resultado.otsCreadas++
-      }
+      const kitPrev = await aplicarKitYPreventivoEquipo({
+        equipoId: equipo.id,
+        clienteId: factura.clienteId,
+        inventario: cat,
+        referencia: `factura ${factura.numero}`,
+        fechaBase: new Date(),
+      })
+      resultado.planesCreados += kitPrev.planesCreados
+      resultado.otsCreadas += kitPrev.otsCreadas
 
       await registrarEntradaHistoria(equipo.id, {
         tipo: 'INSTALACION',

@@ -57,6 +57,7 @@ enum TipoArticuloInventario {
   ACCESORIO
   BATERIA
   EQUIPO
+  ALQUILER
 }
 
 enum TipoItemKitEquipo {
