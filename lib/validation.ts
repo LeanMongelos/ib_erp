@@ -1233,4 +1233,6 @@ export const ticketUpdateSchema = z.object({
 export const ticketComentarioSchema = z.object({
   texto: z.string().trim().min(1, 'Escribí un comentario').max(4000),
   esInterno: z.boolean().optional().default(false),
+  /** Admin pide más info al solicitante (pasa a ESPERANDO_INFO). */
+  esPregunta: z.boolean().optional().default(false),
 })

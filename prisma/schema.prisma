@@ -383,6 +383,7 @@ model Usuario {
   ticketsAsignados                Ticket[] @relation("TicketAsignado")
   ticketComentarios               TicketComentario[]
   ticketHistorial                 TicketHistorial[]
+  ticketAdjuntos                  TicketAdjunto[]
   actasEntregaAlquilerCreadas     ActaEntregaAlquiler[] @relation("ActaEntregaAlquilerCreador")
   fletesCreados                   SeguimientoFlete[] @relation("FletesCreados")
 
@@ -2445,6 +2446,7 @@ model Ticket {
   asignado    Usuario?           @relation("TicketAsignado", fields: [asignadoId], references: [id])
   comentarios TicketComentario[]
   historial   TicketHistorial[]
+  adjuntos    TicketAdjunto[]
 
   @@index([estado])
   @@index([solicitanteId])
@@ -2459,13 +2461,33 @@ model TicketComentario {
   usuarioId String
   texto     String
   esInterno Boolean  @default(false)
+  esPregunta Boolean @default(false)
   creadoEn  DateTime @default(now())
 
   ticket  Ticket  @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   usuario Usuario @relation(fields: [usuarioId], references: [id])
+  adjuntos TicketAdjunto[]
 
   @@index([ticketId])
   @@map("ticket_comentarios")
+}
+
+model TicketAdjunto {
+  id           String   @id @default(cuid())
+  ticketId     String
+  comentarioId String?
+  url          String
+  nombre       String?
+  mimeType     String
+  usuarioId    String
+  creadoEn     DateTime @default(now())
+
+  ticket     Ticket            @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  comentario TicketComentario? @relation(fields: [comentarioId], references: [id], onDelete: SetNull)
+  usuario    Usuario           @relation(fields: [usuarioId], references: [id])
+
+  @@index([ticketId])
+  @@map("ticket_adjuntos")
 }
 
 model TicketHistorial {

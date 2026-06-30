@@ -3,9 +3,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Plus, Search } from 'lucide-react'
+import { Search } from 'lucide-react'
 import { Card } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { BadgeEstadoTicket, BadgePrioridad } from '@/components/ui/badge'
 import { formatFechaHora } from '@/lib/utils'
 import { mensajeErrorRespuesta } from '@/lib/errores'
@@ -29,7 +28,13 @@ function paramOrDefault(value: string | null, fallback: string) {
   return value && value.length > 0 ? value : fallback
 }
 
-export function TicketsTable() {
+export function TicketsTable({
+  modoAdmin = false,
+  soloMios: soloMiosProp = false,
+}: {
+  modoAdmin?: boolean
+  soloMios?: boolean
+}) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const puedeVerTodos = useCan('tickets.read_all')
@@ -38,7 +43,9 @@ export function TicketsTable() {
   const [estado, setEstado] = useState(() => paramOrDefault(searchParams.get('estado'), 'TODOS'))
   const [tipo, setTipo] = useState(() => paramOrDefault(searchParams.get('tipo'), 'TODOS'))
   const [area, setArea] = useState(() => paramOrDefault(searchParams.get('area'), 'TODOS'))
-  const [soloMios, setSoloMios] = useState(() => searchParams.get('soloMios') === '1')
+  const [soloMios, setSoloMios] = useState(
+    () => soloMiosProp || searchParams.get('soloMios') === '1',
+  )
   const [tickets, setTickets] = useState<TicketRow[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -58,9 +65,10 @@ export function TicketsTable() {
       if (mios) params.set('soloMios', '1')
 
       const qs = params.toString()
-      router.replace(qs ? `/tickets?${qs}` : '/tickets', { scroll: false })
+      const base = modoAdmin ? '/tickets/admin' : '/tickets/mis'
+      router.replace(qs ? `${base}?${qs}` : base, { scroll: false })
     },
-    [router, search, estado, tipo, area, soloMios],
+    [router, search, estado, tipo, area, soloMios, modoAdmin],
   )
 
   const cargar = useCallback(async () => {
@@ -72,6 +80,7 @@ export function TicketsTable() {
       if (tipo !== 'TODOS') params.set('tipo', tipo)
       if (area !== 'TODOS') params.set('area', area)
       if (soloMios) params.set('soloMios', '1')
+      if (modoAdmin) params.set('modoAdmin', '1')
 
       const res = await fetch(`/api/tickets?${params}`, { credentials: 'include' })
       if (!res.ok) throw new Error(await mensajeErrorRespuesta(res, 'Error al cargar solicitudes'))
@@ -82,7 +91,7 @@ export function TicketsTable() {
     } finally {
       setLoading(false)
     }
-  }, [search, estado, tipo, area, soloMios])
+  }, [search, estado, tipo, area, soloMios, modoAdmin])
 
   useEffect(() => {
     cargar()
@@ -144,7 +153,7 @@ export function TicketsTable() {
               <option key={a.value} value={a.value}>{a.label}</option>
             ))}
           </select>
-          {puedeVerTodos && (
+          {modoAdmin && puedeVerTodos && (
             <label className="flex items-center gap-1.5 text-[12px] text-[#5b626d] px-2">
               <input
                 type="checkbox"
@@ -158,11 +167,11 @@ export function TicketsTable() {
             </label>
           )}
         </div>
-        <Link href="/tickets/nuevo">
-          <Button size="sm">
-            <Plus size={15} /> Nueva solicitud
-          </Button>
-        </Link>
+        {!modoAdmin && (
+          <p className="text-[11.5px] text-[#9aa1ab] shrink-0">
+            Creá tickets desde el icono <strong>Tickets</strong> arriba
+          </p>
+        )}
       </div>
 
       <Card className="overflow-hidden">

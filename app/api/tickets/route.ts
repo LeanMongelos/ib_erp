@@ -16,6 +16,7 @@ export async function GET(req: NextRequest) {
       area: searchParams.get('area'),
       asignadoId: searchParams.get('asignadoId'),
       soloMios: searchParams.get('soloMios') === '1',
+      modoAdmin: searchParams.get('modoAdmin') === '1',
       usuarioId: actor.id,
       permisos: actor.permissions,
     })

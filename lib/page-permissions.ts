@@ -60,7 +60,8 @@ export const NAV_ITEM_PERMISSIONS: Record<string, readonly string[]> = {
   '/alquiler': ['alquiler.read'],
   '/proveedores': ['proveedores.read'],
   '/automatizaciones': ['config.manage_integrations'],
-  '/tickets': ['tickets.read'],
+  '/tickets/admin': ['tickets.read_all'],
+  '/tickets/mis': ['tickets.read'],
   '/configuracion': ['config.read'],
 }
 

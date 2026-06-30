@@ -7,6 +7,7 @@ import { ticketUpdateSchema } from '@/lib/validation'
 import { plain } from '@/lib/serialize'
 import { obtenerTicketDetalle, puedeVerTicket } from '@/lib/tickets/crud'
 import { validarTransicionTicket } from '@/lib/tickets/transiciones'
+import { marcarAlertasTicketLeidas } from '@/lib/tickets/notificaciones-inbox'
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -22,6 +23,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     const comentarios = ticket.comentarios.filter(
       (c) => !c.esInterno || tienePermiso(actor.permissions, 'tickets.read_all'),
     )
+
+    void marcarAlertasTicketLeidas(actor.id, id)
 
     return NextResponse.json(plain({ ...ticket, comentarios }))
   } catch (error) {

@@ -49,6 +49,7 @@ export type ListarTicketsParams = {
   area?: string | null
   asignadoId?: string | null
   soloMios?: boolean
+  modoAdmin?: boolean
   usuarioId: string
   permisos: string[]
 }
@@ -101,8 +102,11 @@ export async function listarTickets(params: ListarTicketsParams) {
   return prisma.ticket.findMany({
     where,
     include: ticketIncludeList,
-    orderBy: [{ prioridad: 'desc' }, { creadoEn: 'desc' }],
-    take: 200,
+    orderBy:
+      verTodos && params.modoAdmin && !params.soloMios
+        ? [{ creadoEn: 'asc' }]
+        : [{ prioridad: 'desc' }, { creadoEn: 'desc' }],
+    take: params.modoAdmin ? 500 : 200,
   })
 }
 
@@ -114,7 +118,14 @@ export async function obtenerTicketDetalle(id: string) {
       asignado: { select: { id: true, nombre: true, email: true } },
       comentarios: {
         orderBy: { creadoEn: 'asc' },
-        include: { usuario: { select: { id: true, nombre: true } } },
+        include: {
+          usuario: { select: { id: true, nombre: true } },
+          adjuntos: true,
+        },
+      },
+      adjuntos: {
+        where: { comentarioId: null },
+        orderBy: { creadoEn: 'asc' },
       },
       historial: {
         orderBy: { creadoEn: 'asc' },
