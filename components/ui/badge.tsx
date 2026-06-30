@@ -98,6 +98,25 @@ export function BadgeEstadoPresupuesto({
   return <Badge variant={variant}>{label}</Badge>
 }
 
+export function BadgeEstadoTicket({ estado }: { estado: string }) {
+  const map: Record<string, { variant: BadgeProps['variant']; label: string }> = {
+    ABIERTA:         { variant: 'info',    label: 'Abierta' },
+    EN_REVISION:     { variant: 'info',    label: 'En revisión' },
+    EN_PROGRESO:     { variant: 'warning', label: 'En progreso' },
+    ESPERANDO_INFO:  { variant: 'warning', label: 'Esperando info' },
+    RESUELTA:        { variant: 'success', label: 'Resuelta' },
+    CERRADA:         { variant: 'gray',    label: 'Cerrada' },
+    CANCELADA:       { variant: 'gray',    label: 'Cancelada' },
+  }
+  const { variant, label } = map[estado] ?? { variant: 'gray', label: estado }
+  return (
+    <Badge variant={variant}>
+      <span className="w-1.5 h-1.5 rounded-full bg-current" />
+      {label}
+    </Badge>
+  )
+}
+
 export function BadgePrioridad({ prioridad }: { prioridad: string }) {
   const map: Record<string, { variant: BadgeProps['variant']; label: string }> = {
     URGENTE: { variant: 'danger',  label: 'Urgente' },

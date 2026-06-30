@@ -26,6 +26,7 @@ import {
   BarChart3,
   Repeat,
   PackageSearch,
+  LifeBuoy,
 } from 'lucide-react'
 
 const navItems = [
@@ -42,6 +43,7 @@ const navItems = [
   { label: 'Compras',           href: '/compras',                     icon: ShoppingCart    },
   { label: 'Fletes',            href: '/fletes',                      icon: PackageSearch   },
   { label: 'Alquiler',          href: '/alquiler',                    icon: Repeat          },
+  { label: 'Solicitudes',       href: '/tickets',                     icon: LifeBuoy        },
   { label: 'Clientes',          href: '/clientes',                    icon: Building2       },
   { label: 'Proveedores',       href: '/proveedores',                 icon: Truck           },
   { label: 'Automatizaciones',  href: '/automatizaciones',            icon: Zap             },

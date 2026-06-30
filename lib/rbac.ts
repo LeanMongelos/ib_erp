@@ -126,6 +126,13 @@ export const PERMISSIONS: Permiso[] = [
   { clave: 'auditoria.read', modulo: 'auditoria', descripcion: 'Ver auditoría' },
   // Logs del sistema
   { clave: 'logs.read', modulo: 'logs', descripcion: 'Ver logs de errores del sistema' },
+  // Tickets / solicitudes internas
+  { clave: 'tickets.read',       modulo: 'tickets', descripcion: 'Ver solicitudes propias o asignadas' },
+  { clave: 'tickets.read_all',   modulo: 'tickets', descripcion: 'Ver todas las solicitudes' },
+  { clave: 'tickets.create',     modulo: 'tickets', descripcion: 'Crear solicitudes' },
+  { clave: 'tickets.update',     modulo: 'tickets', descripcion: 'Editar y comentar solicitudes' },
+  { clave: 'tickets.assign',     modulo: 'tickets', descripcion: 'Asignar solicitudes' },
+  { clave: 'tickets.close',      modulo: 'tickets', descripcion: 'Cerrar solicitudes' },
   // Listas de precios
   { clave: 'listas_precios.read',   modulo: 'listas_precios', descripcion: 'Ver listas de precios' },
   { clave: 'listas_precios.manage', modulo: 'listas_precios', descripcion: 'Gestionar listas de precios' },
@@ -143,6 +150,8 @@ export const ROLE_DEFS: Record<string, string> = {
 
 const P = PERMISSIONS.map((p) => p.clave)
 const onlyRead = (mod: string) => P.filter((k) => k.startsWith(`${mod}.`) && k.includes('read'))
+const TICKETS_BASE = ['tickets.read', 'tickets.create', 'tickets.update'] as const
+const TICKETS_FULL = [...TICKETS_BASE, 'tickets.read_all', 'tickets.assign', 'tickets.close'] as const
 
 /** Permisos por rol base. SUPERADMIN usa el comodín `*`. */
 export const ROLE_PERMISSIONS: Record<string, string[]> = {
@@ -177,10 +186,12 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
     'logs.read',
     'listas_precios.read',
     'listas_precios.manage',
+    ...TICKETS_FULL,
   ],
 
   ADMINISTRACION: [
     'perfil.edit_own',
+    ...TICKETS_BASE,
     'clientes.read', 'clientes.create', 'clientes.update', 'clientes.deactivate', 'clientes.export',
     'proveedores.read', 'proveedores.create', 'proveedores.update', 'proveedores.deactivate',
     'presupuestos.read', 'presupuestos.create', 'presupuestos.update', 'presupuestos.send', 'presupuestos.approve',
@@ -202,6 +213,7 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
 
   VENTAS: [
     'perfil.edit_own',
+    ...TICKETS_BASE,
     'clientes.read', 'clientes.create', 'clientes.update',
     ...onlyRead('proveedores'),
     'presupuestos.read', 'presupuestos.create', 'presupuestos.update', 'presupuestos.send',
@@ -220,6 +232,7 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
 
   FACTURACION: [
     'perfil.edit_own',
+    ...TICKETS_BASE,
     'clientes.read',
     'presupuestos.read',
     'facturas.read', 'facturas.create', 'facturas.emit_afip', 'facturas.cancel', 'facturas.credit_note', 'facturas.export',
@@ -237,6 +250,7 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
 
   CONTABILIDAD: [
     'perfil.edit_own',
+    ...TICKETS_BASE,
     'clientes.read',
     ...onlyRead('proveedores'),
     'facturas.read', 'facturas.emit_afip', 'facturas.cancel', 'facturas.export',
@@ -252,6 +266,7 @@ export const ROLE_PERMISSIONS: Record<string, string[]> = {
 
   TECNICO: [
     'perfil.edit_own',
+    ...TICKETS_BASE,
     'clientes.read',
     ...onlyRead('proveedores'),
     'presupuestos.read', 'presupuestos.create',

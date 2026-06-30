@@ -14,6 +14,15 @@ export type EstadoOT = 'ABIERTA' | 'EN_PROCESO' | 'CERRADA' | 'VENCIDA' | 'CANCE
 
 export type Prioridad = 'BAJA' | 'NORMAL' | 'ALTA' | 'URGENTE'
 
+export type EstadoTicket =
+  | 'ABIERTA'
+  | 'EN_REVISION'
+  | 'EN_PROGRESO'
+  | 'ESPERANDO_INFO'
+  | 'RESUELTA'
+  | 'CERRADA'
+  | 'CANCELADA'
+
 export type TipoFactura = 'A' | 'B' | 'C'
 
 export type EstadoFactura = 'BORRADOR' | 'PENDIENTE' | 'PENDIENTE_CAE' | 'EMITIDA' | 'RECHAZADA' | 'PAGADA' | 'VENCIDA' | 'ANULADA'

@@ -146,6 +146,34 @@ enum Prioridad {
   URGENTE
 }
 
+enum TipoTicket {
+  ERROR_SISTEMA
+  CORRECCION_DATOS
+  MEJORA_ERP
+  CONSULTA
+  OTRO
+}
+
+enum AreaTicket {
+  ADMINISTRACION
+  GERENCIA
+  SERVICIO_TECNICO
+  VENTAS
+  FACTURACION
+  CONTABILIDAD
+  DESARROLLO
+}
+
+enum EstadoTicket {
+  ABIERTA
+  EN_REVISION
+  EN_PROGRESO
+  ESPERANDO_INFO
+  RESUELTA
+  CERRADA
+  CANCELADA
+}
+
 enum TipoFactura {
   A
   B
@@ -351,6 +379,10 @@ model Usuario {
   eventosOrdenCompra              EventoOrdenCompra[]
   notificacionesUsuario           NotificacionUsuario[]
   contratosAlquilerCreados        ContratoAlquiler[] @relation("ContratoAlquilerCreador")
+  ticketsSolicitados              Ticket[] @relation("TicketSolicitante")
+  ticketsAsignados                Ticket[] @relation("TicketAsignado")
+  ticketComentarios               TicketComentario[]
+  ticketHistorial                 TicketHistorial[]
   actasEntregaAlquilerCreadas     ActaEntregaAlquiler[] @relation("ActaEntregaAlquilerCreador")
   fletesCreados                   SeguimientoFlete[] @relation("FletesCreados")
 
@@ -2386,4 +2418,67 @@ model SeguimientoFlete {
   @@index([clienteId])
   @@index([proveedorOrigenId])
   @@map("seguimiento_fletes")
+}
+
+// ============ TICKETS / SOLICITUDES INTERNAS ============
+
+model Ticket {
+  id            String       @id @default(cuid())
+  numero        String       @unique
+  titulo        String
+  descripcion   String
+  tipo          TipoTicket
+  areaOrigen    AreaTicket
+  areaDestino   AreaTicket   @default(DESARROLLO)
+  estado        EstadoTicket @default(ABIERTA)
+  prioridad     Prioridad    @default(NORMAL)
+  solicitanteId String
+  asignadoId    String?
+  entidadTipo   String?
+  entidadId     String?
+  resolucion    String?
+  creadoEn      DateTime     @default(now())
+  actualizadoEn DateTime     @updatedAt
+  cerradoEn     DateTime?
+
+  solicitante Usuario            @relation("TicketSolicitante", fields: [solicitanteId], references: [id])
+  asignado    Usuario?           @relation("TicketAsignado", fields: [asignadoId], references: [id])
+  comentarios TicketComentario[]
+  historial   TicketHistorial[]
+
+  @@index([estado])
+  @@index([solicitanteId])
+  @@index([asignadoId])
+  @@index([areaOrigen])
+  @@map("tickets")
+}
+
+model TicketComentario {
+  id        String   @id @default(cuid())
+  ticketId  String
+  usuarioId String
+  texto     String
+  esInterno Boolean  @default(false)
+  creadoEn  DateTime @default(now())
+
+  ticket  Ticket  @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+
+  @@index([ticketId])
+  @@map("ticket_comentarios")
+}
+
+model TicketHistorial {
+  id        String       @id @default(cuid())
+  ticketId  String
+  estado    EstadoTicket
+  nota      String?
+  usuarioId String?
+  creadoEn  DateTime     @default(now())
+
+  ticket  Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  usuario Usuario? @relation(fields: [usuarioId], references: [id])
+
+  @@index([ticketId])
+  @@map("ticket_historial")
 }

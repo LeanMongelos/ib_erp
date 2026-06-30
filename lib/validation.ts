@@ -1184,3 +1184,53 @@ export const fleteCreateSchema = z.object({
 export const fleteUpdateSchema = fleteCreateSchema.partial().extend({
   tipo: tipoFleteEnum.optional(),
 })
+
+// ============ TICKETS / SOLICITUDES INTERNAS ============
+
+export const tipoTicketEnum = z.enum(['ERROR_SISTEMA', 'CORRECCION_DATOS', 'MEJORA_ERP', 'CONSULTA', 'OTRO'])
+export const areaTicketEnum = z.enum([
+  'ADMINISTRACION',
+  'GERENCIA',
+  'SERVICIO_TECNICO',
+  'VENTAS',
+  'FACTURACION',
+  'CONTABILIDAD',
+  'DESARROLLO',
+])
+export const estadoTicketEnum = z.enum([
+  'ABIERTA',
+  'EN_REVISION',
+  'EN_PROGRESO',
+  'ESPERANDO_INFO',
+  'RESUELTA',
+  'CERRADA',
+  'CANCELADA',
+])
+
+export const ticketCreateSchema = z.object({
+  titulo: z.string().trim().min(5, 'El título debe tener al menos 5 caracteres').max(200),
+  descripcion: z.string().trim().min(10, 'Describí el pedido con al menos 10 caracteres').max(8000),
+  tipo: tipoTicketEnum,
+  areaOrigen: areaTicketEnum,
+  areaDestino: areaTicketEnum.default('DESARROLLO'),
+  prioridad: prioridadEnum.default('NORMAL'),
+  entidadTipo: z.string().trim().max(80).optional().nullable(),
+  entidadId: z.string().min(1).optional().nullable(),
+})
+
+export const ticketUpdateSchema = z.object({
+  titulo: z.string().trim().min(5).max(200).optional(),
+  descripcion: z.string().trim().min(10).max(8000).optional(),
+  tipo: tipoTicketEnum.optional(),
+  areaDestino: areaTicketEnum.optional(),
+  prioridad: prioridadEnum.optional(),
+  estado: estadoTicketEnum.optional(),
+  asignadoId: z.string().min(1).optional().nullable(),
+  resolucion: z.string().trim().min(5).max(4000).optional().nullable(),
+  nota: z.string().trim().max(2000).optional(),
+})
+
+export const ticketComentarioSchema = z.object({
+  texto: z.string().trim().min(1, 'Escribí un comentario').max(4000),
+  esInterno: z.boolean().optional().default(false),
+})

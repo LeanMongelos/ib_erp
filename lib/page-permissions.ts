@@ -13,6 +13,7 @@ export const DASHBOARD_ACCESS_PERMISSIONS = [
   'reportes.read_financiero',
   'reportes.read_operativo',
   'reportes.read_fiscal',
+  'tickets.read',
   'config.read',
 ] as const
 
@@ -59,6 +60,7 @@ export const NAV_ITEM_PERMISSIONS: Record<string, readonly string[]> = {
   '/alquiler': ['alquiler.read'],
   '/proveedores': ['proveedores.read'],
   '/automatizaciones': ['config.manage_integrations'],
+  '/tickets': ['tickets.read'],
   '/configuracion': ['config.read'],
 }
 
