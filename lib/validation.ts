@@ -173,6 +173,13 @@ export const equipoNuevoOtSchema = z.object({
 /** POST /api/clientes/[id]/equipos — alta externa en ficha del cliente (origen EXTERNO). */
 export const equipoClienteCreateSchema = equipoNuevoOtSchema
 
+export const equipoTrasladoSchema = z.object({
+  clienteId: z.string().min(1, 'Seleccioná el cliente destino'),
+  sucursalId: z.string().min(1).optional().nullable(),
+  motivo: z.string().trim().max(200).optional(),
+  observaciones: z.string().trim().max(2000).optional(),
+})
+
 export const otCreateSchema = z
   .object({
     descripcion: z.string().trim().min(5, 'La descripción debe tener al menos 5 caracteres'),
@@ -397,6 +404,8 @@ export const facturaUpdateSchema = z.object({
   items:           z.array(itemFacturaSchema).min(1).optional(),
 }).refine((d) => Object.keys(d).length > 0, { message: 'Nada para actualizar' })
 
+export const modoGuardadoPresupuestoEnum = z.enum(['borrador', 'finalizar'])
+
 export const presupuestoCreateSchema = z.object({
   clienteId:             z.string().min(1),
   otId:                  z.string().min(1).optional().nullable(),
@@ -415,7 +424,17 @@ export const presupuestoCreateSchema = z.object({
   garantia:              z.string().trim().max(120).optional(),
   bonificacionPct:       z.number().min(0).max(100).optional(),
   alicuotaIvaPct:        z.number().min(0).max(100).optional(),
-  items:                 z.array(itemPresupuestoSchema).min(1),
+  modoGuardado:          modoGuardadoPresupuestoEnum.optional().default('finalizar'),
+  items:                 z.array(itemPresupuestoSchema),
+}).superRefine((data, ctx) => {
+  const lineas = data.items.filter((i) => i.descripcion.trim())
+  if (data.modoGuardado === 'finalizar' && lineas.length === 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Agregá al menos un ítem',
+      path: ['items'],
+    })
+  }
 })
 
 export const presupuestoRevisionSchema = z.object({
@@ -439,7 +458,8 @@ export const presupuestoUpdateSchema = z.object({
   formaPago:       z.string().trim().max(120).optional(),
   plazoEntrega:    z.string().trim().max(120).optional(),
   garantia:        z.string().trim().max(120).optional(),
-  items:           z.array(itemPresupuestoSchema).min(1).optional(),
+  modoGuardado:    modoGuardadoPresupuestoEnum.optional(),
+  items:           z.array(itemPresupuestoSchema).optional(),
 }).refine((d) => Object.keys(d).length > 0, { message: 'Nada para actualizar' })
 
 export const chequeDatosSchema = z.object({

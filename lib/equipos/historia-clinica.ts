@@ -4,6 +4,7 @@
 
 import { prisma } from '@/lib/prisma'
 import type { TipoEntradaHistoriaClinica, Prisma } from '@prisma/client'
+import { listarAsignacionesEquipo } from '@/lib/equipos/asignaciones'
 
 export type BitacoraItem = {
   id: string
@@ -235,8 +236,11 @@ export async function getEquipoHistoriaCompleta(equipoId: string) {
 
   if (!equipo) return null
 
-  const bitacora = await construirBitacora(equipoId)
-  return { equipo, bitacora }
+  const [bitacora, asignaciones] = await Promise.all([
+    construirBitacora(equipoId),
+    listarAsignacionesEquipo(equipoId),
+  ])
+  return { equipo, bitacora, asignaciones }
 }
 
 export async function getAlertasComponentesEquipos(diasHorizonte = 90) {

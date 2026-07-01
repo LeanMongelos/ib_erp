@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { requireAuth, requirePermission, handleApiError, ApiError } from '@/lib/api-auth'
+import { requirePermission, handleApiError, ApiError } from '@/lib/api-auth'
 import { presupuestoCreateSchema } from '@/lib/validation'
 import { calcularTotalesPresupuesto } from '@/lib/presupuestos/calcular-total-presupuesto'
-import { aplicarPreciosResueltosItems } from '@/lib/precios/aplicar-precios-documento'
 import { formatCondicionPago, parsePlazosCobranza } from '@/lib/cobranzas/plazos'
 import { resolverPlantillaIdEmision } from '@/lib/plantillas/resolver-plantilla'
 import { resolverCotizacionUsdDocumento, CotizacionUsdFaltanteError } from '@/lib/moneda'
@@ -11,12 +10,12 @@ import { siguienteNumeroPresupuesto, crearConNumeroUnico } from '@/lib/sequences
 import { plain } from '@/lib/serialize'
 import { registrarAuditoria, getIp } from '@/lib/audit'
 import { actualizarPresupuestosVencidos } from '@/lib/presupuestos/actualizar-vencidos'
+import { resolverEstadoTrasGuardado, debeNotificarClienteEnviado } from '@/lib/presupuestos/estado-guardado'
 
 export async function GET(req: NextRequest) {
   try {
     await requirePermission('presupuestos.read')
 
-    // Antes de listar, sincronizamos presupuestos cuya vigencia ya venció
     await actualizarPresupuestosVencidos()
 
     const { searchParams } = new URL(req.url)
@@ -61,6 +60,7 @@ export async function POST(req: NextRequest) {
     const actor = await requirePermission('presupuestos.create')
     const body = await req.json()
     const data = presupuestoCreateSchema.parse(body)
+    const modoGuardado = data.modoGuardado ?? 'finalizar'
 
     if (data.otId) {
       const ot = await prisma.ordenTrabajo.findUnique({ where: { id: data.otId } })
@@ -77,11 +77,7 @@ export async function POST(req: NextRequest) {
     }
 
     const moneda = data.moneda ?? 'ARS'
-
-    const itemsConPrecio = await aplicarPreciosResueltosItems(data.items, {
-      clienteId: data.clienteId,
-      moneda,
-    })
+    const itemsEntrada = data.items.filter((i) => i.descripcion.trim())
 
     const {
       itemsCalculados,
@@ -92,7 +88,7 @@ export async function POST(req: NextRequest) {
       alicuotaIvaPct,
       plazos,
     } = calcularTotalesPresupuesto({
-      items: itemsConPrecio,
+      items: itemsEntrada,
       bonificacionPct: data.bonificacionPct,
       alicuotaIvaPct: data.alicuotaIvaPct,
       plazosCobranza: data.plazosCobranza,
@@ -107,17 +103,29 @@ export async function POST(req: NextRequest) {
     const tasaFinanciacionPct = data.tasaFinanciacionPct ?? 0
 
     let cotizacionUsd: number | null = null
-    try {
-      cotizacionUsd = await resolverCotizacionUsdDocumento(prisma, moneda, data.cotizacionUsd)
-    } catch (e) {
-      if (e instanceof CotizacionUsdFaltanteError) throw new ApiError(400, e.message)
-      throw e
+    if (moneda === 'USD') {
+      try {
+        cotizacionUsd = await resolverCotizacionUsdDocumento(prisma, moneda, data.cotizacionUsd)
+      } catch (e) {
+        if (e instanceof CotizacionUsdFaltanteError) {
+          if (modoGuardado === 'finalizar') throw new ApiError(400, e.message)
+        } else {
+          throw e
+        }
+      }
     }
 
     const vence = new Date()
     vence.setDate(vence.getDate() + (data.vigenciaDias ?? 15))
 
     const plantillaId = await resolverPlantillaIdEmision('PRESUPUESTO', data.plantillaId ?? null)
+
+    const estado = resolverEstadoTrasGuardado(modoGuardado, {
+      estado: 'BORRADOR',
+      total,
+      clienteId: data.clienteId,
+      items: itemsCalculados,
+    })
 
     const presupuesto = await crearConNumeroUnico(
       siguienteNumeroPresupuesto,
@@ -146,7 +154,7 @@ export async function POST(req: NextRequest) {
             iva,
             total,
             fechaVencimiento: vence,
-            estado: 'ENVIADO',
+            estado,
             items: {
               create: itemsCalculados.map((i) => ({
                 codigo: i.codigo ?? null,
@@ -170,11 +178,17 @@ export async function POST(req: NextRequest) {
 
     await registrarAuditoria({
       usuarioId: actor.id,
-      accion: 'presupuesto.create',
+      accion: modoGuardado === 'borrador' ? 'presupuesto.autosave' : 'presupuesto.create',
       entidad: 'Presupuesto',
       entidadId: presupuesto.id,
       ip: getIp(req),
     })
+
+    if (debeNotificarClienteEnviado(modoGuardado, 'BORRADOR', estado)) {
+      void import('@/lib/presupuestos/notify-cliente-enviado').then(({ notifyClientePresupuestoEnviado }) =>
+        notifyClientePresupuestoEnviado(presupuesto.id).catch(() => null),
+      )
+    }
 
     return NextResponse.json(plain(presupuesto), { status: 201 })
   } catch (error) {

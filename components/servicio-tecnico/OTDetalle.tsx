@@ -329,7 +329,7 @@ export function OTDetalle({ ot }: { ot: any }) {
           </div>
 
           <Card>
-            <p className="text-[11px] font-bold text-[#8a909a] tracking-[0.6px] uppercase mb-3">Checklist de cierre</p>
+            <p className="text-[11px] font-bold text-[#8a909a] tracking-[0.6px] uppercase mb-3">Tareas realizadas</p>
             <div className="flex flex-col gap-2">
               {checklist.map((item, idx) => (
                 <label key={idx} className="flex items-start gap-2 text-[12.5px] text-[#3a4150] cursor-pointer">

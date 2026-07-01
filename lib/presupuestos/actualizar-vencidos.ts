@@ -28,8 +28,6 @@ export async function promoverPresupuestosBorradorCompletos(): Promise<number> {
 }
 
 export async function actualizarPresupuestosVencidos(): Promise<number> {
-  await promoverPresupuestosBorradorCompletos()
-
   const result = await prisma.presupuesto.updateMany({
     where: criterioPresupuestosVencidos(),
     data: { estado: 'VENCIDO' },

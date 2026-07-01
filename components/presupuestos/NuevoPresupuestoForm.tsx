@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Trash2, FileText, UserPlus, ChevronDown, ChevronUp } from 'lucide-react'
+import { Plus, Trash2, FileText, UserPlus, ChevronDown, ChevronUp, Cloud, CloudOff } from 'lucide-react'
 import { toast } from 'sonner'
 import { Card, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -28,6 +28,9 @@ import { formatCondicionPago } from '@/lib/cobranzas/plazos'
 import { calcularInteresFinanciacion } from '@/lib/cobranzas/financiacion'
 import type { PresetPlazoKey } from '@/lib/cobranzas/plazos'
 import { ClienteProspectoModal } from '@/components/crm/ClienteProspectoModal'
+import { itemsPresupuestoParaApi } from '@/lib/presupuestos/items-payload'
+import { presupuestoEsIncompleto } from '@/lib/presupuestos/completitud'
+import { useUnsavedChangesWarning, confirmarSalidaSiHayCambios } from '@/hooks/useUnsavedChangesWarning'
 
 interface ItemRow {
   id: string
@@ -179,6 +182,10 @@ export function NuevoPresupuestoForm({
     return otPrefill ? itemsDesdeOt(otPrefill) : [{ id: '1', descripcion: '', cantidad: 1, precioUnit: 0 }]
   })
   const [loading, setLoading] = useState(false)
+  const [draftId, setDraftId] = useState<string | null>(editPrefill?.id ?? null)
+  const [autosaveStatus, setAutosaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const lastSavedSnapshot = useRef<string | null>(null)
+  const savingRef = useRef(false)
   const plazoInicial = estadoInicialPlazos(
     editPrefill?.condicionPago,
     editPrefill?.tasaFinanciacionPct ?? 0,
@@ -276,100 +283,261 @@ export function NuevoPresupuestoForm({
     setItems(items.map((item, i) => (i === idx ? { ...item, [field]: value } : item)))
   }
 
-  async function guardar() {
-    if (!clienteId) { toast.error('Seleccioná un cliente'); return }
-    if (items.every((i) => !i.descripcion)) { toast.error('Agregá al menos un ítem'); return }
-
-    const errMoneda = validarMonedaDocumentoCliente(moneda, cotizacionUsd)
-    if (errMoneda) {
-      toast.error(errMoneda)
-      return
+  function mapItemPayload(i: ItemRow) {
+    return {
+      descripcion: i.descripcion,
+      cantidad: i.cantidad,
+      precioUnit: i.precioUnit,
+      alicuotaIvaPct: i.alicuotaIvaPct,
+      inventarioId: i.inventarioId ?? null,
+      tipoArticulo: i.tipoArticulo ?? null,
+      codigo: i.codigo ?? undefined,
+      fotoUrl: i.fotoUrl ?? undefined,
     }
+  }
 
-    setLoading(true)
-    try {
-      const payload = {
+  const buildSnapshot = useCallback(
+    () =>
+      JSON.stringify({
+        clienteId,
+        emisorId,
         vigenciaDias,
-        formaPago: formaPago || undefined,
-        plazoEntrega: plazoEntrega || undefined,
-        garantia: garantia || undefined,
-        observaciones: observaciones || undefined,
-        alicuotaIvaPct: alicuotaDocumentoPct,
+        formaPago,
+        plazoEntrega,
+        garantia,
+        observaciones,
+        alicuotaDocumentoPct,
         moneda,
-        cotizacionUsd: moneda === 'USD' ? cotizacionUsd : null,
-        ...(plazosActivos.length > 0
-          ? {
-              plazosCobranza: plazosActivos,
-              condicionPago: formatCondicionPago(plazosActivos),
-            }
-          : {}),
+        cotizacionUsd,
+        presetPlazo,
+        plazosCustom,
         tasaFinanciacionPct,
-        interesFinanciacion,
-        items: items.filter((i) => i.descripcion).map((i) => ({
-          descripcion: i.descripcion,
-          cantidad: i.cantidad,
-          precioUnit: i.precioUnit,
-          alicuotaIvaPct: i.alicuotaIvaPct,
-          inventarioId: i.inventarioId ?? null,
-          codigo: i.codigo ?? undefined,
-          fotoUrl: i.fotoUrl ?? undefined,
-        })),
+        items,
+      }),
+    [
+      clienteId,
+      emisorId,
+      vigenciaDias,
+      formaPago,
+      plazoEntrega,
+      garantia,
+      observaciones,
+      alicuotaDocumentoPct,
+      moneda,
+      cotizacionUsd,
+      presetPlazo,
+      plazosCustom,
+      tasaFinanciacionPct,
+      items,
+    ],
+  )
+
+  const buildPayload = useCallback(
+    (modoGuardado: 'borrador' | 'finalizar') => ({
+      vigenciaDias,
+      formaPago: formaPago || undefined,
+      plazoEntrega: plazoEntrega || undefined,
+      garantia: garantia || undefined,
+      observaciones: observaciones || undefined,
+      alicuotaIvaPct: alicuotaDocumentoPct,
+      moneda,
+      cotizacionUsd: moneda === 'USD' ? cotizacionUsd : null,
+      modoGuardado,
+      ...(plazosActivos.length > 0
+        ? {
+            plazosCobranza: plazosActivos,
+            condicionPago: formatCondicionPago(plazosActivos),
+          }
+        : {}),
+      tasaFinanciacionPct,
+      interesFinanciacion,
+      items: itemsPresupuestoParaApi(items, mapItemPayload),
+    }),
+    [
+      vigenciaDias,
+      formaPago,
+      plazoEntrega,
+      garantia,
+      observaciones,
+      alicuotaDocumentoPct,
+      moneda,
+      cotizacionUsd,
+      plazosActivos,
+      tasaFinanciacionPct,
+      interesFinanciacion,
+      items,
+    ],
+  )
+
+  const persistPresupuesto = useCallback(
+    async (modoGuardado: 'borrador' | 'finalizar') => {
+      if (!clienteId) {
+        if (modoGuardado === 'finalizar') toast.error('Seleccioná un cliente')
+        return null
+      }
+      if (savingRef.current) return draftId
+      if (modoGuardado === 'finalizar') {
+        if (items.every((i) => !i.descripcion.trim())) {
+          toast.error('Agregá al menos un ítem')
+          return null
+        }
+        const errMoneda = validarMonedaDocumentoCliente(moneda, cotizacionUsd)
+        if (errMoneda) {
+          toast.error(errMoneda)
+          return null
+        }
+      } else if (moneda === 'USD' && validarMonedaDocumentoCliente(moneda, cotizacionUsd)) {
+        return null
       }
 
-      if (esEdicion && editPrefill) {
-        const res = await fetch(`/api/presupuestos/${editPrefill.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({
-            ...payload,
-            emisorId: emisorId || null,
-          }),
-        })
-        if (!res.ok) throw new Error(await mensajeErrorRespuesta(res, 'No se pudo guardar el presupuesto'))
-        toast.success('Presupuesto actualizado')
-        router.refresh()
-        router.push(`/presupuestos/${editPrefill.id}`)
-        return
-      }
+      const snapshot = buildSnapshot()
+      if (modoGuardado === 'borrador' && snapshot === lastSavedSnapshot.current) return draftId
 
-      const res = await fetch('/api/presupuestos', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          clienteId,
-          otId: otPrefill?.id ?? null,
-          emisorId: emisorId || null,
-          plantillaId: plantillaPresupuesto.id ?? undefined,
-          ...payload,
-          items: items.filter((i) => i.descripcion).map((i) => ({
-            descripcion: i.descripcion,
-            cantidad: i.cantidad,
-            precioUnit: i.precioUnit,
-            alicuotaIvaPct: i.alicuotaIvaPct,
-            inventarioId: i.inventarioId ?? null,
-            tipoArticulo: i.tipoArticulo ?? null,
-            codigo: i.codigo ?? undefined,
-            fotoUrl: i.fotoUrl ?? undefined,
-          })),
-        }),
-      })
-      if (!res.ok) throw new Error(await mensajeErrorRespuesta(res, 'No se pudo guardar el presupuesto'))
-      const data = await res.json()
-      if (negocioEmbudoId) {
-        await fetch(`/api/crm/embudo/${negocioEmbudoId}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ presupuestoId: data.id }),
-        }).catch(() => null)
+      savingRef.current = true
+      if (modoGuardado === 'borrador') setAutosaveStatus('saving')
+      else setLoading(true)
+
+      try {
+        const payload = buildPayload(modoGuardado)
+        let presupuestoId = draftId
+
+        if (draftId) {
+          const res = await fetch(`/api/presupuestos/${draftId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              ...payload,
+              emisorId: emisorId || null,
+            }),
+          })
+          if (!res.ok) throw new Error(await mensajeErrorRespuesta(res, 'No se pudo guardar el presupuesto'))
+        } else {
+          const res = await fetch('/api/presupuestos', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              clienteId,
+              otId: otPrefill?.id ?? null,
+              emisorId: emisorId || null,
+              plantillaId: plantillaPresupuesto.id ?? undefined,
+              ...payload,
+            }),
+          })
+          if (!res.ok) throw new Error(await mensajeErrorRespuesta(res, 'No se pudo guardar el presupuesto'))
+          const data = await res.json()
+          presupuestoId = data.id
+          setDraftId(data.id)
+          if (negocioEmbudoId) {
+            await fetch(`/api/crm/embudo/${negocioEmbudoId}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ presupuestoId: data.id }),
+            }).catch(() => null)
+          }
+          if (!editPrefill) {
+            router.replace(`/presupuestos/${data.id}/editar`)
+          }
+        }
+
+        lastSavedSnapshot.current = snapshot
+        if (modoGuardado === 'borrador') {
+          setAutosaveStatus('saved')
+        } else {
+          const incompleto = presupuestoEsIncompleto({
+            estado: 'BORRADOR',
+            total: totalACobrar,
+            clienteId,
+            items: payload.items,
+          })
+          if (incompleto) {
+            toast.success('Presupuesto guardado como borrador (faltan datos para enviar)')
+          } else {
+            toast.success(esEdicion ? 'Presupuesto actualizado' : 'Presupuesto guardado')
+          }
+          router.refresh()
+          if (presupuestoId) router.push(`/presupuestos/${presupuestoId}`)
+        }
+        return presupuestoId
+      } catch (e) {
+        if (modoGuardado === 'borrador') {
+          setAutosaveStatus('error')
+        } else {
+          toast.error(mensajeErrorDesconocido(e, 'No se pudo guardar el presupuesto'))
+        }
+        return null
+      } finally {
+        savingRef.current = false
+        if (modoGuardado === 'borrador') setAutosaveStatus('idle')
+        else setLoading(false)
       }
-      toast.success('Presupuesto creado')
-      router.push(`/presupuestos/${data.id}`)
-    } catch (e) {
-      toast.error(mensajeErrorDesconocido(e, 'No se pudo guardar el presupuesto'))
-    } finally {
-      setLoading(false)
+    },
+    [
+      clienteId,
+      items,
+      moneda,
+      cotizacionUsd,
+      buildSnapshot,
+      buildPayload,
+      draftId,
+      emisorId,
+      esEdicion,
+      editPrefill,
+      negocioEmbudoId,
+      otPrefill?.id,
+      plantillaPresupuesto.id,
+      router,
+      totalACobrar,
+    ],
+  )
+
+  const hasUnsavedChanges =
+    Boolean(clienteId) &&
+    buildSnapshot() !== lastSavedSnapshot.current &&
+    (autosaveStatus === 'saving' || autosaveStatus === 'error' || autosaveStatus === 'idle')
+
+  useUnsavedChangesWarning(hasUnsavedChanges)
+
+  useEffect(() => {
+    if (editPrefill?.id) {
+      lastSavedSnapshot.current = buildSnapshot()
     }
+  }, [editPrefill?.id, buildSnapshot])
+
+  useEffect(() => {
+    if (!clienteId || loading || savingRef.current) return
+    const timer = window.setTimeout(() => {
+      void persistPresupuesto('borrador')
+    }, 1500)
+    return () => window.clearTimeout(timer)
+  }, [
+    clienteId,
+    loading,
+    buildSnapshot,
+    persistPresupuesto,
+    emisorId,
+    vigenciaDias,
+    formaPago,
+    plazoEntrega,
+    garantia,
+    observaciones,
+    alicuotaDocumentoPct,
+    moneda,
+    cotizacionUsd,
+    presetPlazo,
+    plazosCustom,
+    tasaFinanciacionPct,
+    items,
+  ])
+
+  async function guardar() {
+    await persistPresupuesto('finalizar')
+  }
+
+  function cancelar() {
+    if (!confirmarSalidaSiHayCambios(hasUnsavedChanges)) return
+    router.back()
   }
 
   return (
@@ -380,8 +548,25 @@ export function NuevoPresupuestoForm({
             Editando {editPrefill.numero} · versión {editPrefill.version}
           </p>
           <p className="text-[12px] text-[#3B82F6] mt-0.5">
-            Podés modificar ítems, precios, plazos y condiciones. Los precios que cargues se guardan tal cual.
+            Los cambios se guardan automáticamente como borrador. «Guardar y finalizar» lo marca listo para enviar al cliente.
           </p>
+        </div>
+      )}
+      {!esEdicion && (
+        <div className="bg-[#F0FDF4] border border-[#86EFAC] rounded-[10px] px-4 py-3 flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[13px] font-bold text-[#166534]">Guardado automático</p>
+            <p className="text-[12px] text-[#15803D] mt-0.5">
+              Al elegir cliente, el presupuesto se guarda como borrador cada pocos segundos. Usá «Guardar y finalizar» cuando esté completo.
+            </p>
+          </div>
+          {clienteId && (
+            <span className="text-[11px] text-[#166534] flex items-center gap-1 shrink-0">
+              {autosaveStatus === 'saving' && <> <Cloud size={14} className="animate-pulse" /> Guardando…</>}
+              {autosaveStatus === 'saved' && <> <Cloud size={14} /> Guardado</>}
+              {autosaveStatus === 'error' && <> <CloudOff size={14} className="text-red-500" /> Error</>}
+            </span>
+          )}
         </div>
       )}
       {negocioEmbudoId && !esEdicion && (
@@ -664,11 +849,22 @@ export function NuevoPresupuestoForm({
         </div>
       </Card>
 
-      <div className="flex items-center justify-end gap-3">
-        <Button variant="secondary" onClick={() => router.back()} disabled={loading}>Cancelar</Button>
-        <Button onClick={guardar} loading={loading}>
-          {esEdicion ? 'Guardar cambios' : 'Guardar presupuesto'}
-        </Button>
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-[11px] text-[#9aa1ab]">
+          {draftId
+            ? autosaveStatus === 'saving'
+              ? 'Guardando borrador…'
+              : 'Borrador guardado en el ERP'
+            : clienteId
+              ? 'Se creará el borrador al guardar'
+              : 'Elegí un cliente para activar el guardado automático'}
+        </p>
+        <div className="flex items-center gap-3">
+          <Button variant="secondary" onClick={cancelar} disabled={loading}>Cancelar</Button>
+          <Button onClick={guardar} loading={loading}>
+            {esEdicion ? 'Guardar y finalizar' : 'Guardar y finalizar'}
+          </Button>
+        </div>
       </div>
 
       <ClienteProspectoModal

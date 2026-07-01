@@ -38,8 +38,8 @@ jobs:
         run: |
           set -euo pipefail
           URL="https://erp-ibiomedica.com.ar/api/health"
-          for i in 1 2 3 4 5 6; do
-            echo "Health check intento $i/6…"
+          for i in 1 2 3 4 5 6 7 8 9 10 11 12; do
+            echo "Health check intento $i/12…"
             if resp=$(curl -sf --max-time 30 "$URL"); then
               if echo "$resp" | grep -q '"ok"[[:space:]]*:[[:space:]]*true'; then
                 echo "Health OK: $resp"

@@ -129,6 +129,16 @@ enum TipoEntradaHistoriaClinica {
   COMPONENTE
   TRACKING
   CAMBIO_ESTADO
+  CAMBIO_ASIGNACION
+}
+
+enum TipoAsignacionEquipo {
+  VENTA
+  ALQUILER
+  COMODATO
+  EXTERNO
+  TRASLADO
+  MANUAL_ST
 }
 
 enum EstadoOT {
@@ -379,6 +389,7 @@ model Usuario {
   eventosOrdenCompra              EventoOrdenCompra[]
   notificacionesUsuario           NotificacionUsuario[]
   contratosAlquilerCreados        ContratoAlquiler[] @relation("ContratoAlquilerCreador")
+  asignacionesEquiposCreadas      EquipoAsignacion[] @relation("EquipoAsignacionCreador")
   ticketsSolicitados              Ticket[] @relation("TicketSolicitante")
   ticketsAsignados                Ticket[] @relation("TicketAsignado")
   ticketComentarios               TicketComentario[]
@@ -564,6 +575,7 @@ model Cliente {
   ordenesVenta   OrdenVenta[]
   remitosVenta   RemitoVenta[]
   fletes         SeguimientoFlete[]
+  asignacionesEquipos EquipoAsignacion[]
 
   @@map("clientes")
 }
@@ -584,6 +596,7 @@ model ClienteSucursal {
   cliente Cliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)
   equipos Equipo[]
   itemsFacturaInstalacion ItemFactura[]
+  asignacionesEquipo EquipoAsignacion[]
 
   @@index([clienteId])
   @@map("clientes_sucursales")
@@ -650,6 +663,7 @@ model Equipo {
   itemFacturaOrigen ItemFactura? @relation("FacturaItemEquipo")
   lineasAlquiler LineaAlquiler[]
   itemsRemito    ItemRemito[]
+  asignaciones   EquipoAsignacion[]
 
   @@index([clienteId])
   @@index([sucursalId])
@@ -709,6 +723,33 @@ model HistoriaClinicaEntrada {
 
   @@index([equipoId, fecha])
   @@map("historia_clinica_entradas")
+}
+
+model EquipoAsignacion {
+  id              String               @id @default(cuid())
+  equipoId        String
+  clienteId       String
+  sucursalId      String?
+  tipo            TipoAsignacionEquipo
+  vigenciaDesde   DateTime             @default(now())
+  vigenciaHasta   DateTime?
+  activa          Boolean              @default(true)
+  motivo          String?
+  observaciones   String?
+  lineaAlquilerId String?
+  creadoPorId     String?
+  creadoEn        DateTime             @default(now())
+
+  equipo        Equipo           @relation(fields: [equipoId], references: [id], onDelete: Cascade)
+  cliente       Cliente          @relation(fields: [clienteId], references: [id])
+  sucursal      ClienteSucursal? @relation(fields: [sucursalId], references: [id])
+  lineaAlquiler LineaAlquiler?   @relation(fields: [lineaAlquilerId], references: [id], onDelete: SetNull)
+  creadoPor     Usuario?         @relation("EquipoAsignacionCreador", fields: [creadoPorId], references: [id])
+
+  @@index([equipoId, activa])
+  @@index([clienteId, activa])
+  @@index([equipoId, vigenciaDesde])
+  @@map("equipos_asignaciones")
 }
 
 model OrdenTrabajo {
@@ -2281,6 +2322,7 @@ model LineaAlquiler {
   equipo           Equipo?          @relation(fields: [equipoId], references: [id])
   cuotas           CuotaAlquiler[]
   actas            ActaEntregaAlquiler[]
+  asignaciones     EquipoAsignacion[]
 
   @@index([contratoId])
   @@index([inventarioUnidadId])

@@ -63,9 +63,16 @@ function main() {
 
   presupuestoCreateSchema.parse({
     clienteId: 'cli-1',
+    modoGuardado: 'borrador',
+    items: [],
+  })
+  pass('presupuestoCreateSchema acepta borrador sin ítems')
+
+  presupuestoCreateSchema.parse({
+    clienteId: 'cli-1',
     items: [{ descripcion: 'Monitor', cantidad: 1, precioUnit: 50000 }],
   })
-  pass('presupuestoCreateSchema acepta payload mínimo')
+  pass('presupuestoCreateSchema acepta payload mínimo finalizar')
 
   presupuestoUpdateSchema.parse({ vigenciaDias: 30 })
   pass('presupuestoUpdateSchema PATCH parcial OK')

@@ -57,9 +57,10 @@ WHERE s.cliente_id = :clienteId AND s.activo = true;
 ```
 
 **Reglas:**
-- Un equipo **siempre** tiene `clienteId` (no puede existir sin cliente).
+- Un equipo **siempre** tiene `clienteId` (no puede existir sin cliente) — refleja la **asignación activa**.
 - `sucursalId` es opcional; si se setea, la sucursal debe ser del **mismo** cliente.
-- No hay historial de “cambio de cliente” en tabla aparte; el parque se mueve actualizando `equipos.clienteId` (si la app lo permite) o dando de baja y creando uno nuevo.
+- El **historial de dueños** vive en `equipos_asignaciones` (vigencia desde/hasta, tipo). Traslados vía `POST /api/equipos/:id/trasladar`.
+- Sigue sin haber multi-cliente simultáneo: una sola asignación `activa` por equipo.
 
 ```mermaid
 erDiagram
@@ -534,6 +535,16 @@ PATCH /api/equipos/:id
 Campos: `nombre`, `marca`, `modelo`, `modeloExacto`, `codigoInterno`, `firmwareVersion`, `softwareVersion`, `servicioInstalacion`, `pisoSala`, `contactoResponsable`, `notasTecnicas`, `referenciaCompra`, `proveedorOrigenId`, `fechaInstalacion`, `direccionUbicacion`, `sucursalId`.
 
 Si cambia ubicación → re-geocodifica. No expone cambio de `estado` ni `clienteId` por este endpoint.
+
+### Traslado a otro cliente
+
+```
+POST /api/equipos/:id/trasladar
+```
+
+Permiso: `servicio.update`. Body: `clienteId`, `sucursalId?`, `motivo?`, `observaciones?`.
+
+Cierra la asignación activa en `equipos_asignaciones`, crea una nueva tipo `TRASLADO`, actualiza `equipos.clienteId` y registra entrada en historia clínica (`CAMBIO_ASIGNACION`). Bloqueado si hay línea de alquiler activa.
 
 ### Componentes
 

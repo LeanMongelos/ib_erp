@@ -22,6 +22,8 @@ notify_deploy_webhook() {
 }
 
 on_deploy_error() {
+  resume_after_build 2>/dev/null || true
+  ensure_app_online 2>/dev/null || true
   notify_deploy_webhook "fail" ""
   exit 1
 }
@@ -64,14 +66,41 @@ teardown_build_swap() {
   fi
 }
 
+WORKER_PM2=(worker-afip worker-cobranzas worker-crm-email worker-crm-graph)
+
+ensure_app_online() {
+  local code
+  code="$(curl -s -o /dev/null -w "%{http_code}" --max-time 8 http://127.0.0.1:3000/api/health 2>/dev/null || echo 000)"
+  if [[ "$code" == "200" ]]; then
+    return 0
+  fi
+  echo "WARN: app no responde (HTTP $code); levantando ibiomedica en PM2..."
+  pm2 restart ibiomedica 2>/dev/null || pm2 start npm --name ibiomedica -- start
+  pm2 save
+  sleep 3
+  code="$(curl -s -o /dev/null -w "%{http_code}" --max-time 8 http://127.0.0.1:3000/api/health 2>/dev/null || echo 000)"
+  if [[ "$code" != "200" ]]; then
+    echo "ERROR: app sigue sin responder tras ensure_app_online (HTTP $code)"
+    return 1
+  fi
+}
+
 pause_nonessential_for_build() {
-  echo "    Pausando PM2 y contenedores no esenciales (libera RAM)..."
-  pm2 stop all 2>/dev/null || true
+  echo "    Pausando workers PM2 y contenedores no esenciales (ibiomedica sigue online)..."
+  for worker in "${WORKER_PM2[@]}"; do
+    pm2 stop "$worker" 2>/dev/null || true
+  done
   docker stop ibiomedica_minio ibiomedica_redis ibiomedica_n8n 2>/dev/null || true
 }
 
 resume_after_build() {
   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d minio redis n8n 2>/dev/null || true
+  for worker in "${WORKER_PM2[@]}"; do
+    if pm2 describe "$worker" >/dev/null 2>&1; then
+      pm2 restart "$worker" --update-env 2>/dev/null || pm2 start "$worker" 2>/dev/null || true
+    fi
+  done
+  ensure_app_online || true
 }
 
 cd "$APP_DIR"
@@ -133,9 +162,9 @@ teardown_build_swap
 resume_after_build
 trap on_deploy_error ERR
 
-echo "==> PM2 (reinicio antes de tests — evita caída si falla test:invariants)..."
-pm2 restart ibiomedica 2>/dev/null || pm2 start npm --name ibiomedica -- start
-for worker in worker-afip worker-cobranzas worker-crm-email worker-crm-graph; do
+echo "==> PM2 (reload rápido de app + workers tras build)..."
+pm2 reload ibiomedica --update-env 2>/dev/null || pm2 restart ibiomedica 2>/dev/null || pm2 start npm --name ibiomedica -- start
+for worker in "${WORKER_PM2[@]}"; do
   if pm2 describe "$worker" >/dev/null 2>&1; then
     echo "    reiniciando $worker..."
     pm2 restart "$worker" --update-env
@@ -144,16 +173,18 @@ for worker in worker-afip worker-cobranzas worker-crm-email worker-crm-graph; do
   fi
 done
 pm2 save
+ensure_app_online
 
 echo "==> Test invariantes (sin DB)..."
 npm run test:invariants
 
 echo "==> PM2 (confirmación post-tests)..."
-pm2 restart ibiomedica 2>/dev/null || true
-for worker in worker-afip worker-cobranzas worker-crm-email worker-crm-graph; do
+pm2 reload ibiomedica --update-env 2>/dev/null || pm2 restart ibiomedica 2>/dev/null || true
+for worker in "${WORKER_PM2[@]}"; do
   pm2 describe "$worker" >/dev/null 2>&1 && pm2 restart "$worker" --update-env 2>/dev/null || true
 done
 pm2 save
+ensure_app_online
 
 echo "==> Post-deploy scripts..."
 run_optional_step "Permisos RBAC nuevos (compras/tesoreria, idempotente)" \
@@ -202,7 +233,8 @@ run_optional_step "Hardening seguridad VPS (ufw, fail2ban, docker localhost)" \
   bash scripts/vps-harden-security.sh
 
 sleep 2
-HEALTH_CODE="$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:3000/login)"
+ensure_app_online
+HEALTH_CODE="$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:3000/api/health)"
 echo "deploy_ok:${HEALTH_CODE}"
 
 notify_deploy_webhook "ok" "$HEALTH_CODE"

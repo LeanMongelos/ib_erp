@@ -1,0 +1,569 @@
+{
+  "generatedAt": "2026-07-01T14:55:50.169Z",
+  "schemaVersion": 2,
+  "clientes": [
+    {
+      "id": "cmqmv4eme0007b0fxphdskfz9",
+      "nombre": "Centro de Diagnóstico Médico Formosa",
+      "tipo": "CLINICA",
+      "ciudad": "Formosa Capital",
+      "activo": true,
+      "equipos": [
+        {
+          "id": "cmqmv4ev7000pb0fx9carbpmn",
+          "nombre": "Monitor Multiparamétrico",
+          "marca": "Mindray",
+          "modelo": "iMEC 8",
+          "numeroSerie": "MND-1012",
+          "estado": "ACTIVO",
+          "origen": "ALQUILER",
+          "asignacionActivaId": "cmr274cgi000yskfxczlqgz1x",
+          "asignaciones": [
+            {
+              "id": "cmr274cgi000yskfxczlqgz1x",
+              "clienteId": "cmqmv4eme0007b0fxphdskfz9",
+              "clienteNombre": "Centro de Diagnóstico Médico Formosa",
+              "sucursalNombre": null,
+              "tipo": "ALQUILER",
+              "vigenciaDesde": "2026-06-20T21:21:20.707Z",
+              "vigenciaHasta": null,
+              "activa": true,
+              "motivo": null
+            }
+          ]
+        },
+        {
+          "id": "cmqmv4evc000qb0fxfavav8in",
+          "nombre": "Electrobisturí",
+          "marca": "Valleylab",
+          "modelo": "FT10",
+          "numeroSerie": "VLB-1013",
+          "estado": "EN_REPARACION",
+          "origen": "VENTA",
+          "asignacionActivaId": "cmr274c9y0003skfxy56oaghs",
+          "asignaciones": [
+            {
+              "id": "cmr274c9y0003skfxy56oaghs",
+              "clienteId": "cmqmv4eme0007b0fxphdskfz9",
+              "clienteNombre": "Centro de Diagnóstico Médico Formosa",
+              "sucursalNombre": null,
+              "tipo": "VENTA",
+              "vigenciaDesde": "2026-06-20T21:21:20.712Z",
+              "vigenciaHasta": null,
+              "activa": true,
+              "motivo": null
+            }
+          ]
+        },
+        {
+          "id": "cmqmv4evj000rb0fx5hon59xl",
+          "nombre": "Desfibrilador",
+          "marca": "Philips",
+          "modelo": "HeartStart XL+",
+          "numeroSerie": "PHI-1014",
+          "estado": "ACTIVO",
+          "origen": "VENTA",
+          "asignacionActivaId": "cmr274ca60004skfxl0dwxti8",
+          "asignaciones": [
+            {
+              "id": "cmr274ca60004skfxl0dwxti8",
+              "clienteId": "cmqmv4eme0007b0fxphdskfz9",
+              "clienteNombre": "Centro de Diagnóstico Médico Formosa",
+              "sucursalNombre": null,
+              "tipo": "VENTA",
+              "vigenciaDesde": "2026-06-20T21:21:20.719Z",
+              "vigenciaHasta": null,
+              "activa": true,
+              "motivo": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cmqmv4eme0005b0fx3ly43dxy",
+      "nombre": "Clínica San Juan",
+      "tipo": "CLINICA",
+      "ciudad": "Formosa Capital",
+      "activo": true,
+      "equipos": [
+        {
+          "id": "cmqmv4eu6000jb0fxpgtgerp6",
+          "nombre": "Autoclave",
+          "marca": "Azteca",
+          "modelo": "NS100",
+          "numeroSerie": "AZT-1006",
+          "estado": "ACTIVO",
+          "origen": "VENTA",
+          "asignacionActivaId": "cmr274cf1000rskfx2hfzciw6",
+          "asignaciones": [
+            {
+              "id": "cmr274cf1000rskfx2hfzciw6",
+              "clienteId": "cmqmv4eme0005b0fx3ly43dxy",
+              "clienteNombre": "Clínica San Juan",
+              "sucursalNombre": null,
+              "tipo": "VENTA",
+              "vigenciaDesde": "2026-06-20T21:21:20.670Z",
+              "vigenciaHasta": null,
+              "activa": true,
+              "motivo": null
+            }
+          ]
+        },
+        {
+          "id": "cmqmv4eue000kb0fxs3oo7k9a",
+          "nombre": "Oxímetro de Pulso",
+          "marca": "Nellcor",
+          "modelo": "PM10N",
+          "numeroSerie": "NEL-1007",
+          "estado": "EN_REPARACION",
+          "origen": "VENTA",
+          "asignacionActivaId": "cmr274cf7000sskfx3h1bjvnx",
+          "asignaciones": [
+            {
+              "id": "cmr274cf7000sskfx3h1bjvnx",
+              "clienteId": "cmqmv4eme0005b0fx3ly43dxy",
+              "clienteNombre": "Clínica San Juan",
+              "sucursalNombre": null,
+              "tipo": "VENTA",
+              "vigenciaDesde": "2026-06-20T21:21:20.678Z",
+              "vigenciaHasta": null,
+              "activa": true,
+              "motivo": null
+            }
+          ]
+        },
+        {
+          "id": "cmqmv4eui000lb0fxggg7mbxk",
+          "nombre": "Bomba de Infusión",
+          "marca": "BD",
+          "modelo": "Alaris CC",
+          "numeroSerie": "BD-1008",
+          "estado": "ACTIVO",
+          "origen": "VENTA",
+          "asignacionActivaId": "cmr274cff000tskfx0grgix1n",
+          "asignaciones": [
+            {
+              "id": "cmr274cff000tskfx0grgix1n",
+              "clienteId": "cmqmv4eme0005b0fx3ly43dxy",
+              "clienteNombre": "Clínica San Juan",
+              "sucursalNombre": null,
+              "tipo": "VENTA",
+              "vigenciaDesde": "2026-06-20T21:21:20.682Z",
+              "vigenciaHasta": null,
+              "activa": true,
+              "motivo": null
+            }
+          ]
+        },
+        {
+          "id": "cmqnb08xb00040cfxhdcav2h8",
+          "nombre": "Incubadora Neonatal",
+          "marca": "Dräger",
+          "modelo": "Caleo 8000",
+          "numeroSerie": "DRC-SJ-200",
+          "estado": "ACTIVO",
+          "origen": "VENTA",
+          "asignacionActivaId": "cmr274cef000oskfxudy7wz8z",
+          "asignaciones": [
+            {
+              "id": "cmr274cef000oskfxudy7wz8z",
+              "clienteId": "cmqmv4eme0005b0fx3ly43dxy",
+              "clienteNombre": "Clínica San Juan",
+              "sucursalNombre": null,
+              "tipo": "VENTA",
+              "vigenciaDesde": "2026-06-21T04:46:00.239Z",
+              "vigenciaHasta": null,
+              "activa": true,
+              "motivo": null
+            }
+          ]
+        },
+        {
+          "id": "cmqnb090b00050cfxhwbf0x8r",
+          "nombre": "Incubadora Neonatal",
+          "marca": "Dräger",
+          "modelo": "Caleo 8000",
+          "numeroSerie": "DRC-SJ-201",
+          "estado": "ACTIVO",
+          "origen": "VENTA",
+          "asignacionActivaId": "cmr274cem000pskfx54i24cor",
+          "asignaciones": [
+            {
+              "id": "cmr274cem000pskfx54i24cor",
+              "clienteId": "cmqmv4eme0005b0fx3ly43dxy",
+              "clienteNombre": "Clínica San Juan",
+              "sucursalNombre": null,
+              "tipo": "VENTA",
+              "vigenciaDesde": "2026-06-21T04:46:00.347Z",
+              "vigenciaHasta": null,
+              "activa": true,
+              "motivo": null
+            }
+          ]
+        },
+        {
+          "id": "cmqnb090g00060cfxpa1pyhvf",
+          "nombre": "Incubadora Neonatal",
+          "marca": "Dräger",
+          "modelo": "Caleo 8000",
+          "numeroSerie": "DRC-SJ-202",
+          "estado": "ACTIVO",
+          "origen": "VENTA",
+          "asignacionActivaId": "cmr274ceu000qskfx8hqg2j9v",
+          "asignaciones": [
+            {
+              "id": "cmr274ceu000qskfx8hqg2j9v",
+              "clienteId": "cmqmv4eme0005b0fx3ly43dxy",
+              "clienteNombre": "Clínica San Juan",
+              "sucursalNombre": null,
+              "tipo": "VENTA",
+              "vigenciaDesde": "2026-06-21T04:46:00.352Z",
+              "vigenciaHasta": null,
+              "activa": true,
+              "motivo": null
+            }
+          ]
+        },
+        {
+          "id": "cmqnb09w5000t0cfxv64jhtjj",
+          "nombre": "Monitor multiparamétrico Mindray ePM 12",
+          "marca": "Mindray",
+          "modelo": "ePM 12",
+          "numeroSerie": "MND-SJ-DEMO-2026-001",
+          "estado": "ACTIVO",
+          "origen": "VENTA",
+          "asignacionActivaId": "cmr274cg8000xskfxsv61j5t1",
+          "asignaciones": [
+            {
+              "id": "cmr274cg8000xskfxsv61j5t1",
+              "clienteId": "cmqmv4eme0005b0fx3ly43dxy",
+              "clienteNombre": "Clínica San Juan",
+              "sucursalNombre": "Sede Central — UCI Neonatal",
+              "tipo": "VENTA",
+              "vigenciaDesde": "2026-06-21T04:46:01.493Z",
+              "vigenciaHasta": null,
+              "activa": true,
+              "motivo": null
+            }
+          ]
+        },
+        {
+          "id": "cmr1zvzfl0000cofxli0ne4kr",
+          "nombre": "Monitor multiparamétrico Mindray ePM 12",
+          "marca": "Mindray",
+          "modelo": "ePM 12",
+          "numeroSerie": "MND-SJ-EPM12-ML",
+          "estado": "ACTIVO",
+          "origen": "VENTA",
+          "inventario": {
+            "sku": "MON-PAT-001",
+            "nombre": "Monitor multiparamétrico Mindray ePM 12",
+            "marca": "Mindray",
+            "modelo": "ePM 12",
+            "descripcion": "Monitor de signos vitales 12\" — venta con kit",
+            "tieneFotoReferencia": true
+          },
+          "asignacionActivaId": "cmr274cd2000hskfx6ifibu9m",
+          "asignaciones": [
+            {
+              "id": "cmr274cd2000hskfx6ifibu9m",
+              "clienteId": "cmqmv4eme0005b0fx3ly43dxy",
+              "clienteNombre": "Clínica San Juan",
+              "sucursalNombre": null,
+              "tipo": "VENTA",
+              "vigenciaDesde": "2026-07-01T11:31:18.177Z",
+              "vigenciaHasta": null,
+              "activa": true,
+              "motivo": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cmqmv4emf0008b0fxhr127aqq",
+      "nombre": "Consultorio Dr. Ramón Espínola",
+      "tipo": "CONSULTORIO",
+      "ciudad": "Clorinda",
+      "activo": true,
+      "equipos": [
+        {
+          "id": "cmqmv4evo000sb0fx5s1zdgf3",
+          "nombre": "Ecógrafo Portátil",
+          "marca": "GE",
+          "modelo": "Vscan Extend",
+          "numeroSerie": "GE-1015",
+          "estado": "ACTIVO",
+          "origen": "EXTERNO",
+          "asignacionActivaId": "cmr274cfm000uskfxyzr6qjau",
+          "asignaciones": [
+            {
+              "id": "cmr274cfm000uskfxyzr6qjau",
+              "clienteId": "cmqmv4emf0008b0fxhr127aqq",
+              "clienteNombre": "Consultorio Dr. Ramón Espínola",
+              "sucursalNombre": null,
+              "tipo": "EXTERNO",
+              "vigenciaDesde": "2026-06-20T21:21:20.724Z",
+              "vigenciaHasta": null,
+              "activa": true,
+              "motivo": null
+            }
+          ]
+        },
+        {
+          "id": "cmqmv4evv000tb0fxci9xgu6w",
+          "nombre": "Autoclave",
+          "marca": "Azteca",
+          "modelo": "NS100",
+          "numeroSerie": "AZT-1016",
+          "estado": "EN_REPARACION",
+          "origen": "EXTERNO",
+          "asignacionActivaId": "cmr274cfu000vskfxe1hwjlvn",
+          "asignaciones": [
+            {
+              "id": "cmr274cfu000vskfxe1hwjlvn",
+              "clienteId": "cmqmv4emf0008b0fxhr127aqq",
+              "clienteNombre": "Consultorio Dr. Ramón Espínola",
+              "sucursalNombre": null,
+              "tipo": "EXTERNO",
+              "vigenciaDesde": "2026-06-20T21:21:20.731Z",
+              "vigenciaHasta": null,
+              "activa": true,
+              "motivo": null
+            }
+          ]
+        },
+        {
+          "id": "cmqmv4ew2000ub0fx2qoldn35",
+          "nombre": "Oxímetro de Pulso",
+          "marca": "Nellcor",
+          "modelo": "PM10N",
+          "numeroSerie": "NEL-1017",
+          "estado": "ACTIVO",
+          "origen": "EXTERNO",
+          "asignacionActivaId": "cmr274cg0000wskfxqgulghi0",
+          "asignaciones": [
+            {
+              "id": "cmr274cg0000wskfxqgulghi0",
+              "clienteId": "cmqmv4emf0008b0fxhr127aqq",
+              "clienteNombre": "Consultorio Dr. Ramón Espínola",
+              "sucursalNombre": null,
+              "tipo": "EXTERNO",
+              "vigenciaDesde": "2026-06-20T21:21:20.738Z",
+              "vigenciaHasta": null,
+              "activa": true,
+              "motivo": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cmqmv4eme0003b0fx4j87ah4r",
+      "nombre": "Hospital Central Dr. Salvador Mazza",
+      "tipo": "HOSPITAL",
+      "ciudad": "Formosa Capital",
+      "activo": true,
+      "equipos": [
+        {
+          "id": "cmqmv4esv000db0fx5hz8y5wx",
+          "nombre": "Respirador Mecánico",
+          "marca": "Dräger",
+          "modelo": "Savina 300",
+          "numeroSerie": "DRG-1000",
+          "estado": "ACTIVO",
+          "origen": "VENTA",
+          "asignacionActivaId": "cmr274ce0000mskfxdg9drmls",
+          "asignaciones": [
+            {
+              "id": "cmr274ce0000mskfxdg9drmls",
+              "clienteId": "cmqmv4eme0003b0fx4j87ah4r",
+              "clienteNombre": "Hospital Central Dr. Salvador Mazza",
+              "sucursalNombre": null,
+              "tipo": "VENTA",
+              "vigenciaDesde": "2026-06-20T21:21:20.623Z",
+              "vigenciaHasta": null,
+              "activa": true,
+              "motivo": null
+            }
+          ]
+        },
+        {
+          "id": "cmqmv4et5000eb0fxhwpp50z6",
+          "nombre": "Incubadora Neonatal",
+          "marca": "Dräger",
+          "modelo": "Caleo 8000",
+          "numeroSerie": "DRC-1001",
+          "estado": "EN_REPARACION",
+          "origen": "VENTA",
+          "asignacionActivaId": "cmr274ce7000nskfxgmx3909k",
+          "asignaciones": [
+            {
+              "id": "cmr274ce7000nskfxgmx3909k",
+              "clienteId": "cmqmv4eme0003b0fx4j87ah4r",
+              "clienteNombre": "Hospital Central Dr. Salvador Mazza",
+              "sucursalNombre": null,
+              "tipo": "VENTA",
+              "vigenciaDesde": "2026-06-20T21:21:20.633Z",
+              "vigenciaHasta": null,
+              "activa": true,
+              "motivo": null
+            }
+          ]
+        },
+        {
+          "id": "cmqmv4ete000fb0fxef3ffxzj",
+          "nombre": "Monitor Multiparamétrico",
+          "marca": "Mindray",
+          "modelo": "iMEC 8",
+          "numeroSerie": "MND-1002",
+          "estado": "ACTIVO",
+          "origen": "VENTA",
+          "asignacionActivaId": "cmr274cd8000iskfxl9h5jzo7",
+          "asignaciones": [
+            {
+              "id": "cmr274cd8000iskfxl9h5jzo7",
+              "clienteId": "cmqmv4eme0003b0fx4j87ah4r",
+              "clienteNombre": "Hospital Central Dr. Salvador Mazza",
+              "sucursalNombre": null,
+              "tipo": "VENTA",
+              "vigenciaDesde": "2026-06-20T21:21:20.642Z",
+              "vigenciaHasta": null,
+              "activa": true,
+              "motivo": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cmqmv4emf0009b0fxesj5yu4w",
+      "nombre": "Hospital Distrital de Clorinda",
+      "tipo": "HOSPITAL",
+      "ciudad": "Clorinda",
+      "activo": true,
+      "equipos": [
+        {
+          "id": "cmqmv4ew8000vb0fxuz4dt0ow",
+          "nombre": "Bomba de Infusión",
+          "marca": "BD",
+          "modelo": "Alaris CC",
+          "numeroSerie": "BD-1018",
+          "estado": "ACTIVO",
+          "origen": "VENTA",
+          "asignacionActivaId": "cmr274cae0005skfxap9bowb4",
+          "asignaciones": [
+            {
+              "id": "cmr274cae0005skfxap9bowb4",
+              "clienteId": "cmqmv4emf0009b0fxesj5yu4w",
+              "clienteNombre": "Hospital Distrital de Clorinda",
+              "sucursalNombre": null,
+              "tipo": "VENTA",
+              "vigenciaDesde": "2026-06-20T21:21:20.744Z",
+              "vigenciaHasta": null,
+              "activa": true,
+              "motivo": null
+            }
+          ]
+        },
+        {
+          "id": "cmqmv4ewe000wb0fxz5nzfp43",
+          "nombre": "Electrocardiógraf.",
+          "marca": "Mortara",
+          "modelo": "ELI 150c",
+          "numeroSerie": "MRT-1019",
+          "estado": "EN_REPARACION",
+          "origen": "VENTA",
+          "asignacionActivaId": "cmr274cam0006skfxf0t33704",
+          "asignaciones": [
+            {
+              "id": "cmr274cam0006skfxf0t33704",
+              "clienteId": "cmqmv4emf0009b0fxesj5yu4w",
+              "clienteNombre": "Hospital Distrital de Clorinda",
+              "sucursalNombre": null,
+              "tipo": "VENTA",
+              "vigenciaDesde": "2026-06-20T21:21:20.750Z",
+              "vigenciaHasta": null,
+              "activa": true,
+              "motivo": null
+            }
+          ]
+        },
+        {
+          "id": "cmqmv4ewk000xb0fx9ctzcdap",
+          "nombre": "Respirador Mecánico",
+          "marca": "Dräger",
+          "modelo": "Savina 300",
+          "numeroSerie": "DRG-1020",
+          "estado": "ACTIVO",
+          "origen": "VENTA",
+          "asignacionActivaId": "cmr274cav0007skfxlt0xgssc",
+          "asignaciones": [
+            {
+              "id": "cmr274cav0007skfxlt0xgssc",
+              "clienteId": "cmqmv4emf0009b0fxesj5yu4w",
+              "clienteNombre": "Hospital Distrital de Clorinda",
+              "sucursalNombre": null,
+              "tipo": "VENTA",
+              "vigenciaDesde": "2026-06-20T21:21:20.756Z",
+              "vigenciaHasta": null,
+              "activa": true,
+              "motivo": null
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "otrosClientes": [
+    {
+      "id": "cmqmv4emf000bb0fxqn60pap9",
+      "nombre": "Centro Médico El Palmar",
+      "tipo": "OTRO",
+      "ciudad": "Las Lomitas",
+      "activo": true,
+      "cantidadEquipos": 3
+    },
+    {
+      "id": "cliente-eventual",
+      "nombre": "Cliente Eventual",
+      "tipo": "OTRO",
+      "ciudad": null,
+      "activo": true,
+      "cantidadEquipos": 0
+    },
+    {
+      "id": "cmqmv4emf000ab0fxh0p3t1v9",
+      "nombre": "Clínica Riviera",
+      "tipo": "CLINICA",
+      "ciudad": "Formosa Capital",
+      "activo": true,
+      "cantidadEquipos": 3
+    },
+    {
+      "id": "cmqmv4emf000cb0fx15kaj02s",
+      "nombre": "Consultorio Dental Formosa",
+      "tipo": "CONSULTORIO",
+      "ciudad": "Formosa Capital",
+      "activo": true,
+      "cantidadEquipos": 3
+    },
+    {
+      "id": "cmqmv4eme0004b0fx9j703njo",
+      "nombre": "Hospital de la Madre y el Niño",
+      "tipo": "HOSPITAL",
+      "ciudad": "Formosa Capital",
+      "activo": true,
+      "cantidadEquipos": 3
+    },
+    {
+      "id": "cmqmv4eme0006b0fxvcx5sodj",
+      "nombre": "Sanatorio del Norte",
+      "tipo": "SANATORIO",
+      "ciudad": "Formosa Capital",
+      "activo": true,
+      "cantidadEquipos": 3
+    }
+  ]
+}

@@ -9,6 +9,10 @@ import {
   estadoPresupuestoParaUi,
   presupuestoEsIncompleto,
 } from '../lib/presupuestos/completitud'
+import {
+  resolverEstadoTrasGuardado,
+  debeNotificarClienteEnviado,
+} from '../lib/presupuestos/estado-guardado'
 
 const errors: string[] = []
 
@@ -90,6 +94,26 @@ function main() {
   if (!presupuestoEsIncompleto({ estado: 'BORRADOR', total: 0, clienteId: 'c1', items: [] })) {
     fail('sin ítems debe ser incompleto')
   } else pass('sin ítems = borrador incompleto')
+
+  if (resolverEstadoTrasGuardado('borrador', completo) !== 'BORRADOR') {
+    fail('autosave debe mantener BORRADOR')
+  } else pass('autosave → BORRADOR')
+
+  if (resolverEstadoTrasGuardado('finalizar', completo) !== 'ENVIADO') {
+    fail('finalizar completo → ENVIADO')
+  } else pass('finalizar completo → ENVIADO')
+
+  if (resolverEstadoTrasGuardado('borrador', completo, 'ENVIADO') !== 'ENVIADO') {
+    fail('autosave sobre ENVIADO mantiene ENVIADO')
+  } else pass('autosave ENVIADO sin degradar')
+
+  if (!debeNotificarClienteEnviado('finalizar', 'BORRADOR', 'ENVIADO')) {
+    fail('debe notificar al finalizar')
+  } else pass('notificación solo al finalizar')
+
+  if (debeNotificarClienteEnviado('borrador', 'BORRADOR', 'ENVIADO')) {
+    fail('autosave no debe notificar')
+  } else pass('autosave sin notificación')
 
   console.log('')
   if (errors.length > 0) {

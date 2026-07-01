@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { ApiError } from '@/lib/api-auth'
 import { devolverUnidadDeAlquiler } from '@/lib/inventario/unidades'
 import { UBICACION_IB } from '@/lib/tracking'
+import { finalizarAsignacionesActivas } from '@/lib/equipos/asignaciones'
 
 type Tx = Prisma.TransactionClient
 
@@ -30,6 +31,7 @@ export async function devolverLineaAlquiler(
     await devolverUnidadDeAlquiler(linea.inventarioUnidadId, db)
 
     if (linea.equipoId) {
+      await finalizarAsignacionesActivas(db, linea.equipoId, new Date())
       await db.equipo.update({
         where: { id: linea.equipoId },
         data: {

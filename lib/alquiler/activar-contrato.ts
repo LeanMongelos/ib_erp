@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma'
 import { calcularVencimientoCuota, formatPeriodo } from '@/lib/alquiler/periodo'
 import { resolverUbicacionLineaAlquiler } from '@/lib/alquiler/resolver-ubicacion-linea'
 import { aplicarKitYPreventivoEquipo } from '@/lib/equipos/aplicar-kit-preventivo-equipo'
+import { crearAsignacionEquipo } from '@/lib/equipos/asignaciones'
 
 export async function activarContratoAlquiler(contratoId: string, usuarioId?: string | null) {
   return prisma.$transaction(async (tx) => {
@@ -98,6 +99,18 @@ export async function activarContratoAlquiler(contratoId: string, usuarioId?: st
             fechaInstalacion: linea.fechaEntrega ?? fechaInicio,
           },
         })
+        await crearAsignacionEquipo(
+          {
+            equipoId,
+            clienteId: contrato.clienteId,
+            tipo: 'ALQUILER',
+            vigenciaDesde: linea.fechaEntrega ?? fechaInicio,
+            lineaAlquilerId: linea.id,
+            motivo: `Contrato ${contrato.numero}`,
+            usuarioId,
+          },
+          tx,
+        )
       } else {
         const nuevoEquipo = await tx.equipo.create({
           data: {
@@ -145,6 +158,20 @@ export async function activarContratoAlquiler(contratoId: string, usuarioId?: st
           where: { id: linea.id },
           data: { equipoId: nuevoEquipo.id },
         })
+
+        await crearAsignacionEquipo(
+          {
+            equipoId: nuevoEquipo.id,
+            clienteId: contrato.clienteId,
+            tipo: 'ALQUILER',
+            vigenciaDesde: linea.fechaEntrega ?? fechaInicio,
+            lineaAlquilerId: linea.id,
+            motivo: `Contrato ${contrato.numero}`,
+            usuarioId,
+            reemplazarActiva: false,
+          },
+          tx,
+        )
       }
 
       await tx.inventarioUnidad.update({

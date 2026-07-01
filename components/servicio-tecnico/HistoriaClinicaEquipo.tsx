@@ -12,10 +12,13 @@ import { formatFecha } from '@/lib/utils'
 import { useCan } from '@/components/auth/useCan'
 import { mensajeErrorDesconocido, mensajeErrorRespuesta } from '@/lib/errores'
 
-type TabId = 'resumen' | 'datos' | 'componentes' | 'accesorios' | 'bitacora' | 'mantenimiento'
+import { ClienteCombobox } from '@/components/clientes/ClienteCombobox'
+
+type TabId = 'resumen' | 'asignaciones' | 'datos' | 'componentes' | 'accesorios' | 'bitacora' | 'mantenimiento'
 
 const TABS: { id: TabId; label: string }[] = [
   { id: 'resumen', label: 'Resumen' },
+  { id: 'asignaciones', label: 'Asignaciones' },
   { id: 'datos', label: 'Datos técnicos' },
   { id: 'componentes', label: 'Componentes y vencimientos' },
   { id: 'accesorios', label: 'Accesorios' },
@@ -37,6 +40,15 @@ const ESTADO_EQUIPO: Record<string, string> = {
   BAJA: 'Baja',
 }
 
+const TIPO_ASIGNACION: Record<string, string> = {
+  VENTA: 'Venta',
+  ALQUILER: 'Alquiler',
+  COMODATO: 'Comodato',
+  EXTERNO: 'Externo',
+  TRASLADO: 'Traslado',
+  MANUAL_ST: 'Alta ST',
+}
+
 export function HistoriaClinicaEquipo({ inicial }: { inicial: any }) {
   const router = useRouter()
   const puedeEditar = useCan('servicio.update')
@@ -44,8 +56,13 @@ export function HistoriaClinicaEquipo({ inicial }: { inicial: any }) {
   const [data, setData] = useState(inicial)
   const [saving, setSaving] = useState(false)
   const [sucursales, setSucursales] = useState<Array<{ id: string; nombre: string }>>([])
+  const [mostrarTraslado, setMostrarTraslado] = useState(false)
+  const [clienteDestinoId, setClienteDestinoId] = useState('')
+  const [sucursalesDestino, setSucursalesDestino] = useState<Array<{ id: string; nombre: string }>>([])
+  const [sucursalDestinoId, setSucursalDestinoId] = useState('')
 
   const eq = data.equipo
+  const asignaciones = data.asignaciones ?? []
   const clienteId = eq.clienteId ?? eq.cliente?.id
 
   useEffect(() => {
@@ -55,6 +72,18 @@ export function HistoriaClinicaEquipo({ inicial }: { inicial: any }) {
       .then(setSucursales)
       .catch(() => setSucursales([]))
   }, [clienteId])
+
+  useEffect(() => {
+    if (!clienteDestinoId) {
+      setSucursalesDestino([])
+      setSucursalDestinoId('')
+      return
+    }
+    fetch(`/api/clientes/${clienteDestinoId}/sucursales`, { credentials: 'include' })
+      .then((r) => (r.ok ? r.json() : []))
+      .then(setSucursalesDestino)
+      .catch(() => setSucursalesDestino([]))
+  }, [clienteDestinoId])
 
   const reload = useCallback(async () => {
     const res = await fetch(`/api/equipos/${eq.id}`)
@@ -98,6 +127,39 @@ export function HistoriaClinicaEquipo({ inicial }: { inicial: any }) {
       await reload()
     } else {
       toast.error(await mensajeErrorRespuesta(res, 'No se pudo guardar la nota'))
+    }
+  }
+
+  async function trasladarEquipo(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    if (!clienteDestinoId) {
+      toast.error('Seleccioná el cliente destino')
+      return
+    }
+    const fd = new FormData(e.currentTarget)
+    setSaving(true)
+    try {
+      const res = await fetch(`/api/equipos/${eq.id}/trasladar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          clienteId: clienteDestinoId,
+          sucursalId: sucursalDestinoId || null,
+          motivo: String(fd.get('motivo') ?? '') || undefined,
+          observaciones: String(fd.get('observaciones') ?? '') || undefined,
+        }),
+      })
+      if (!res.ok) throw new Error(await mensajeErrorRespuesta(res, 'No se pudo trasladar el equipo'))
+      toast.success('Equipo trasladado')
+      setMostrarTraslado(false)
+      setClienteDestinoId('')
+      setSucursalDestinoId('')
+      await reload()
+    } catch (err) {
+      toast.error(mensajeErrorDesconocido(err, 'No se pudo trasladar el equipo'))
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -268,6 +330,95 @@ export function HistoriaClinicaEquipo({ inicial }: { inicial: any }) {
               </table>
             ) : (
               <p className="text-[12.5px] text-[#9aa1ab]">Sin órdenes de trabajo</p>
+            )}
+          </Card>
+        </div>
+      )}
+
+      {tab === 'asignaciones' && (
+        <div className="flex flex-col gap-4">
+          <Card>
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+              <div>
+                <h3 className="text-[13px] font-bold">Historial de asignación</h3>
+                <p className="text-[11.5px] text-[#6B7280] mt-1">
+                  Dueño actual y traslados anteriores con vigencia. El cliente en la ficha del equipo es la asignación activa.
+                </p>
+              </div>
+              {puedeEditar && eq.estado !== 'BAJA' && (
+                <Button type="button" size="sm" onClick={() => setMostrarTraslado((v) => !v)}>
+                  {mostrarTraslado ? 'Cancelar traslado' : 'Trasladar a otro cliente'}
+                </Button>
+              )}
+            </div>
+
+            {mostrarTraslado && (
+              <form onSubmit={trasladarEquipo} className="mb-6 p-4 rounded-[10px] border border-[#FFE4CC] bg-[#FFFBF5] grid grid-cols-2 gap-3">
+                <div className="col-span-2">
+                  <ClienteCombobox
+                    label="Cliente destino"
+                    value={clienteDestinoId}
+                    onChange={setClienteDestinoId}
+                  />
+                </div>
+                {sucursalesDestino.length > 0 && (
+                  <Select
+                    label="Sucursal (opcional)"
+                    className="col-span-2"
+                    value={sucursalDestinoId}
+                    onChange={(e) => setSucursalDestinoId(e.target.value)}
+                    options={[
+                      { value: '', label: '— Sin sucursal específica —' },
+                      ...sucursalesDestino.map((s) => ({ value: s.id, label: s.nombre })),
+                    ]}
+                  />
+                )}
+                <Input name="motivo" label="Motivo" placeholder="Venta usada, traslado de sede…" className="col-span-2" />
+                <Input name="observaciones" label="Observaciones" className="col-span-2" />
+                <div className="col-span-2 flex justify-end">
+                  <Button type="submit" loading={saving}>Confirmar traslado</Button>
+                </div>
+              </form>
+            )}
+
+            {asignaciones.length ? (
+              <table className="w-full text-[12px]">
+                <thead>
+                  <tr className="text-[10px] uppercase text-[#8a909a]">
+                    <th className="text-left pb-2">Cliente</th>
+                    <th className="text-left pb-2">Tipo</th>
+                    <th className="text-left pb-2">Desde</th>
+                    <th className="text-left pb-2">Hasta</th>
+                    <th className="text-left pb-2">Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {asignaciones.map((a: any) => (
+                    <tr key={a.id} className="border-t border-[#f4f5f7]">
+                      <td className="py-2.5">
+                        <Link href={`/clientes/${a.cliente.id}`} className="text-[#E8650A] font-semibold hover:underline">
+                          {a.cliente.nombre}
+                        </Link>
+                        {a.sucursal?.nombre ? (
+                          <p className="text-[10px] text-[#9aa1ab]">{a.sucursal.nombre}</p>
+                        ) : null}
+                      </td>
+                      <td className="py-2.5">{TIPO_ASIGNACION[a.tipo] ?? a.tipo}</td>
+                      <td className="py-2.5">{formatFecha(a.vigenciaDesde)}</td>
+                      <td className="py-2.5">{a.vigenciaHasta ? formatFecha(a.vigenciaHasta) : '—'}</td>
+                      <td className="py-2.5">
+                        {a.activa ? (
+                          <span className="text-[11px] font-bold text-[#15803D]">Activa</span>
+                        ) : (
+                          <span className="text-[11px] text-[#6B7280]">Finalizada</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <p className="text-[12.5px] text-[#9aa1ab]">Sin asignaciones registradas. Ejecutá el backfill o creá un traslado.</p>
             )}
           </Card>
         </div>

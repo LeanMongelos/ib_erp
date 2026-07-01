@@ -4,6 +4,7 @@
 import type { OrigenEquipo, Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { ApiError } from '@/lib/api-auth'
+import { crearAsignacionInicialEquipo } from '@/lib/equipos/asignaciones'
 
 export type EquipoClienteInput = {
   nombre: string
@@ -88,6 +89,16 @@ export async function crearEquipoCliente(
       usuarioId: opts.usuarioId ?? null,
     },
   })
+
+  await crearAsignacionInicialEquipo(
+    {
+      equipoId: equipo.id,
+      clienteId,
+      origen: opts.origen,
+      usuarioId: opts.usuarioId,
+    },
+    db,
+  )
 
   return equipo
 }

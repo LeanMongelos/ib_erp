@@ -10,6 +10,7 @@ import { geocodificarClientePorId } from '@/lib/clientes/geocodificar-cliente'
 import { garantiaHastaDesdeTexto } from '@/lib/garantia'
 import { aplicarKitYPreventivoEquipo } from '@/lib/equipos/aplicar-kit-preventivo-equipo'
 import { isEquipoVenta } from '@/lib/inventario/tipo-articulo'
+import { crearAsignacionInicialEquipo } from '@/lib/equipos/asignaciones'
 
 export interface ResultadoProvisionVenta {
   equiposCreados: number
@@ -112,6 +113,15 @@ export async function provisionarEquiposDesdeFactura(
           estado: 'ACTIVO',
           garantiaHasta: garantiaHastaPresupuesto,
         },
+      })
+
+      await crearAsignacionInicialEquipo({
+        equipoId: equipo.id,
+        clienteId: factura.clienteId,
+        sucursalId: sucursalInstalacion?.id ?? null,
+        origen: 'VENTA',
+        vigenciaDesde: new Date(),
+        usuarioId,
       })
 
       if (sucursalInstalacion) {

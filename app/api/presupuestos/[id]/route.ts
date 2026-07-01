@@ -8,7 +8,10 @@ import { registrarAuditoria, getIp } from '@/lib/audit'
 import { resolverCotizacionUsdDocumento, CotizacionUsdFaltanteError } from '@/lib/moneda'
 import { formatCondicionPago, parsePlazosCobranza } from '@/lib/cobranzas/plazos'
 import { presupuestoEditable, recalcularPresupuestoDesdeItems } from '@/lib/presupuestos/revision'
-import { estadoPresupuestoTrasGuardarCompleto } from '@/lib/presupuestos/completitud'
+import {
+  resolverEstadoTrasGuardado,
+  debeNotificarClienteEnviado,
+} from '@/lib/presupuestos/estado-guardado'
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -85,7 +88,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       )
     }
 
-    const { items, moneda: monedaPatch, cotizacionUsd: cotizacionPatch, plazosCobranza, ...resto } = data
+    const { items, moneda: monedaPatch, cotizacionUsd: cotizacionPatch, plazosCobranza, modoGuardado, ...resto } = data
+    const modo = modoGuardado ?? (data.estado === 'ENVIADO' ? 'finalizar' : 'borrador')
 
     const monedaFinal = monedaPatch ?? actual.moneda
     let cotizacionUsd: number | null | undefined = cotizacionPatch
@@ -97,14 +101,18 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           cotizacionPatch ?? actual.cotizacionUsd,
         )
       } catch (e) {
-        if (e instanceof CotizacionUsdFaltanteError) throw new ApiError(400, e.message)
-        throw e
+        if (e instanceof CotizacionUsdFaltanteError) {
+          if (modo === 'finalizar') throw new ApiError(400, e.message)
+          cotizacionUsd = null
+        } else {
+          throw e
+        }
       }
     }
 
     if (items) {
-      // En edición respetar precios enviados por el usuario (no re-resolver lista de precios).
-      const itemsConPrecio = items
+      const itemsEntrada = items.filter((i) => i.descripcion.trim())
+      const itemsConPrecio = itemsEntrada
       const plazos =
         plazosCobranza?.length
           ? plazosCobranza
@@ -125,19 +133,23 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           tasaFinanciacionPct: data.tasaFinanciacionPct ?? actual.tasaFinanciacionPct ?? 0,
           interesFinanciacion: data.interesFinanciacion ?? actual.interesFinanciacion ?? 0,
         })
-      const estadoAuto = estadoPresupuestoTrasGuardarCompleto(actual.estado, {
-        estado: actual.estado,
-        total,
-        clienteId: actual.clienteId,
-        items: itemsCalculados,
-      })
+      const estadoNuevo = resolverEstadoTrasGuardado(
+        modo,
+        {
+          estado: actual.estado,
+          total,
+          clienteId: actual.clienteId,
+          items: itemsCalculados,
+        },
+        actual.estado,
+      )
       const p = await prisma.$transaction(async (tx) => {
         await tx.itemPresupuesto.deleteMany({ where: { presupuestoId: id } })
         return tx.presupuesto.update({
           where: { id },
           data: {
             ...resto,
-            ...(estadoAuto ? { estado: estadoAuto as 'ENVIADO' } : {}),
+            estado: estadoNuevo,
             condicionPago,
             tasaFinanciacionPct: data.tasaFinanciacionPct ?? actual.tasaFinanciacionPct,
             interesFinanciacion,
@@ -180,9 +192,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         })
       })
       await registrarAuditoria({
-        usuarioId: actor.id, accion: 'presupuesto.update', entidad: 'Presupuesto', entidadId: id, despues: data, ip: getIp(req),
+        usuarioId: actor.id,
+        accion: modo === 'borrador' ? 'presupuesto.autosave' : 'presupuesto.update',
+        entidad: 'Presupuesto',
+        entidadId: id,
+        despues: data,
+        ip: getIp(req),
       })
-      if (estadoAuto === 'ENVIADO') {
+      if (debeNotificarClienteEnviado(modo, actual.estado, estadoNuevo)) {
         void import('@/lib/presupuestos/notify-cliente-enviado').then(({ notifyClientePresupuestoEnviado }) =>
           notifyClientePresupuestoEnviado(id).catch(() => null),
         )

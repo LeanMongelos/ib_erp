@@ -113,6 +113,15 @@ function InformeOTDoc({ datos }: { datos: DatosInformeOT }) {
           </View>
         )}
 
+        {diagnosticoTexto && (
+          <View style={s.section}>
+            <Text style={s.sectionTitle}>Diagnóstico</Text>
+            <View style={s.box}>
+              <Text>{diagnosticoTexto}</Text>
+            </View>
+          </View>
+        )}
+
         <View style={s.section}>
           <Text style={s.sectionTitle}>Descripción del problema</Text>
           <View style={s.box}>
@@ -121,20 +130,11 @@ function InformeOTDoc({ datos }: { datos: DatosInformeOT }) {
         </View>
 
         <View style={s.section}>
-          <Text style={s.sectionTitle}>Checklist de cierre</Text>
+          <Text style={s.sectionTitle}>Tareas realizadas</Text>
           <View style={s.box}>
             <Text style={s.mono}>{formatChecklistParaPdf(checklist)}</Text>
           </View>
         </View>
-
-        {diagnosticoTexto && (
-          <View style={s.section}>
-            <Text style={s.sectionTitle}>Diagnóstico / solución</Text>
-            <View style={s.box}>
-              <Text>{diagnosticoTexto}</Text>
-            </View>
-          </View>
-        )}
 
         {datos.repuestos.length > 0 && (
           <View style={s.section}>
