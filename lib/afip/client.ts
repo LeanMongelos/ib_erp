@@ -13,6 +13,7 @@ import Afip from '@afipsdk/afip.js'
 import { prisma } from '@/lib/prisma'
 import { getStorage } from '@/lib/storage'
 import { afipMonedaId } from '@/lib/moneda'
+import { buildImportesWsfe } from '@/lib/afip/wsfe-importes'
 
 export interface ResultadoCAE {
   ok: boolean
@@ -106,6 +107,12 @@ export async function emitirCAEFactura(facturaId: string): Promise<ResultadoCAE>
 
     const monId = afipMonedaId(factura.moneda)
     const monCotiz = factura.moneda === 'USD' ? (factura.cotizacionUsd ?? 1) : 1
+    const importes = buildImportesWsfe({
+      tipo: factura.tipo,
+      subtotal: Number(factura.subtotal),
+      iva: Number(factura.iva),
+      total: Number(factura.total),
+    })
 
     const data = {
       CantReg: 1,
@@ -117,15 +124,9 @@ export async function emitirCAEFactura(facturaId: string): Promise<ResultadoCAE>
       CbteDesde: numeroAfip,
       CbteHasta: numeroAfip,
       CbteFch: fecha,
-      ImpTotal: Number(factura.total),
-      ImpTotConc: 0,
-      ImpNeto: Number(factura.subtotal),
-      ImpOpEx: 0,
-      ImpIVA: Number(factura.iva),
-      ImpTrib: 0,
       MonId: monId,
       MonCotiz: monCotiz,
-      Iva: [{ Id: 5, BaseImp: Number(factura.subtotal), Importe: Number(factura.iva) }],
+      ...importes,
     }
 
     const res = await afip.ElectronicBilling.createVoucher(data)
@@ -199,6 +200,12 @@ export async function emitirCAENotaCredito(
 
     const monId = afipMonedaId(nota.moneda)
     const monCotiz = nota.moneda === 'USD' ? (nota.cotizacionUsd ?? 1) : 1
+    const importes = buildImportesWsfe({
+      tipo: nota.tipo,
+      subtotal: Number(nota.subtotal),
+      iva: Number(nota.iva),
+      total: Number(nota.total),
+    })
 
     const data = {
       CantReg: 1,
@@ -210,15 +217,9 @@ export async function emitirCAENotaCredito(
       CbteDesde: numeroAfip,
       CbteHasta: numeroAfip,
       CbteFch: fecha,
-      ImpTotal: Number(nota.total),
-      ImpTotConc: 0,
-      ImpNeto: Number(nota.subtotal),
-      ImpOpEx: 0,
-      ImpIVA: Number(nota.iva),
-      ImpTrib: 0,
       MonId: monId,
       MonCotiz: monCotiz,
-      Iva: [{ Id: 5, BaseImp: Number(nota.subtotal), Importe: Number(nota.iva) }],
+      ...importes,
       CbtesAsoc: [{
         Tipo: tipoCbteAsoc,
         PtoVta: origen.puntoVenta,
