@@ -101,6 +101,49 @@ export async function requireDevAlertas(): Promise<SessionUser> {
   return user
 }
 
+/** Etiquetas legibles para nombres de campo frecuentes en mensajes de validación. */
+const ETIQUETAS_CAMPO: Record<string, string> = {
+  nombre: 'Nombre',
+  descripcion: 'Descripción',
+  sku: 'Código interno',
+  codigoInterno: 'Código interno',
+  marca: 'Marca',
+  modelo: 'Modelo',
+  categoria: 'Categoría',
+  precioUnit: 'Precio',
+  precioUnitario: 'Precio',
+  stock: 'Stock',
+  stockMinimo: 'Stock mínimo',
+  email: 'Email',
+  telefono: 'Teléfono',
+  cuit: 'CUIT',
+  razonSocial: 'Razón social',
+  direccion: 'Dirección',
+  ciudad: 'Ciudad',
+  cantidad: 'Cantidad',
+  fecha: 'Fecha',
+}
+
+function etiquetaCampo(path: readonly PropertyKey[]): string {
+  const key = [...path].reverse().find((p) => typeof p === 'string') as string | undefined
+  if (!key) return ''
+  return ETIQUETAS_CAMPO[key] ?? key
+}
+
+/**
+ * Resumen legible (máx. 4 campos) de los issues de Zod para mostrar al usuario,
+ * nombrando el campo que falló y el motivo (evita el genérico "Datos inválidos").
+ */
+function resumirIssuesZod(issues: ReadonlyArray<{ path: readonly PropertyKey[]; message: string }>): string {
+  return issues
+    .slice(0, 4)
+    .map((i) => {
+      const label = etiquetaCampo(i.path)
+      return label ? `${label}: ${i.message}` : i.message
+    })
+    .join(' · ')
+}
+
 /**
  * Convierte cualquier error lanzado dentro de un handler en una respuesta
  * JSON consistente. Mapea los casos conocidos a códigos HTTP adecuados.
@@ -114,13 +157,18 @@ export function handleApiError(error: unknown, ctx?: ApiErrorLogContext): NextRe
     return wrap({ error: error.message }, error.status)
   }
 
-  // Errores de validación de Zod → 400 (sin detalle interno en producción)
+  // Errores de validación de Zod → 400.
+  // Mostramos qué campo(s) fallaron también en producción: los mensajes de Zod
+  // son de cara al usuario (no filtran datos sensibles) y evitan el genérico
+  // "Datos inválidos" que no orienta. El array `details` completo va solo en dev.
   if (error instanceof ZodError) {
     const detalle = error.issues.map((i) => ({ ...i, message: traducirMensajeInterno(i.message) }))
+    const resumen = resumirIssuesZod(detalle)
+    const mensaje = resumen ? `Datos inválidos — ${resumen}` : 'Datos inválidos'
     if (process.env.NODE_ENV === 'production') {
-      return wrap({ error: 'Datos inválidos' }, 400)
+      return wrap({ error: mensaje }, 400)
     }
-    return wrap({ error: 'Datos inválidos', details: detalle }, 400)
+    return wrap({ error: mensaje, details: detalle }, 400)
   }
 
   // Errores conocidos de Prisma
