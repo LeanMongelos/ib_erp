@@ -19,6 +19,7 @@
 | Catálogo API | [`11-API-ENDPOINTS.md`](11-API-ENDPOINTS.md) | 22 (solo rutas principales) |
 | Cliente/servidor | [`14-CONTRATOS-FRONTERAS.md`](14-CONTRATOS-FRONTERAS.md) | AGENTS §4 |
 | **Clientes + equipos (modelo + API)** | [`CLIENTES-EQUIPOS-MODELO-API.md`](CLIENTES-EQUIPOS-MODELO-API.md) | 03, 07, 09 |
+| Handoff continuidad / estado reciente | [`HANDOFF-CONTINUACION-ERP.md`](HANDOFF-CONTINUACION-ERP.md) | — |
 | **Handoff integración ML / visión** | [`HANDOFF-INTEGRACION-ML-VISION.md`](HANDOFF-INTEGRACION-ML-VISION.md) | — |
 | Flujos comerciales | [`13-FLUJOS-COMERCIALES.md`](13-FLUJOS-COMERCIALES.md) | 02, 06, 07, 24 |
 | Alquiler equipos | [`24-alquiler-equipos.md`](24-alquiler-equipos.md) | 06 §stock, 13 §cobranzas |

@@ -12,12 +12,13 @@
 | 1 | [`prisma/schema.prisma`](../prisma/schema.prisma) | Modelo de datos real |
 | 2 | [`lib/rbac.ts`](../lib/rbac.ts) | Permisos y roles en runtime |
 | 3 | [`AGENTS.md`](../AGENTS.md) | Reglas operativas y checklist |
-| 4 | [`00-SISTEMA-PUNTA-A-PUNTA.md`](00-SISTEMA-PUNTA-A-PUNTA.md) | Flujos end-to-end |
-| 5 | [`00-INFRAESTRUCTURA.md`](00-INFRAESTRUCTURA.md) | Dev, Docker, VPS, CI/CD |
-| 6 | [`00-INDICE-CANONICO.md`](00-INDICE-CANONICO.md) | Qué doc usar; evitar duplicados |
-| 7 | [`00-ARQUITECTURA-IMPLEMENTADA.md`](00-ARQUITECTURA-IMPLEMENTADA.md) | Patrones de código |
-| 8 | Docs de dominio `01–08` | Reglas de negocio por módulo |
-| 9 | [`10-roadmap.md`](10-roadmap.md) | Plan futuro — **no** asumir implementado |
+| 4 | [`HANDOFF-CONTINUACION-ERP.md`](HANDOFF-CONTINUACION-ERP.md) | Estado reciente, prod, pendientes (retomar trabajo) |
+| 5 | [`00-SISTEMA-PUNTA-A-PUNTA.md`](00-SISTEMA-PUNTA-A-PUNTA.md) | Flujos end-to-end |
+| 6 | [`00-INFRAESTRUCTURA.md`](00-INFRAESTRUCTURA.md) | Dev, Docker, VPS, CI/CD |
+| 7 | [`00-INDICE-CANONICO.md`](00-INDICE-CANONICO.md) | Qué doc usar; evitar duplicados |
+| 8 | [`00-ARQUITECTURA-IMPLEMENTADA.md`](00-ARQUITECTURA-IMPLEMENTADA.md) | Patrones de código |
+| 9 | Docs de dominio `01–08` | Reglas de negocio por módulo |
+| 10 | [`10-roadmap.md`](10-roadmap.md) | Plan futuro — **no** asumir implementado |
 
 **Regla:** si un doc de diseño contradice el código, **el código manda**. Actualizar el doc, no inventar comportamiento.
 
@@ -42,6 +43,7 @@ Datos: PostgreSQL · Archivos: storage/ o S3 · Colas: Redis/BullMQ · Automatiz
 
 | Si vas a… | Leer primero | Luego |
 |-----------|--------------|-------|
+| **Retomar sin contexto** | [`HANDOFF-CONTINUACION-ERP.md`](HANDOFF-CONTINUACION-ERP.md) | `AGENTS.md`, pendientes §7 |
 | Cualquier cambio | Este archivo + `AGENTS.md` | `00-INDICE-CANONICO.md` |
 | Nueva API | `14-CONTRATOS-FRONTERAS.md` | `11-API-ENDPOINTS.md`, `lib/rbac.ts` |
 | Nueva página dashboard | `22-MAPA-MODULOS.md` | `lib/page-guard.ts`, permiso en rbac |

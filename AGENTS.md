@@ -5,7 +5,7 @@
 
 Este archivo es la **fuente de verdad operativa** para no romper módulos al tocar otros.
 
-**→ Leer primero:** [`docs/AI-MASTER.md`](docs/AI-MASTER.md) (protocolo completo + checklist + anti-patrones).
+**→ Leer primero:** [`docs/HANDOFF-CONTINUACION-ERP.md`](docs/HANDOFF-CONTINUACION-ERP.md) (estado reciente y pendientes) · [`docs/AI-MASTER.md`](docs/AI-MASTER.md) (protocolo completo).
 
 ---
 

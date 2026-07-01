@@ -1,9 +1,11 @@
 ---
-description: Reglas obligatorias para agentes de IA en iBiomédica ERP. Leer docs/AI-MASTER.md antes de cualquier cambio.
+description: Reglas obligatorias para agentes de IA en iBiomédica ERP. Leer docs/HANDOFF-CONTINUACION-ERP.md si retomás el proyecto; docs/AI-MASTER.md antes de cualquier cambio.
 alwaysApply: true
 ---
 
 # iBiomédica ERP — Reglas para IA
+
+**Retomando el proyecto:** leer [`docs/HANDOFF-CONTINUACION-ERP.md`](docs/HANDOFF-CONTINUACION-ERP.md) (estado, prod, pendientes).
 
 **Antes de editar código:** leer [`docs/AI-MASTER.md`](docs/AI-MASTER.md) y [`AGENTS.md`](AGENTS.md).
 

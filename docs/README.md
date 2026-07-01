@@ -9,11 +9,12 @@
 
 | Orden | Documento | Contenido |
 |-------|-----------|-----------|
-| **1** | **[`AI-MASTER.md`](AI-MASTER.md)** | Protocolo obligatorio, checklist, anti-patrones |
-| **2** | **[`../AGENTS.md`](../AGENTS.md)** | Reglas de oro, estructura repo |
-| **3** | **[`00-SISTEMA-PUNTA-A-PUNTA.md`](00-SISTEMA-PUNTA-A-PUNTA.md)** | Flujos end-to-end + diagramas Mermaid |
-| **4** | **[`00-INFRAESTRUCTURA.md`](00-INFRAESTRUCTURA.md)** | Dev, Docker, VPS, CI/CD |
-| **5** | **[`00-INDICE-CANONICO.md`](00-INDICE-CANONICO.md)** | Fuente única por tema (evitar duplicados) |
+| **1** | **[`HANDOFF-CONTINUACION-ERP.md`](HANDOFF-CONTINUACION-ERP.md)** | **Retomar trabajo — estado, prod, pendientes (leer si sos nuevo)** |
+| **2** | **[`AI-MASTER.md`](AI-MASTER.md)** | Protocolo obligatorio, checklist, anti-patrones |
+| **3** | **[`../AGENTS.md`](../AGENTS.md)** | Reglas de oro, estructura repo |
+| **4** | **[`00-SISTEMA-PUNTA-A-PUNTA.md`](00-SISTEMA-PUNTA-A-PUNTA.md)** | Flujos end-to-end + diagramas Mermaid |
+| **5** | **[`00-INFRAESTRUCTURA.md`](00-INFRAESTRUCTURA.md)** | Dev, Docker, VPS, CI/CD |
+| **6** | **[`00-INDICE-CANONICO.md`](00-INDICE-CANONICO.md)** | Fuente única por tema (evitar duplicados) |
 
 | Documento | Contenido |
 |-----------|-----------|
