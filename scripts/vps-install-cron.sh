@@ -4,12 +4,14 @@
 #
 # Variables opcionales:
 #   APP_DIR     — ruta del repo (default /opt/ibiomedica)
-#   CRON_USER   — usuario Unix del cron (default deploy)
+#   CRON_USER   — usuario Unix del cron (default: deploy si existe, si no root)
 #   APP_URL     — URL pública HTTPS (default https://erp-ibiomedica.com.ar)
 set -euo pipefail
 
 APP_DIR="${APP_DIR:-/opt/ibiomedica}"
-CRON_USER="${CRON_USER:-deploy}"
+# Usar 'deploy' solo si el usuario existe; si no, 'root' (evita cron muerto: un
+# usuario inexistente hace que NINGUNA tarea programada corra, en silencio).
+CRON_USER="${CRON_USER:-$(id deploy >/dev/null 2>&1 && echo deploy || echo root)}"
 APP_URL="${APP_URL:-https://erp-ibiomedica.com.ar}"
 CRON_FILE="/etc/cron.d/ibiomedica-cron"
 
