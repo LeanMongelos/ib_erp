@@ -2,7 +2,7 @@
 
 ## 1. Propósito
 
-Generar **Factura**, **Presupuesto** y **Remito** con layout configurable (formato IB — Ingeniería Biomédica), usando `@react-pdf/renderer`.
+Generar **Factura**, **Presupuesto** y **Remito** (formato IB — Ingeniería Biomédica). Los tres documentos de fábrica se renderizan desde **plantillas HTML** dedicadas (→ Puppeteer → PDF); el editor visual por bloques (`@react-pdf/renderer`) sigue disponible para plantillas personalizadas. La **Factura** cumple formato **AFIP/ARCA**: recuadro de letra A/B/C, Punto de Venta + Nº de comprobante, CAE + vencimiento + QR, IVA discriminado en A e "IVA incluido" por **alícuota real** en B/C.
 
 ## 2. Archivos clave
 
@@ -11,8 +11,15 @@ Generar **Factura**, **Presupuesto** y **Remito** con layout configurable (forma
 | `lib/plantillas/types.ts` | `PlantillaConfig`, `LayoutElement`, `ColumnaItem` |
 | `lib/plantillas/defaults.ts` | Plantillas fábrica por tipo |
 | `lib/plantillas/layout-default-presupuesto.ts` | Layout IB en bloques (mm) |
-| `lib/plantillas/render-documento.tsx` | Entry: layout bloques o legacy |
-| `lib/plantillas/render-layout.tsx` | Render por bloques posicionados |
+| `lib/plantillas/render-documento.tsx` | Entry: layout bloques → **HTML** → legacy |
+| `lib/plantillas/render-layout.tsx` | Render por bloques posicionados (solo plantillas personalizadas por el editor) |
+| `lib/plantillas/html-factura.html` | **Factura formato AFIP** (letra, Pto Venta/Nº, CAE/QR, IVA) |
+| `lib/plantillas/html-presupuesto.html` | Presupuesto (no fiscal) |
+| `lib/plantillas/html-remito.html` | Remito (sin precios, con N° de serie + firma) |
+| `lib/plantillas/html-templates.ts` | Lee los `.html` · `htmlDefaultPorTipo` |
+| `lib/plantillas/render-html.ts` | Sustituye `{{placeholders}}` (incluye IVA por alícuota, CAE, QR) |
+| `lib/plantillas/html-to-pdf.server.ts` | HTML → PDF con Puppeteer (inyecta logo) |
+| `scripts/sync-plantillas-html.ts` | Post-deploy: migra plantillas de fábrica al motor HTML |
 | `lib/plantillas/binding-resolver.ts` | **Cliente-safe** — resolve campos |
 | `lib/plantillas/resolve-image-src.server.ts` | **Solo servidor** — rutas imagen |
 | `lib/plantillas/preview.ts` | Preview con datos ejemplo |
@@ -82,10 +89,19 @@ API preview/PDF factura
   → getPlantillaConfig(plantillaId?, tipo)
   → buildDatos* (desde Prisma o sample-datos)
   → renderDocumentoPDF(cfg, datos)
-      → si cfg.layout.elementos.length → LayoutDocumentPage
-      → si no → PresupuestoIB (legacy) o DocumentoSimple
+      1) si cfg.layout.elementos.length → LayoutDocumentPage (react-pdf)
+         └ solo plantillas personalizadas con el editor visual
+      2) si no → HTML: cfg.html || htmlDefaultPorTipo(tipo) → Puppeteer
+         └ Factura / Presupuesto / Remito de FÁBRICA usan esta rama
+      3) fallback → react-pdf (PresupuestoIB / DocumentoSimple)
   → Buffer PDF
 ```
+
+> **Prioridad:** el layout de bloques gana sobre el HTML. Por eso las plantillas de
+> fábrica **no** llevan layout (ver `defaults.ts` + `ensure-layout.ts`, que ya no
+> fuerza layout por tipo). En producción, `scripts/sync-plantillas-html.ts` (paso
+> del deploy) migra las plantillas de fábrica existentes quitándoles el layout
+> legacy → así el rediseño aplica **sin "Restaurar fábrica" manual**.
 
 ## 6. Editor visual — comportamiento
 
@@ -130,3 +146,26 @@ Datos ejemplo: `sample-datos.ts` (Haemonetics + ítem corto "Filtro de aire").
 | **REMITO** | Sí (preview + editor) | **Parcial (M2)** — `GET/POST /api/ots/[id]/remito` y `GET/POST /api/facturas/[id]/remito` generan PDF con numeración R-; sin entidad Remito ni flujo logístico OC→recepción |
 
 Emisión mínima: repuestos de OT o ítems de factura, emisor predeterminado, plantilla REMITO predeterminada. Preview: `?preview=true` (no consume correlativo).
+
+El **remito ahora porta el N° de serie** de los equipos vendidos (viaja en la
+descripción detalle, vía `lib/remitos/build-datos.ts`) y trae área de firma
+"Entregó / Recibí conforme".
+
+## 11. Factura AFIP + IVA por alícuota
+
+- **Datos AFIP** expuestos en `render-html.ts` (`buildHtmlPlaceholderMap`): `factura_letra`,
+  `factura_cod_comprobante`, `factura_punto_venta`, `factura_comp_nro`, `factura_cae`,
+  `factura_cae_vencimiento`, `factura_qr`, `factura_original`. El Punto de Venta viaja
+  desde `Factura.puntoVenta ?? Emisor.puntoVenta` (ver `build-datos.ts`).
+- **IVA en B/C:** leyenda "Los precios incluyen IVA. IVA contenido: $X" calculada por la
+  **alícuota real de cada ítem** (`ItemFactura.alicuotaIvaPct`) — soporta 21%, 10,5%,
+  exento y facturas mixtas. **Nada hardcodeado.** En Factura A el IVA se discrimina.
+
+## 12. Entrega: Factura + brochures
+
+`GET /api/facturas/[id]/entrega` arma un **PDF único** = factura + los brochures (PDF)
+de los equipos vendidos que tengan uno cargado (deduplicado por producto, merge con
+`pdf-lib`). Ver `lib/facturas/entrega-pdf.ts`. El comprobante fiscal sigue siendo la
+factura; los brochures son **anexos informativos** para la entrega formal.
+Botón 📦 en la tabla de facturas. El brochure se carga por producto (ver
+[`06-inventario-y-compras.md`](06-inventario-y-compras.md)).

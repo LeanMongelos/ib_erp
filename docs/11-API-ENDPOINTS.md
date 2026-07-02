@@ -101,6 +101,7 @@ Usado por `SucursalUbicacionFields` y `SucursalRapidaModal` al validar direcció
 | POST | `/api/facturas/[id]/emitir` | `facturas.emit_afip` | Solicitar CAE |
 | POST | `/api/facturas/[id]/provisionar-equipos` | `facturas.create` | Provisión manual de equipos desde factura |
 | GET | `/api/facturas/[id]/pdf` | `facturas.read` | PDF fiscal |
+| GET | `/api/facturas/[id]/entrega` | `facturas.read` | PDF de entrega = factura + brochures (PDF) de los equipos vendidos (merge `pdf-lib`) |
 | GET/POST | `/api/facturas/[id]/remito` | `facturas.read` | Remito PDF desde ítems de factura |
 | GET | `/api/facturas/items/[id]/detalle` | `crm.read` **o** `clientes.read` | Detalle ítem (equipo, kit, sucursal) para historial CRM |
 
@@ -137,6 +138,9 @@ Ver [`24-alquiler-equipos.md`](24-alquiler-equipos.md).
 | GET/POST | `/api/inventario` | 🔐 / `inventario.create` | Stock |
 | POST | `/api/inventario/[id]/ajustar` | `inventario.adjust_stock` | Ajuste ENTRADA/SALIDA/AJUSTE |
 | POST | `/api/inventario/[id]/transferir` | `inventario.transfer` | Transferencia entre depósitos (trazabilidad) |
+| POST/DELETE | `/api/inventario/[id]/foto` | `inventario.update` | Subir / quitar foto del producto |
+| POST/DELETE | `/api/inventario/[id]/brochure` | `inventario.update` | Subir / quitar brochure (PDF, máx. 20 MB) del producto |
+| GET | `/api/inventario/media/[...path]` | `inventario.read` | Servir foto (imagen) o brochure (PDF) |
 | GET | `/api/inventario/faltantes` | `compras.read` | Ítems bajo mínimo |
 | POST | `/api/inventario/generar-oc` | `compras.create` | Generar OC desde faltantes |
 | GET/POST | `/api/ordenes-compra` | `compras.read/create` | Órdenes de compra |
@@ -237,6 +241,15 @@ Ver detalle: [`12-PLANTILLAS-PDF.md`](12-PLANTILLAS-PDF.md).
 | POST | `/api/n8n/crear-ot` | 🌐 API key | Crear OT |
 | POST | `/api/n8n/responder` | 🌐 API key | Responder conversación |
 | POST | `/api/n8n/etiquetar` | 🌐 API key | Etiquetar |
+
+## ML (lectura, token de servicio)
+
+Auth: header `Authorization: Bearer $ML_API_KEY`. Solo lectura, sin PII. Detalle en [`HANDOFF-INTEGRACION-ML-VISION.md`](HANDOFF-INTEGRACION-ML-VISION.md).
+
+| Método | Ruta | Auth | Descripción |
+|--------|------|------|-------------|
+| GET | `/api/ml/clientes` | 🌐 `ML_API_KEY` | Clientes activos + equipos + asignaciones (`?cliente=<id>` filtra) |
+| GET | `/api/ml/equipos/[id]` | 🌐 `ML_API_KEY` | Ficha acotada de un equipo (marca/modelo/serie/estado/cliente) |
 
 ## Webhooks y cron
 

@@ -1,7 +1,7 @@
 # Handoff — Continuación del ERP iBiomédica
 
 > **Audiencia:** desarrollador u operador que retoma el proyecto con **Cursor** (u otro agente de IA).  
-> **Última actualización:** 2026-07-01 · **Rama principal:** `master` · **Commit de referencia:** `0243e49`  
+> **Última actualización:** 2026-07-02 · **Rama principal:** `master` · **Commit de referencia:** ver `git log` (post rediseño de comprobantes)  
 > **Producción:** https://erp-ibiomedica.com.ar
 
 Este documento resume **qué se hizo recientemente**, **cómo venimos trabajando**, **estado actual** y **próximos pasos**. Es la lectura obligatoria **antes** de cualquier tarea nueva si no tenés contexto de la conversación previa.
@@ -120,6 +120,18 @@ Scripts útiles: `scripts/vps-diagnose.sh`, `scripts/vps-health-check.sh`, `scri
 ---
 
 ## 4. Trabajo reciente (commits relevantes)
+
+### 2026-07-02 — Rediseño de comprobantes + brochure + entrega + fix cron
+
+| Área | Cambio |
+|------|--------|
+| **Plantillas** | Factura/Presupuesto/Remito rediseñados con **motor HTML** (Puppeteer). Factura formato **AFIP** (letra, Pto Venta/Nº, CAE/QR, IVA discriminado en A e **IVA incluido por alícuota real** en B/C). Remito con **N° de serie** + firma. Ver [`12-PLANTILLAS-PDF.md`](12-PLANTILLAS-PDF.md). |
+| **Migración plantillas** | `scripts/sync-plantillas-html.ts` (paso del deploy, idempotente): migra las plantillas de fábrica al HTML → **ya no hace falta "Restaurar fábrica" manual**. No toca plantillas personalizadas. |
+| **Brochure por producto** | `Inventario.brochureUrl` (PDF ≤20 MB) + upload/serve; se ve en la ficha. Ver [`06-inventario-y-compras.md`](06-inventario-y-compras.md). |
+| **Entrega factura+brochures** | `GET /api/facturas/[id]/entrega` → PDF único factura + brochures de los equipos vendidos (`pdf-lib`). Botón 📦 en la tabla de facturas. |
+| **API ML lectura** | `GET /api/ml/clientes`, `/api/ml/equipos/[id]` (token `ML_API_KEY`, solo lectura). Ver [`HANDOFF-INTEGRACION-ML-VISION.md`](HANDOFF-INTEGRACION-ML-VISION.md). |
+| **Errores 400** | `handleApiError` ahora nombra el campo/motivo (no solo "Datos inválidos"). |
+| **Seguridad/infra** | Puertos internos (Postgres/Redis/MinIO/n8n) bindeados a `127.0.0.1`. **Cron:** el usuario `deploy` no existía → autodetección a `root` en `vps-install-cron.sh` (todas las tareas programadas estaban muertas). |
 
 ### `0243e49` — fix(afip): importes WSFE B/C
 

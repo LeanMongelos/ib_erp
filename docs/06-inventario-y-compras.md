@@ -33,6 +33,15 @@ graph LR
     ENT --> INST[Instalado en cliente]
 ```
 
+### Ficha del producto: foto y brochure
+
+Cada producto (`Inventario`) puede tener:
+
+- **Foto** (`fotoUrl`, JPG/PNG/WEBP, se optimiza en el navegador) — endpoint `POST/DELETE /api/inventario/[id]/foto`.
+- **Brochure / ficha técnica** (`brochureUrl`, **PDF hasta 20 MB**) — endpoint `POST/DELETE /api/inventario/[id]/brochure`.
+
+Ambos se cargan en el alta/edición del producto (Inventario → Nuevo producto → pestaña *General*) y se sirven vía `GET /api/inventario/media/[...path]`. El brochure aparece con "Ver brochure" en la ficha, y se **adjunta automáticamente al PDF de entrega** de una factura (ver [`12-PLANTILLAS-PDF.md`](12-PLANTILLAS-PDF.md) §12). Storage: `lib/inventario/brochure-storage.ts` (local/S3, mismo driver que la foto).
+
 ---
 
 ## 2. Reposición inteligente (lo que pediste)
