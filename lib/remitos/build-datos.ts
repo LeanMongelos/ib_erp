@@ -45,13 +45,14 @@ export function buildDatosRemito(
   numero: string,
   emisor: EmisorRow,
   cliente: ClienteRow,
-  items: Array<{ descripcion: string; cantidad: number; codigo?: string | null }>,
+  items: Array<{ descripcion: string; cantidad: number; codigo?: string | null; numeroSerie?: string | null }>,
   observaciones?: string | null,
 ): DatosDocumentoRender {
   const mapped = items.map((i) => ({
     codigo: i.codigo ?? null,
     descripcion: i.descripcion,
-    descripcionLarga: null,
+    // El número de serie del equipo (si lo lleva) viaja en la descripción detalle.
+    descripcionLarga: i.numeroSerie?.trim() ? `N° de serie: ${i.numeroSerie.trim()}` : null,
     fotoUrl: null,
     cantidad: i.cantidad,
     precioUnit: 0,
@@ -107,7 +108,7 @@ export function buildDatosRemitoDesdeFactura(
   factura: {
     numero: string
     observaciones?: string | null
-    items: Array<{ descripcion: string; cantidad: number; codigo?: string | null }>
+    items: Array<{ descripcion: string; cantidad: number; codigo?: string | null; numeroSerie?: string | null }>
   },
   emisor: EmisorRow,
   cliente: ClienteRow,
@@ -120,6 +121,7 @@ export function buildDatosRemitoDesdeFactura(
       codigo: i.codigo ?? null,
       descripcion: i.descripcion,
       cantidad: i.cantidad,
+      numeroSerie: i.numeroSerie ?? null,
     })),
     factura.observaciones ?? `Remito vinculado a factura ${factura.numero}`,
   )

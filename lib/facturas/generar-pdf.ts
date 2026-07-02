@@ -47,6 +47,7 @@ export async function generarPdfFactura(facturaId: string): Promise<Buffer | nul
     {
       numero: f.numeroAfip ? String(f.numeroAfip).padStart(8, '0') : f.numero,
       tipo: f.tipo,
+      puntoVenta: f.puntoVenta,
       estado: f.estado,
       fechaEmision: f.fechaEmision,
       subtotal: f.subtotal,

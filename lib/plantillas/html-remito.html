@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Presupuesto {{presupuesto_numero}}</title>
+  <title>Remito {{documento_numero}}</title>
   <style>
     :root {
       --accent:      #D94F1E;
-      --header-bg:   #D94F1E;   /* naranja franjas (encabezado tabla + total) */
+      --header-bg:   #D94F1E;
       --row-alt:     #F7F7F7;
       --border:      #B5B5B5;
       --border-hard: #000000;
@@ -18,11 +18,9 @@
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: Arial, sans-serif; font-size: 9pt; color: var(--text); background: #fff; }
-
     .page { width: var(--page-width); min-height: 297mm; margin: 0 auto; padding: var(--page-pad);
             display: flex; flex-direction: column; gap: 4mm; }
 
-    /* ══ ENCABEZADO ══ */
     .doc-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 8mm;
                   border-bottom: 2px solid var(--accent); padding-bottom: 3mm; }
     .dh-emisor img { height: 15mm; width: auto; display: block; margin-bottom: 2mm; }
@@ -36,51 +34,29 @@
     .dh-datos .no-valido { font-size: 7.5pt; color: var(--muted); border: 1px solid var(--border);
                            display: inline-block; padding: 1mm 2mm; margin-top: 2mm; text-transform: uppercase; }
 
-    /* ══ CLIENTE ══ */
     .cliente { border: 1px solid var(--border-hard); padding: 3mm 4mm; display: grid;
                grid-template-columns: 1fr 1fr; gap: 1mm 8mm; font-size: 8.5pt; }
     .cliente .full { grid-column: 1 / -1; }
     .cliente .lbl { color: var(--muted); }
     .cliente .val { font-weight: bold; }
 
-    /* ══ TABLA ══ */
     table.items { width: 100%; border-collapse: collapse; font-size: 8.5pt; }
     table.items thead tr { background: var(--header-bg); color: #fff; }
     table.items thead th { padding: 2mm 3mm; text-align: left; font-weight: bold; }
     table.items thead th.center { text-align: center; }
-    table.items thead th.right { text-align: right; }
     table.items tbody td { padding: 2mm 3mm; vertical-align: top; border-bottom: 1px solid var(--border); }
     table.items tbody tr:nth-child(even) { background: var(--row-alt); }
     table.items td.center { text-align: center; white-space: nowrap; }
-    table.items td.right { text-align: right; white-space: nowrap; }
     .cod-item { font-weight: bold; white-space: nowrap; }
     .desc-main { font-weight: bold; }
     .desc-detalle { margin-top: 1mm; color: var(--muted); font-size: 7.5pt; line-height: 1.45; }
 
-    /* ══ TOTALES ══ */
-    .totales-wrap { display: flex; justify-content: space-between; align-items: flex-start; gap: 8mm; margin-top: 2mm; }
-    .son-pesos { flex: 1; font-size: 8pt; color: var(--muted); font-style: italic; align-self: flex-end; }
-    .totales { min-width: 72mm; border: 1px solid var(--border); }
-    .totales .t-row { display: flex; justify-content: space-between; gap: 8mm; padding: 1.4mm 3mm; border-bottom: 1px solid var(--border); }
-    .totales .t-row:last-child { border-bottom: none; }
-    .totales .t-label { color: var(--muted); }
-    .totales .t-value { font-weight: bold; text-align: right; }
-    .totales .t-row.total-final { background: var(--header-bg); color: #fff; font-size: 11pt; }
-    .totales .t-row.total-final .t-label, .totales .t-row.total-final .t-value { color: #fff; }
-
-    /* ══ CRONOGRAMA ══ */
-    .cronograma { border-top: 1px solid var(--border); padding-top: 2.5mm; margin-top: 1mm; font-size: 8pt; }
-    .obs-title { font-weight: bold; margin-bottom: 1.5mm; }
-    .cron-body { background: var(--row-alt); padding: 2mm 3mm; }
-    .cron-row { display: flex; justify-content: space-between; gap: 4mm; padding: .4mm 0; }
-    .cron-monto { font-weight: bold; white-space: nowrap; }
-
-    /* ══ OBSERVACIONES ══ */
     .observaciones { border-top: 1px solid var(--border); padding-top: 2.5mm; font-size: 8pt; }
-    .obs-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: .8mm 8mm; margin-top: 1mm; }
-    .obs-row { display: flex; gap: 2mm; }
-    .obs-label { color: var(--muted); white-space: nowrap; }
-    .obs-value { font-weight: bold; }
+    .obs-title { font-weight: bold; margin-bottom: 1.5mm; }
+
+    .firma { margin-top: auto; display: flex; justify-content: space-between; gap: 20mm; padding-top: 14mm; }
+    .firma .box { flex: 1; border-top: 1px solid var(--border-hard); padding-top: 1.5mm;
+                  text-align: center; font-size: 8pt; color: var(--muted); }
 
     @media print { body { background: #fff; } .page { margin: 0; } }
   </style>
@@ -98,12 +74,11 @@
       <div class="linea"><b>{{empresa_condicion_iva}}</b></div>
     </div>
     <div class="dh-datos">
-      <div class="titulo">PRESUPUESTO</div>
-      <div class="num">N° {{presupuesto_numero}}</div>
+      <div class="titulo">REMITO</div>
+      <div class="num">N° {{documento_numero}}</div>
       <div class="fiscal">
-        <b>Fecha:</b> {{presupuesto_fecha}}<br>
-        <b>CUIT:</b> {{empresa_cuit}}<br>
-        <b>Ing. Brutos:</b> {{empresa_ingresos_brutos}}
+        <b>Fecha:</b> {{documento_fecha}}<br>
+        <b>CUIT:</b> {{empresa_cuit}}
       </div>
       <div class="no-valido">Documento no válido como factura</div>
     </div>
@@ -124,28 +99,26 @@
       <span class="val">{{cliente_condicion_iva}}</span>
     </div>
     <div class="field full">
-      <span class="lbl">Domicilio:</span>
-      <span class="val">{{cliente_direccion}}</span>
-    </div>
-    <div class="field">
-      <span class="lbl">Vendedor:</span>
-      <span class="val">{{vendedor_nombre}}</span>
+      <span class="lbl">Domicilio de entrega:</span>
+      <span class="val">{{direccion_entrega}}</span>
     </div>
     <div class="field">
       <span class="lbl">Orden de compra:</span>
       <span class="val">{{orden_compra}}</span>
     </div>
+    <div class="field">
+      <span class="lbl">Plazo de entrega:</span>
+      <span class="val">{{plazo_entrega}}</span>
+    </div>
   </section>
 
-  <!-- ══ TABLA DE ÍTEMS ══ -->
+  <!-- ══ TABLA DE ÍTEMS (sin precios) ══ -->
   <table class="items">
     <thead>
       <tr>
-        <th style="width:12%">Código</th>
-        <th style="width:52%">Descripción</th>
-        <th class="center" style="width:9%">Cant.</th>
-        <th class="right" style="width:13%">P. Unitario</th>
-        <th class="right" style="width:14%">Subtotal</th>
+        <th style="width:16%">Código</th>
+        <th style="width:70%">Descripción</th>
+        <th class="center" style="width:14%">Cantidad</th>
       </tr>
     </thead>
     <tbody>
@@ -156,8 +129,6 @@
           <div class="desc-detalle">{{item1_descripcion_larga}}</div>
         </td>
         <td class="center">{{item1_cantidad}}</td>
-        <td class="right">{{item1_precio}}</td>
-        <td class="right">{{item1_subtotal}}</td>
       </tr>
       <tr>
         <td class="cod-item">{{item2_codigo}}</td>
@@ -166,8 +137,6 @@
           <div class="desc-detalle">{{item2_descripcion_larga}}</div>
         </td>
         <td class="center">{{item2_cantidad}}</td>
-        <td class="right">{{item2_precio}}</td>
-        <td class="right">{{item2_subtotal}}</td>
       </tr>
       <tr>
         <td class="cod-item">{{item3_codigo}}</td>
@@ -176,40 +145,22 @@
           <div class="desc-detalle">{{item3_descripcion_larga}}</div>
         </td>
         <td class="center">{{item3_cantidad}}</td>
-        <td class="right">{{item3_precio}}</td>
-        <td class="right">{{item3_subtotal}}</td>
       </tr>
 
       <!-- Agregar más ítems repitiendo el bloque <tr> de arriba -->
     </tbody>
   </table>
 
-  <!-- ══ TOTALES ══ -->
-  <div class="totales-wrap">
-    <div class="son-pesos">Son {{documento_moneda}}: {{total_en_letras}}</div>
-    <div class="totales">
-      <div class="t-row"><span class="t-label">Subtotal</span><span class="t-value">{{total_subtotal}}</span></div>
-      <div class="t-row"><span class="t-label">Bonificación</span><span class="t-value">{{total_bonificacion}}</span></div>
-      <div class="t-row"><span class="t-label">Subtotal Neto</span><span class="t-value">{{total_subtotal_neto}}</span></div>
-      {{filas_totales_extra}}
-      <div class="t-row total-final"><span class="t-label">Total</span><span class="t-value">{{total_final}}</span></div>
-    </div>
-  </div>
-
-  {{seccion_cronograma}}
-
   <!-- ══ OBSERVACIONES ══ -->
   <div class="observaciones">
     <div class="obs-title">Observaciones</div>
-    <p style="margin-bottom:1.5mm;">{{observaciones_texto}}</p>
-    <div class="obs-grid">
-      <div class="obs-row"><span class="obs-label">Vigencia:</span><span class="obs-value">{{vigencia}}</span></div>
-      <div class="obs-row"><span class="obs-label">Forma de pago:</span><span class="obs-value">{{forma_pago}}</span></div>
-      <div class="obs-row"><span class="obs-label">Plazos de cobranza:</span><span class="obs-value">{{plazos_cobranza}}</span></div>
-      <div class="obs-row"><span class="obs-label">Tasa financiación:</span><span class="obs-value">{{tasa_financiacion}}</span></div>
-      <div class="obs-row"><span class="obs-label">Plazo de entrega:</span><span class="obs-value">{{plazo_entrega}}</span></div>
-      <div class="obs-row"><span class="obs-label">Garantía:</span><span class="obs-value">{{garantia}}</span></div>
-    </div>
+    <p>{{observaciones_texto}}</p>
+  </div>
+
+  <!-- ══ FIRMAS ══ -->
+  <div class="firma">
+    <div class="box">Entregó (Ingeniería Biomédica)</div>
+    <div class="box">Recibí conforme (aclaración, DNI y sello)</div>
   </div>
 
 </div>

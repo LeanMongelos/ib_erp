@@ -26,6 +26,7 @@ export function datosEjemploPlantilla(tipo: 'FACTURA' | 'PRESUPUESTO' | 'REMITO'
   const items = [
     {
       codigo: 'REP-01',
+      alicuotaIvaPct: 21,
       descripcion: 'Filtro de aire',
       descripcionLarga: null as string | null,
       fotoUrl: null as string | null,
@@ -35,6 +36,7 @@ export function datosEjemploPlantilla(tipo: 'FACTURA' | 'PRESUPUESTO' | 'REMITO'
     },
     {
       codigo: 'HOE098',
+      alicuotaIvaPct: 10.5,
       descripcion: 'Sist. recolecc. multicomponen MCS+ HAEMONETICS.',
       descripcionLarga:
         'Sistema de Recolección Multicomponente. La recolección de aféresis móvil representa la extensión natural de la población fija de donantes existente en su centro. El dispositivo terapéutico móvil MCS+, pequeño y portátil, está diseñado para entornos hospitalarios y centros de sangre móviles. Proporciona un tratamiento agradable y cómodo para los pacientes. Donaciones de componentes: Plaquetas, Glóbulos rojos, Plasma.',
@@ -45,6 +47,7 @@ export function datosEjemploPlantilla(tipo: 'FACTURA' | 'PRESUPUESTO' | 'REMITO'
     },
     {
       codigo: 'HOR010',
+      alicuotaIvaPct: 10.5,
       descripcion: 'Protocolo Kits 980 MCS+ HAEMONETICS.',
       descripcionLarga: 'Closed Therapeutic Plasma Exchange disposable set',
       fotoUrl: null,
@@ -54,6 +57,7 @@ export function datosEjemploPlantilla(tipo: 'FACTURA' | 'PRESUPUESTO' | 'REMITO'
     },
     {
       codigo: 'HOR009',
+      alicuotaIvaPct: 21,
       descripcion: 'Prtocolo kits 997 MCS+ HAEMONETICS . Plaquetoferesis',
       descripcionLarga: '',
       fotoUrl: null,
@@ -91,6 +95,7 @@ export function datosEjemploPlantilla(tipo: 'FACTURA' | 'PRESUPUESTO' | 'REMITO'
       ...base,
       tipo: 'FACTURA',
       tipoFactura: 'B',
+      puntoVenta: 12,
       presupuestoNumero: '000000000134',
       cae: '71234567890123',
       caeVencimiento: new Date(Date.now() + 10 * 86400000).toISOString(),
@@ -107,7 +112,27 @@ export function datosEjemploPlantilla(tipo: 'FACTURA' | 'PRESUPUESTO' | 'REMITO'
       formaPago: undefined,
       plazoEntrega: undefined,
       garantia: undefined,
-      observaciones: 'Entrega de repuestos — OT de ejemplo',
+      items: [
+        {
+          codigo: 'MON-PAT-001',
+          descripcion: 'Monitor multiparamétrico Mindray ePM 12',
+          descripcionLarga: 'N° de serie: MND-SJ-EPM12-ML',
+          fotoUrl: null,
+          cantidad: 1,
+          precioUnit: 0,
+          subtotal: 0,
+        },
+        {
+          codigo: 'REP-01',
+          descripcion: 'Filtro de aire',
+          descripcionLarga: null,
+          fotoUrl: null,
+          cantidad: 2,
+          precioUnit: 0,
+          subtotal: 0,
+        },
+      ],
+      observaciones: 'Entrega de equipo con N° de serie + repuesto — OT de ejemplo',
     }
   }
 

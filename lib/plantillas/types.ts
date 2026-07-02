@@ -145,6 +145,8 @@ export interface ItemDocumentoRender {
   cantidad: number
   precioUnit: number
   bonificacionPct?: number
+  /** Alícuota de IVA del ítem (%). null/undefined = exento. Para IVA contenido en B/C. */
+  alicuotaIvaPct?: number | null
   subtotal: number
 }
 
@@ -152,6 +154,8 @@ export interface DatosDocumentoRender {
   tipo: 'FACTURA' | 'PRESUPUESTO' | 'REMITO'
   numero: string
   tipoFactura?: 'A' | 'B' | 'C'
+  /** Punto de venta AFIP (para mostrar 0012-00000104) */
+  puntoVenta?: number | null
   fechaEmision: string
   moneda?: string
   cotizacionUsd?: number | null

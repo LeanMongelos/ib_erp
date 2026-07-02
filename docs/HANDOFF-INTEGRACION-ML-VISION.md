@@ -2,7 +2,7 @@
 
 > **Destinatario:** equipo de Machine Learning (motor de identificación y respuesta)  
 > **Emisor:** Ingeniería Biomédica  
-> **Fecha:** junio 2026  
+> **Fecha:** junio 2026 · **Actualizado:** 2026-07-01 (API REST de lectura disponible en producción)  
 > **Contacto:** Leandro Mongelos
 
 ---
@@ -310,10 +310,62 @@ Estructura (schemaVersion 2):
 
 **Uso ML:** filtrar candidatos por `clienteId` del contexto usando `asignacionActivaId` / fila con `activa: true`. El historial permite enriquecer respuestas (“antes estaba en otro hospital”) sin multi-cliente simultáneo.
 
-Acordaremos además uno o más de estos canales (sin publicar URLs ni credenciales en este documento):
+### API REST de lectura — DISPONIBLE
 
-1. **Export estático** (JSON) — generado localmente con el script anterior; ideal para entrenamiento inicial.
-2. **Entorno de prueba aislado** con API REST de solo lectura — ideal para integración del motor.
+Además del export estático, habilitamos una **API REST de solo lectura** para consultar en vivo clientes, equipos y asignaciones. Devuelve los mismos campos acotados del export (sin datos de contacto).
+
+- **Base URL:** `https://erp-ibiomedica.com.ar`
+- **Autenticación:** header `Authorization: Bearer <TOKEN>` en **cada** request. El **token de servicio** se entrega por **canal seguro aparte** (no se publica en este documento). Es rotable.
+- **Datos:** producción, **solo lectura**. Sin CUIT / email / teléfono.
+
+| Recurso | Método y ruta | Descripción |
+|---------|---------------|-------------|
+| Clientes + equipos + asignaciones | `GET /api/ml/clientes` | Todos los clientes activos con sus equipos y asignaciones |
+| Filtrar por un cliente | `GET /api/ml/clientes?cliente=<clienteId>` | Equipos/asignaciones de ese cliente |
+| Ficha de un equipo | `GET /api/ml/equipos/<equipoId>` | Equipo con `clienteId`, marca, modelo, serie, estado, asignaciones y catálogo |
+
+**Ejemplo (curl):**
+```bash
+curl -H "Authorization: Bearer <TOKEN>" \
+  https://erp-ibiomedica.com.ar/api/ml/clientes
+```
+
+**Respuesta de `GET /api/ml/clientes`** (misma forma que el export, `schemaVersion 2`):
+```json
+{
+  "generatedAt": "2026-07-01T21:00:00.000Z",
+  "schemaVersion": 2,
+  "clientes": [
+    {
+      "id": "…", "nombre": "…", "tipo": "HOSPITAL", "ciudad": "…", "activo": true,
+      "equipos": [
+        {
+          "id": "…", "nombre": "…", "marca": "Dräger", "modelo": "Savina 300",
+          "numeroSerie": "DRG-1000", "estado": "ACTIVO", "origen": "VENTA",
+          "asignacionActivaId": "…",
+          "asignaciones": [
+            { "id": "…", "clienteId": "…", "clienteNombre": "…", "sucursalNombre": null,
+              "tipo": "VENTA", "vigenciaDesde": "…", "vigenciaHasta": null, "activa": true, "motivo": null }
+          ],
+          "inventario": { "sku": "…", "nombre": "…", "marca": "…", "modelo": "…",
+                          "descripcion": "…", "tieneFotoReferencia": true }
+        }
+      ]
+    }
+  ]
+}
+```
+
+**Respuesta de `GET /api/ml/equipos/<id>`:** un objeto equipo como el de arriba, más `clienteId` y `clienteNombre` en la raíz. `404` si el equipo no existe.
+
+**Códigos:** `200` OK · `401` token faltante/ inválido · `404` no encontrado · `503` servicio sin token configurado. Rate limit / límites de tamaño: a coordinar si hace falta.
+
+---
+
+Canales de entrega acordados:
+
+1. **API REST de lectura** (arriba) — **disponible** en producción; ideal para integrar el motor.
+2. **Export estático** (JSON `docs/exports/ml-handoff-clientes-equipos.json`) — ideal para entrenamiento inicial offline.
 3. **Imágenes de referencia** del catálogo (cuando existan) asociadas a marca/modelo.
 
 ### Contrato de integración del motor (propuesta)
@@ -397,7 +449,7 @@ sequenceDiagram
 |------------|-------------|--------|
 | Modelo de datos Cliente ↔ Equipo | IB | ✅ Documentado en este archivo |
 | Tablas de ejemplo (5+ clientes, casuísticas) | IB | ✅ §4 + `npm run export:ml-handoff` |
-| APIs de consulta (clientes, equipos, asignación) | IB | ⏳ Sandbox + credenciales por canal seguro |
+| APIs de consulta (clientes, equipos, asignación) | IB | ✅ API REST de lectura en producción (token de servicio) — ver §5 |
 | Motor ML (visión + respuesta) | Equipo ML | ⏳ En desarrollo |
 | Integración en canal de usuario | IB | ⏳ Posterior al motor |
 

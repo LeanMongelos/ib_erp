@@ -45,15 +45,19 @@ function itemPlaceholders(item: ItemDocumentoRender | undefined, n: number, dato
 }
 
 function filaItemHtml(item: ItemDocumentoRender, datos: DatosDocumentoRender): string {
+  const precios =
+    datos.tipo === 'REMITO'
+      ? ''
+      : `
+        <td class="right">${formatImporteDoc(item.precioUnit, datos)}</td>
+        <td class="right">${formatImporteDoc(item.subtotal, datos)}</td>`
   return `<tr>
-        <td class="producto-codigo">${esc(item.codigo ?? '')}</td>
+        <td class="cod-item">${esc(item.codigo ?? '')}</td>
         <td>
-          <div class="producto-descripcion-main">${esc(item.descripcion)}</div>
-          <div class="producto-descripcion-detalle">${esc(item.descripcionLarga ?? '')}</div>
+          <div class="desc-main">${esc(item.descripcion)}</div>
+          <div class="desc-detalle">${esc(item.descripcionLarga ?? '')}</div>
         </td>
-        <td class="center">${formatCantidadAr(item.cantidad)}</td>
-        <td class="center">${formatImporteDoc(item.precioUnit, datos)}</td>
-        <td class="center">${formatImporteDoc(item.subtotal, datos)}</td>
+        <td class="center">${formatCantidadAr(item.cantidad)}</td>${precios}
       </tr>`
 }
 
@@ -117,6 +121,37 @@ export function buildHtmlPlaceholderMap(datos: DatosDocumentoRender): Record<str
   const equivalenteArs =
     moneda === 'USD' && cotizacion ? datos.total * cotizacion : null
 
+  // ── AFIP: letra, código de comprobante, punto de venta, número, CAE, QR ──
+  const letra = datos.tipoFactura ?? 'B'
+  const codComprobante = ({ A: '01', B: '06', C: '11' } as Record<string, string>)[letra] ?? '06'
+  const puntoVentaStr = String(datos.puntoVenta ?? 1).padStart(4, '0')
+  const compNro = (datos.numero.replace(/\D/g, '') || '0').slice(-8).padStart(8, '0')
+  const qrHtml = datos.qrDataUrl
+    ? `<img class="qr-img" src="${datos.qrDataUrl}" alt="QR AFIP" />`
+    : '<div class="qr-placeholder">Código QR AFIP<br/>(se genera al emitir)</div>'
+
+  // Leyenda informativa "IVA incluido" — solo Facturas B/C (en A el IVA se discrimina).
+  // IVA contenido calculado por la alícuota REAL de cada ítem (soporta 21%, 10,5%,
+  // exento y facturas con alícuotas mixtas). En B/C el precio ya incluye el IVA.
+  const bonifFactor = 1 - bonifPct / 100
+  const ratesGravadas = new Set<number>()
+  let ivaContenido = 0
+  for (const it of datos.items) {
+    const rate = it.alicuotaIvaPct ?? 0
+    if (rate > 0) {
+      ratesGravadas.add(rate)
+      const brutoItem = it.subtotal * bonifFactor
+      ivaContenido += brutoItem * (rate / (100 + rate))
+    }
+  }
+  ivaContenido = Math.round(ivaContenido * 100) / 100
+  const rateLabel =
+    ratesGravadas.size === 1 ? ` (${[...ratesGravadas][0].toLocaleString('es-AR')}%)` : ''
+  const ivaIncluidoLeyenda =
+    datos.tipo === 'FACTURA' && letra !== 'A' && ivaContenido > 0
+      ? `Los precios incluyen IVA${rateLabel}. IVA contenido: ${formatImporteDoc(ivaContenido, datos)}`
+      : ''
+
   const map: Record<string, string> = {
     empresa_nombre: esc(e.razonSocial),
     empresa_direccion: esc(e.domicilio ?? ''),
@@ -130,6 +165,16 @@ export function buildHtmlPlaceholderMap(datos: DatosDocumentoRender): Record<str
     presupuesto_fecha: formatFecha(datos.fechaEmision),
     factura_numero: esc(datos.tipoFactura ? `${datos.tipoFactura} ${datos.numero}` : datos.numero),
     factura_fecha: formatFecha(datos.fechaEmision),
+    factura_letra: esc(letra),
+    factura_cod_comprobante: codComprobante,
+    factura_punto_venta: puntoVentaStr,
+    factura_comp_nro: compNro,
+    factura_original: 'ORIGINAL',
+    factura_cae: esc(datos.cae ?? ''),
+    factura_cae_vencimiento: esc(fmtFechaCorta(datos.caeVencimiento)),
+    factura_qr: qrHtml,
+    factura_iva_incluido: esc(ivaIncluidoLeyenda),
+    cliente_condicion_venta: esc(plazosTexto),
     documento_numero: esc(datos.numero),
     documento_fecha: formatFecha(datos.fechaEmision),
     cliente_nombre: esc(c.nombre),

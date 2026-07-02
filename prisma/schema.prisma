@@ -1093,6 +1093,7 @@ model Inventario {
   archivoRef  String? @map("archivo_ref")
   alicuotaIvaId String?
   fotoUrl     String?
+  brochureUrl String?
   activo      Boolean  @default(true)
   creadoEn    DateTime @default(now())
 

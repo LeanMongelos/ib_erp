@@ -8,6 +8,7 @@ const CONTENT_TYPE: Record<string, string> = {
   '.jpg': 'image/jpeg',
   '.jpeg': 'image/jpeg',
   '.webp': 'image/webp',
+  '.pdf': 'application/pdf',
 }
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {

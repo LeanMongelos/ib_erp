@@ -1,6 +1,5 @@
 import type { PlantillaConfig } from './types'
-import { LAYOUT_PRESUPUESTO_IB } from './layout-default-presupuesto'
-import { HTML_PLANTILLA_FACTURA, HTML_PLANTILLA_PRESUPUESTO } from './html-templates'
+import { HTML_PLANTILLA_FACTURA, HTML_PLANTILLA_PRESUPUESTO, HTML_PLANTILLA_REMITO } from './html-templates'
 
 const COLUMNAS_ITEMS = [
   { key: 'codigo', label: 'Producto', visible: true, anchoPct: 12, maxChars: 24, overflow: 'truncate' as const },
@@ -41,13 +40,17 @@ export const PLANTILLA_PRESUPUESTO_DEFAULT: PlantillaConfig = {
     leyendaNoFiscal: 'documento no válido como factura',
   },
   pieFiscal: { cae: false, qr: false },
-  layout: LAYOUT_PRESUPUESTO_IB,
+  // La factura/presupuesto/remito usan su HTML dedicado, no el layout de bloques.
+  layout: undefined,
   html: HTML_PLANTILLA_PRESUPUESTO,
 }
 
 export const PLANTILLA_FACTURA_DEFAULT: PlantillaConfig = {
   ...PLANTILLA_PRESUPUESTO_DEFAULT,
   tipo: 'FACTURA',
+  // La factura usa su HTML fiscal dedicado (formato AFIP), no el layout de bloques
+  // del presupuesto: el layout tiene prioridad sobre el HTML en renderDocumentoPDF.
+  layout: undefined,
   html: HTML_PLANTILLA_FACTURA,
   observaciones: {
     camposFijos: ['formaPago', 'plazosCobranza', 'tasaFinanciacion', 'plazoEntrega'],
@@ -63,7 +66,7 @@ export const PLANTILLA_FACTURA_DEFAULT: PlantillaConfig = {
 export const PLANTILLA_REMITO_DEFAULT: PlantillaConfig = {
   ...PLANTILLA_PRESUPUESTO_DEFAULT,
   tipo: 'REMITO',
-  html: undefined,
+  html: HTML_PLANTILLA_REMITO,
   observaciones: {
     camposFijos: ['plazoEntrega'],
     textoLibre: true,

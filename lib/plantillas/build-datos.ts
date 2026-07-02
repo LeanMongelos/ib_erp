@@ -31,6 +31,7 @@ type EmisorRow = {
   domicilio?: string | null
   telefono?: string | null
   email?: string | null
+  puntoVenta?: number | null
 }
 
 type ClienteRow = {
@@ -49,6 +50,7 @@ type ItemRow = {
   cantidad: number
   precioUnit: number
   bonificacionPct?: number
+  alicuotaIvaPct?: number | null
   subtotal: number
   numeroSerie?: string | null
   proximoPreventivo?: Date | string | null
@@ -100,6 +102,7 @@ function mapItems(items: ItemRow[]) {
       cantidad: i.cantidad,
       precioUnit: Number(i.precioUnit),
       bonificacionPct: i.bonificacionPct ?? 0,
+      alicuotaIvaPct: i.alicuotaIvaPct ?? null,
       subtotal: Number(i.subtotal),
     }
   })
@@ -156,6 +159,7 @@ export function buildDatosFactura(
   fact: {
     numero: string
     tipo: 'A' | 'B' | 'C'
+    puntoVenta?: number | null
     estado: string
     fechaEmision: Date
     subtotal: number
@@ -197,6 +201,7 @@ export function buildDatosFactura(
     tipo: 'FACTURA',
     numero: fact.numero,
     tipoFactura: fact.tipo,
+    puntoVenta: fact.puntoVenta ?? emisor.puntoVenta ?? null,
     fechaEmision: fact.fechaEmision.toISOString(),
     emisor: mapEmisor(emisor),
     cliente: mapCliente(cliente),

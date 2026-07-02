@@ -3,410 +3,241 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Factura {{factura_numero}}</title>
+  <title>Factura {{factura_letra}} {{factura_punto_venta}}-{{factura_comp_nro}}</title>
   <style>
-    /* ── TOKENS ── */
     :root {
-      --color-accent:    #D94F1E;   /* naranja corporativo IB */
-      --color-header-bg: #1A1A1A;   /* negro encabezado tabla */
-      --color-row-alt:   #F7F7F7;
-      --color-border:    #CCCCCC;
-      --color-text:      #1A1A1A;
-      --color-muted:     #555555;
-      --color-white:     #FFFFFF;
-
-      --font-body:    'Arial', sans-serif;
-      --font-mono:    'Courier New', monospace;
-
-      --page-width:   210mm;
-      --page-padding: 12mm;
+      --accent:      #D94F1E;   /* naranja corporativo IB */
+      --header-bg:   #D94F1E;   /* naranja franjas (encabezado tabla + total) */
+      --row-alt:     #F7F7F7;
+      --border:      #B5B5B5;
+      --border-hard: #000000;
+      --text:        #1A1A1A;
+      --muted:       #555555;
+      --page-width:  210mm;
+      --page-pad:    10mm;
     }
-
-    /* ── RESET ── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: var(--font-body);
-      font-size: 9pt;
-      color: var(--color-text);
-      background: #fff;
-    }
+    body { font-family: Arial, sans-serif; font-size: 9pt; color: var(--text); background: #fff; }
 
-    /* ── PÁGINA ── */
     .page {
       width: var(--page-width);
       min-height: 297mm;
       margin: 0 auto;
-      padding: var(--page-padding);
+      padding: var(--page-pad);
       display: flex;
       flex-direction: column;
-      gap: 6mm;
-    }
-
-    /* ── HEADER ── */
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 8mm;
-    }
-
-    .header-logo-area {
-      display: flex;
-      align-items: center;
       gap: 4mm;
     }
 
-    .empresa-nombre {
-      font-size: 16pt;
-      font-weight: bold;
-      letter-spacing: 1px;
-      color: var(--color-text);
-      text-transform: uppercase;
-    }
-    .empresa-datos {
-      font-size: 8pt;
-      color: var(--color-muted);
-      margin-top: 2mm;
-      line-height: 1.5;
-    }
-
-    /* Bloque fiscal (derecha del header) */
-    .header-fiscal {
-      text-align: right;
-      font-size: 8pt;
-      color: var(--color-muted);
-      line-height: 1.6;
-      min-width: 60mm;
-    }
-    .header-fiscal .doc-invalido {
-      font-size: 7.5pt;
-      color: var(--color-muted);
-      border: 1px solid var(--color-border);
-      padding: 1mm 2mm;
-      display: inline-block;
-      margin-bottom: 1mm;
-    }
-    .header-fiscal .presupuesto-numero {
-      font-size: 13pt;
-      font-weight: bold;
-      color: var(--color-text);
-    }
-    .header-fiscal .fiscal-row {
+    /* ══ BANDA FISCAL SUPERIOR (emisor | letra | comprobante) ══ */
+    .comprobante-header {
+      position: relative;
       display: flex;
-      justify-content: flex-end;
-      gap: 3mm;
+      border: 1px solid var(--border-hard);
+      min-height: 34mm;
     }
-    .header-fiscal .fiscal-label { color: var(--color-muted); }
-    .header-fiscal .fiscal-value { color: var(--color-text); font-weight: bold; }
-
-    /* ── SEPARADOR ── */
-    hr.divider {
-      border: none;
-      border-top: 1.5px solid var(--color-border);
+    .ch-col { flex: 1; padding: 4mm; }
+    .ch-emisor { border-right: 1px solid var(--border-hard); }
+    .ch-original {
+      position: absolute;
+      top: 1.5mm; right: 2.5mm;
+      font-size: 7.5pt; letter-spacing: 1px; color: var(--muted);
     }
+    /* Recuadro de letra que "monta" sobre el borde divisorio */
+    .ch-letra {
+      position: absolute;
+      top: -1px; left: 50%; transform: translateX(-50%);
+      width: 22mm; height: 20mm;
+      background: #fff;
+      border: 1px solid var(--border-hard);
+      border-top: none;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+    }
+    .ch-letra .letra { font-size: 30pt; font-weight: bold; line-height: 1; }
+    .ch-letra .cod { font-size: 7pt; color: var(--muted); margin-top: 1mm; }
 
-    /* ── DATOS CLIENTE ── */
-    .cliente-grid {
+    .ch-emisor img { height: 15mm; width: auto; display: block; margin-bottom: 2mm; }
+    .ch-emisor .razon { font-size: 14pt; font-weight: bold; text-transform: uppercase; letter-spacing: .5px; }
+    .ch-emisor .linea { font-size: 8pt; color: var(--muted); line-height: 1.5; margin-top: .5mm; }
+
+    .ch-datos { text-align: right; padding-left: 14mm; }
+    .ch-datos .titulo { font-size: 20pt; font-weight: bold; letter-spacing: 1px; }
+    .ch-datos .comp-nro { font-size: 10pt; font-weight: bold; margin-top: 1mm; }
+    .ch-datos .fiscal { font-size: 8pt; color: var(--muted); line-height: 1.65; margin-top: 2mm; }
+    .ch-datos .fiscal b { color: var(--text); }
+
+    /* ══ CLIENTE ══ */
+    .cliente {
+      border: 1px solid var(--border-hard);
+      padding: 3mm 4mm;
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 1.5mm 8mm;
-      font-size: 8.5pt;
-      border: 1px solid var(--color-border);
-      padding: 3mm 4mm;
-    }
-    .cliente-grid .field { display: flex; gap: 2mm; }
-    .cliente-grid .field-label { color: var(--color-muted); white-space: nowrap; }
-    .cliente-grid .field-value { font-weight: bold; }
-
-    /* ── TABLA PRODUCTOS ── */
-    table.productos {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 8.5pt;
-    }
-    table.productos thead tr {
-      background: var(--color-header-bg);
-      color: var(--color-white);
-    }
-    table.productos thead th {
-      padding: 2mm 3mm;
-      text-align: left;
-      font-weight: bold;
-      letter-spacing: 0.3px;
-    }
-    table.productos thead th.right { text-align: right; }
-    table.productos thead th.center { text-align: center; }
-
-    table.productos tbody tr:nth-child(even) { background: var(--color-row-alt); }
-    table.productos tbody td {
-      padding: 2mm 3mm;
-      vertical-align: top;
-      border-bottom: 1px solid var(--color-border);
-    }
-    table.productos tbody td.right { text-align: right; white-space: nowrap; }
-    table.productos tbody td.center { text-align: center; white-space: nowrap; }
-
-    .fiscal-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 7pt;
-      margin-bottom: 3mm;
-    }
-    .fiscal-table td {
-      border: 1px solid #000;
-      padding: 1.5mm 2mm;
-      text-align: center;
-      width: 25%;
-    }
-    .doc-meta {
-      font-size: 8pt;
-      margin-bottom: 2mm;
-    }
-    .doc-numero-centro {
-      text-align: center;
-      font-size: 13pt;
-      font-weight: bold;
-      margin-bottom: 4mm;
-    }
-    .empresa-centro {
-      text-align: center;
-      margin-bottom: 6mm;
-    }
-    .empresa-centro img {
-      height: 18mm;
-      width: auto;
-      display: block;
-      margin: 0 auto 3mm;
-    }
-    .empresa-centro .empresa-nombre {
-      font-size: 14pt;
-      font-weight: bold;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-    .empresa-centro .empresa-datos {
-      font-size: 8pt;
-      color: var(--color-muted);
-      line-height: 1.6;
-      margin-top: 2mm;
-    }
-
-    .producto-codigo { font-weight: bold; white-space: nowrap; }
-    .producto-descripcion-main { font-weight: bold; }
-    .producto-descripcion-detalle {
-      margin-top: 1mm;
-      color: var(--color-muted);
-      font-size: 7.5pt;
-      line-height: 1.5;
-    }
-    .producto-descripcion-detalle ul {
-      margin-left: 4mm;
-      margin-top: 1mm;
-    }
-    .producto-descripcion-detalle ul.sin-bullets { list-style: none; margin-left: 0; }
-    .producto-descripcion-detalle strong { color: var(--color-text); }
-
-    /* ── TOTALES ── */
-    .totales-wrapper {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 8mm;
-      margin-top: 3mm;
-    }
-    .son-pesos {
-      flex: 1;
-      font-size: 8pt;
-      color: var(--color-muted);
-      font-style: italic;
-      align-self: center;
-    }
-    .totales-tabla {
-      min-width: 65mm;
-      font-size: 8.5pt;
-    }
-    .totales-tabla .t-row {
-      display: flex;
-      justify-content: space-between;
-      gap: 8mm;
-      padding: 1mm 0;
-      border-bottom: 1px solid var(--color-border);
-    }
-    .totales-tabla .t-row:last-child { border-bottom: none; }
-    .totales-tabla .t-label { color: var(--color-muted); }
-    .totales-tabla .t-value { font-weight: bold; text-align: right; }
-    .totales-tabla .t-row.total-final {
-      font-size: 10pt;
-      font-weight: bold;
-      color: var(--color-text);
-      border-top: 2px solid var(--color-text);
-      padding-top: 2mm;
-    }
-
-    /* ── OBSERVACIONES ── */
-    .observaciones {
-      border-top: 1.5px solid var(--color-border);
-      padding-top: 3mm;
-      font-size: 8pt;
-    }
-    .obs-title {
-      font-weight: bold;
-      margin-bottom: 2mm;
-      font-size: 8.5pt;
-    }
-    .obs-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
       gap: 1mm 8mm;
+      font-size: 8.5pt;
     }
+    .cliente .full { grid-column: 1 / -1; }
+    .cliente .lbl { color: var(--muted); }
+    .cliente .val { font-weight: bold; }
+
+    /* ══ TABLA ══ */
+    table.items { width: 100%; border-collapse: collapse; font-size: 8.5pt; }
+    table.items thead tr { background: var(--header-bg); color: #fff; }
+    table.items thead th { padding: 2mm 3mm; text-align: left; font-weight: bold; }
+    table.items thead th.center { text-align: center; }
+    table.items thead th.right { text-align: right; }
+    table.items tbody td { padding: 2mm 3mm; vertical-align: top; border-bottom: 1px solid var(--border); }
+    table.items tbody tr:nth-child(even) { background: var(--row-alt); }
+    table.items td.center { text-align: center; white-space: nowrap; }
+    table.items td.right { text-align: right; white-space: nowrap; }
+    .cod-item { font-weight: bold; white-space: nowrap; }
+    .desc-main { font-weight: bold; }
+    .desc-detalle { margin-top: 1mm; color: var(--muted); font-size: 7.5pt; line-height: 1.45; }
+
+    /* ══ TOTALES ══ */
+    .totales-wrap { display: flex; justify-content: space-between; align-items: flex-start; gap: 8mm; margin-top: 2mm; }
+    .son-pesos { flex: 1; font-size: 8pt; color: var(--muted); font-style: italic; align-self: flex-end; }
+    .totales { min-width: 72mm; border: 1px solid var(--border); }
+    .totales .t-row { display: flex; justify-content: space-between; gap: 8mm; padding: 1.4mm 3mm; border-bottom: 1px solid var(--border); }
+    .totales .t-row:last-child { border-bottom: none; }
+    .totales .t-label { color: var(--muted); }
+    .totales .t-value { font-weight: bold; text-align: right; }
+    .totales .t-row.total-final { background: var(--header-bg); color: #fff; font-size: 11pt; }
+    .totales .t-row.total-final .t-label,
+    .totales .t-row.total-final .t-value { color: #fff; }
+    .iva-incluido { text-align: right; font-size: 8pt; color: var(--muted); font-style: italic; margin-top: 1.5mm; }
+
+    /* ══ PIE FISCAL: CAE + QR ══ */
+    .pie-fiscal {
+      margin-top: auto;
+      border-top: 1.5px solid var(--border-hard);
+      padding-top: 3mm;
+      display: flex;
+      align-items: center;
+      gap: 5mm;
+    }
+    .pie-fiscal .qr-img { width: 24mm; height: 24mm; }
+    .pie-fiscal .qr-placeholder {
+      width: 24mm; height: 24mm; border: 1px dashed var(--border);
+      display: flex; align-items: center; justify-content: center;
+      text-align: center; font-size: 6.5pt; color: var(--muted);
+    }
+    .pie-fiscal .cae-datos { font-size: 9pt; line-height: 1.7; }
+    .pie-fiscal .cae-datos .cae-num { font-size: 11pt; font-weight: bold; }
+    .pie-fiscal .cae-datos .autorizado { color: var(--accent); font-weight: bold; }
+
+    /* ══ OBSERVACIONES ══ */
+    .observaciones { border-top: 1px solid var(--border); padding-top: 2.5mm; font-size: 8pt; }
+    .obs-title { font-weight: bold; margin-bottom: 1.5mm; }
+    .obs-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: .8mm 8mm; }
     .obs-row { display: flex; gap: 2mm; }
-    .obs-label { color: var(--color-muted); white-space: nowrap; }
+    .obs-label { color: var(--muted); white-space: nowrap; }
     .obs-value { font-weight: bold; }
 
-    /* ── CRONOGRAMA ── */
-    .cronograma {
-      border-top: 1.5px solid var(--color-border);
-      padding-top: 3mm;
-      margin-top: 2mm;
-      font-size: 8pt;
-    }
-    .cron-body {
-      background: var(--color-row-alt);
-      border-radius: 2mm;
-      padding: 2mm 3mm;
-    }
-    .cron-row {
-      display: flex;
-      justify-content: space-between;
-      gap: 4mm;
-      padding: 0.5mm 0;
-      font-size: 8pt;
-    }
-    .cron-monto { font-weight: bold; white-space: nowrap; }
-
-    /* ── PRINT ── */
-    @media print {
-      body { background: #fff; }
-      .page { margin: 0; padding: var(--page-padding); }
-    }
+    @media print { body { background: #fff; } .page { margin: 0; } }
   </style>
 </head>
 <body>
 <div class="page">
 
-  <!-- ══ ENCABEZADO ══ -->
-  <table class="fiscal-table">
-    <tr>
-      <td>CUIT {{empresa_cuit}}</td>
-      <td>Ingresos Brutos {{empresa_ingresos_brutos}}</td>
-      <td>Inicio de Actividades {{empresa_inicio_actividades}}</td>
-      <td>{{empresa_condicion_iva}}</td>
-    </tr>
-  </table>
+  <!-- ══ BANDA FISCAL SUPERIOR ══ -->
+  <section class="comprobante-header">
+    <div class="ch-original">{{factura_original}}</div>
 
-  <div class="doc-meta">Fecha: {{factura_fecha}}</div>
-  <div class="doc-numero-centro">Factura {{factura_numero}}</div>
+    <div class="ch-col ch-emisor">
+      <img src="/logo.png" alt="Logo" />
+      <div class="razon">{{empresa_nombre}}</div>
+      <div class="linea">{{empresa_direccion}}</div>
+      <div class="linea">Tel: {{empresa_telefono}} · {{empresa_email}}</div>
+      <div class="linea"><b>{{empresa_condicion_iva}}</b></div>
+    </div>
 
-  <section class="empresa-centro">
-    <img src="/logo.png" alt="Logo Ingeniería Biomédica" />
-    <div class="empresa-nombre">{{empresa_nombre}}</div>
-    <div class="empresa-datos">
-      {{empresa_direccion}}<br>
-      Cel: {{empresa_telefono}}<br>
-      Mail: {{empresa_email}}
+    <div class="ch-letra">
+      <div class="letra">{{factura_letra}}</div>
+      <div class="cod">CÓD. {{factura_cod_comprobante}}</div>
+    </div>
+
+    <div class="ch-col ch-datos">
+      <div class="titulo">FACTURA</div>
+      <div class="comp-nro">{{factura_punto_venta}} - {{factura_comp_nro}}</div>
+      <div class="fiscal">
+        <b>Fecha de Emisión:</b> {{factura_fecha}}<br>
+        <b>CUIT:</b> {{empresa_cuit}}<br>
+        <b>Ingresos Brutos:</b> {{empresa_ingresos_brutos}}<br>
+        <b>Inicio de Actividades:</b> {{empresa_inicio_actividades}}
+      </div>
     </div>
   </section>
 
-  <hr class="divider">
-
-  <!-- ══ DATOS CLIENTE ══ -->
-  <section class="cliente-grid">
-    <div class="field">
-      <span class="field-label">Cliente:</span>
-      <span class="field-value">{{cliente_nombre}}</span>
+  <!-- ══ DATOS DEL CLIENTE ══ -->
+  <section class="cliente">
+    <div class="field full">
+      <span class="lbl">Apellido y Nombre / Razón Social:</span>
+      <span class="val">{{cliente_nombre}}</span>
     </div>
     <div class="field">
-      <span class="field-label">Vendedor:</span>
-      <span class="field-value">{{vendedor_nombre}}</span>
+      <span class="lbl">CUIT / DNI:</span>
+      <span class="val">{{cliente_cuit}}</span>
     </div>
     <div class="field">
-      <span class="field-label">Dirección:</span>
-      <span class="field-value">{{cliente_direccion}}</span>
+      <span class="lbl">Condición frente al IVA:</span>
+      <span class="val">{{cliente_condicion_iva}}</span>
+    </div>
+    <div class="field full">
+      <span class="lbl">Domicilio:</span>
+      <span class="val">{{cliente_direccion}}</span>
     </div>
     <div class="field">
-      <span class="field-label">Orden de compra:</span>
-      <span class="field-value">{{orden_compra}}</span>
+      <span class="lbl">Condición de venta:</span>
+      <span class="val">{{cliente_condicion_venta}}</span>
     </div>
     <div class="field">
-      <span class="field-label">CUIT:</span>
-      <span class="field-value">{{cliente_cuit}}</span>
-    </div>
-    <div class="field">
-      <span class="field-label">Plazos de cobranza:</span>
-      <span class="field-value">{{plazos_cobranza}}</span>
-    </div>
-    <div class="field">
-      <span class="field-label">Situac. IVA:</span>
-      <span class="field-value">{{cliente_condicion_iva}}</span>
-    </div>
-    <div class="field">
-      <span class="field-label">Entrega:</span>
-      <span class="field-value">{{fecha_entrega}}</span>
-    </div>
-    <div class="field" style="grid-column: 1 / -1;">
-      <span class="field-label">Dirección de entrega:</span>
-      <span class="field-value">{{direccion_entrega}}</span>
+      <span class="lbl">Orden de compra:</span>
+      <span class="val">{{orden_compra}}</span>
     </div>
   </section>
 
-  <!-- ══ TABLA DE PRODUCTOS ══ -->
-  <table class="productos">
+  <!-- ══ TABLA DE ÍTEMS ══ -->
+  <table class="items">
     <thead>
       <tr>
-        <th style="width:12%">Producto</th>
-        <th style="width:54%">Descripción</th>
-        <th class="center" style="width:10%">Cantidad</th>
-        <th class="center" style="width:12%">Precio</th>
-        <th class="center" style="width:12%">Sub total</th>
+        <th style="width:12%">Código</th>
+        <th style="width:52%">Descripción</th>
+        <th class="center" style="width:9%">Cant.</th>
+        <th class="right" style="width:13%">P. Unitario</th>
+        <th class="right" style="width:14%">Subtotal</th>
       </tr>
     </thead>
     <tbody>
-      <!-- ── ÍTEM 1 ── -->
       <tr>
-        <td class="producto-codigo">{{item1_codigo}}</td>
+        <td class="cod-item">{{item1_codigo}}</td>
         <td>
-          <div class="producto-descripcion-main">{{item1_descripcion_corta}}</div>
-          <div class="producto-descripcion-detalle">
-            {{item1_descripcion_larga}}
-          </div>
+          <div class="desc-main">{{item1_descripcion_corta}}</div>
+          <div class="desc-detalle">{{item1_descripcion_larga}}</div>
         </td>
         <td class="center">{{item1_cantidad}}</td>
-        <td class="center">{{item1_precio}}</td>
-        <td class="center">{{item1_subtotal}}</td>
+        <td class="right">{{item1_precio}}</td>
+        <td class="right">{{item1_subtotal}}</td>
       </tr>
-
-      <!-- ── ÍTEM 2 ── -->
       <tr>
-        <td class="producto-codigo">{{item2_codigo}}</td>
+        <td class="cod-item">{{item2_codigo}}</td>
         <td>
-          <div class="producto-descripcion-main">{{item2_descripcion_corta}}</div>
-          <div class="producto-descripcion-detalle">{{item2_descripcion_larga}}</div>
+          <div class="desc-main">{{item2_descripcion_corta}}</div>
+          <div class="desc-detalle">{{item2_descripcion_larga}}</div>
         </td>
         <td class="center">{{item2_cantidad}}</td>
-        <td class="center">{{item2_precio}}</td>
-        <td class="center">{{item2_subtotal}}</td>
+        <td class="right">{{item2_precio}}</td>
+        <td class="right">{{item2_subtotal}}</td>
       </tr>
-
-      <!-- ── ÍTEM 3 ── -->
       <tr>
-        <td class="producto-codigo">{{item3_codigo}}</td>
+        <td class="cod-item">{{item3_codigo}}</td>
         <td>
-          <div class="producto-descripcion-main">{{item3_descripcion_corta}}</div>
-          <div class="producto-descripcion-detalle">{{item3_descripcion_larga}}</div>
+          <div class="desc-main">{{item3_descripcion_corta}}</div>
+          <div class="desc-detalle">{{item3_descripcion_larga}}</div>
         </td>
         <td class="center">{{item3_cantidad}}</td>
-        <td class="center">{{item3_precio}}</td>
-        <td class="center">{{item3_subtotal}}</td>
+        <td class="right">{{item3_precio}}</td>
+        <td class="right">{{item3_subtotal}}</td>
       </tr>
 
       <!-- Agregar más ítems repitiendo el bloque <tr> de arriba -->
@@ -414,13 +245,11 @@
   </table>
 
   <!-- ══ TOTALES ══ -->
-  <div class="totales-wrapper">
-    <div class="son-pesos">
-      SON {{total_en_letras}}
-    </div>
-    <div class="totales-tabla">
+  <div class="totales-wrap">
+    <div class="son-pesos">Son {{documento_moneda}}: {{total_en_letras}}</div>
+    <div class="totales">
       <div class="t-row">
-        <span class="t-label">SubTotal</span>
+        <span class="t-label">Subtotal</span>
         <span class="t-value">{{total_subtotal}}</span>
       </div>
       <div class="t-row">
@@ -428,48 +257,39 @@
         <span class="t-value">{{total_bonificacion}}</span>
       </div>
       <div class="t-row">
-        <span class="t-label">SubTotal Neto</span>
+        <span class="t-label">Importe Neto Gravado</span>
         <span class="t-value">{{total_subtotal_neto}}</span>
       </div>
       {{filas_totales_extra}}
       <div class="t-row total-final">
-        <span class="t-label">Total a cobrar</span>
+        <span class="t-label">Importe Total</span>
         <span class="t-value">{{total_final}}</span>
       </div>
+    </div>
+  </div>
+  <div class="iva-incluido">{{factura_iva_incluido}}</div>
+
+  <!-- ══ OBSERVACIONES ══ -->
+  <div class="observaciones">
+    <div class="obs-title">Observaciones</div>
+    <p style="margin-bottom:1.5mm;">{{observaciones_texto}}</p>
+    <div class="obs-grid">
+      <div class="obs-row"><span class="obs-label">Presupuesto origen:</span><span class="obs-value">{{presupuesto_ref}}</span></div>
+      <div class="obs-row"><span class="obs-label">Forma de pago:</span><span class="obs-value">{{forma_pago}}</span></div>
+      <div class="obs-row"><span class="obs-label">Plazo de entrega:</span><span class="obs-value">{{plazo_entrega}}</span></div>
+      <div class="obs-row"><span class="obs-label">Garantía:</span><span class="obs-value">{{garantia}}</span></div>
     </div>
   </div>
 
   {{seccion_cronograma}}
 
-  <!-- ══ OBSERVACIONES ══ -->
-  <div class="observaciones">
-    <div class="obs-title">Observaciones:</div>
-    <p style="margin-bottom:2mm; font-size:8pt;">{{observaciones_texto}}</p>
-    <div class="obs-grid">
-      <div class="obs-row">
-        <span class="obs-label">Presupuesto origen:</span>
-        <span class="obs-value">{{presupuesto_ref}}</span>
-      </div>
-      <div class="obs-row">
-        <span class="obs-label">Forma de pago:</span>
-        <span class="obs-value">{{forma_pago}}</span>
-      </div>
-      <div class="obs-row">
-        <span class="obs-label">Plazos de cobranza:</span>
-        <span class="obs-value">{{plazos_cobranza}}</span>
-      </div>
-      <div class="obs-row">
-        <span class="obs-label">Tasa financiación:</span>
-        <span class="obs-value">{{tasa_financiacion}}</span>
-      </div>
-      <div class="obs-row">
-        <span class="obs-label">Plazo de entrega:</span>
-        <span class="obs-value">{{plazo_entrega}}</span>
-      </div>
-      <div class="obs-row">
-        <span class="obs-label">Garantía:</span>
-        <span class="obs-value">{{garantia}}</span>
-      </div>
+  <!-- ══ PIE FISCAL: CAE + QR AFIP ══ -->
+  <div class="pie-fiscal">
+    {{factura_qr}}
+    <div class="cae-datos">
+      <div class="cae-num">CAE N°: {{factura_cae}}</div>
+      <div><b>Fecha de Vto. de CAE:</b> {{factura_cae_vencimiento}}</div>
+      <div class="autorizado">Comprobante Autorizado</div>
     </div>
   </div>
 

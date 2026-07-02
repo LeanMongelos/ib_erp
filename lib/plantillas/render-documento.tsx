@@ -289,7 +289,7 @@ export async function renderDocumentoPDF(
   }
 
   let html = cfgNorm.html?.trim()
-  if (!html && (cfgNorm.tipo === 'FACTURA' || cfgNorm.tipo === 'PRESUPUESTO')) {
+  if (!html && (cfgNorm.tipo === 'FACTURA' || cfgNorm.tipo === 'PRESUPUESTO' || cfgNorm.tipo === 'REMITO')) {
     const { htmlDefaultPorTipo } = await import('./html-templates')
     html = htmlDefaultPorTipo(cfgNorm.tipo)
   }

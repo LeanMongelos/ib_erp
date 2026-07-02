@@ -16,6 +16,7 @@ import { useCan } from '@/components/auth/useCan'
 import { formatMontoMoneda } from '@/lib/moneda'
 import { mensajeErrorDesconocido, mensajeErrorRespuesta } from '@/lib/errores'
 import { ProductoFotoField, subirFotoInventario } from '@/components/inventario/ProductoFotoField'
+import { ProductoBrochureField, subirBrochureInventario } from '@/components/inventario/ProductoBrochureField'
 import { TIPOS_ARTICULO, TIPOS_KIT, MODOS_TRAZABILIDAD } from '@/lib/inventario-constants'
 import { InventarioUnidadesPanel } from '@/components/inventario/InventarioUnidadesPanel'
 import { TransferirStockModal } from '@/components/inventario/TransferirStockModal'
@@ -61,6 +62,7 @@ export interface ItemInventario {
   moneda: string
   categoria: string | null
   fotoUrl?: string | null
+  brochureUrl?: string | null
   kitComoEquipo?: KitItemForm[]
   alicuotaIva?: { id: string; porcentaje: number; nombre: string } | null
 }
@@ -187,6 +189,8 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
   const [ajusteMotivo, setAjusteMotivo] = useState('')
   const [fotoUrl, setFotoUrl] = useState<string | null>(null)
   const [fotoPendiente, setFotoPendiente] = useState<File | null>(null)
+  const [brochureUrl, setBrochureUrl] = useState<string | null>(null)
+  const [brochurePendiente, setBrochurePendiente] = useState<File | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const stockFileRef = useRef<HTMLInputElement>(null)
   const csvFileRef = useRef<HTMLInputElement>(null)
@@ -245,6 +249,8 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
     setForm(itemAForm(item))
     setFotoUrl(item.fotoUrl ?? null)
     setFotoPendiente(null)
+    setBrochureUrl(item.brochureUrl ?? null)
+    setBrochurePendiente(null)
   }
 
   function abrirDesdeFilaStock(fila: FilaStockDeposito) {
@@ -375,11 +381,16 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
       if (fotoPendiente) {
         await subirFotoInventario(creado.id, fotoPendiente)
       }
+      if (brochurePendiente) {
+        await subirBrochureInventario(creado.id, brochurePendiente)
+      }
       toast.success('Producto agregado al inventario')
       setModalAlta(false)
       setForm(formVacio())
       setFotoUrl(null)
       setFotoPendiente(null)
+      setBrochureUrl(null)
+      setBrochurePendiente(null)
       await recargar()
     } catch (e) {
       toast.error(mensajeErrorDesconocido(e, 'No se pudo crear el producto'))
@@ -660,7 +671,7 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
               <Button variant="outline" size="sm" loading={importando} onClick={() => csvFileRef.current?.click()}>
                 <Upload size={14} /> Importar CSV
               </Button>
-              <Button variant="primary" size="sm" onClick={() => { setForm(formVacio()); setFotoUrl(null); setFotoPendiente(null); setDetalleContexto(null); setModalAlta(true) }}>
+              <Button variant="primary" size="sm" onClick={() => { setForm(formVacio()); setFotoUrl(null); setFotoPendiente(null); setBrochureUrl(null); setBrochurePendiente(null); setDetalleContexto(null); setModalAlta(true) }}>
                 <Plus size={14} /> Nuevo producto
               </Button>
             </>
@@ -796,6 +807,9 @@ export function InventarioManager({ items: inicial, faltantesCount }: Props) {
           fotoUrl={fotoUrl}
           onFotoChange={setFotoUrl}
           onArchivoPendiente={setFotoPendiente}
+          brochureUrl={brochureUrl}
+          onBrochureChange={setBrochureUrl}
+          onArchivoBrochurePendiente={setBrochurePendiente}
           puedeEditarUnidades={editando ? puedeEditar : puedeCrear}
           contextoUbicacion={detalleContexto}
           initialTab={detalleContexto?.tabInicial}
@@ -866,6 +880,9 @@ function ModalForm({
   fotoUrl,
   onFotoChange,
   onArchivoPendiente,
+  brochureUrl,
+  onBrochureChange,
+  onArchivoBrochurePendiente,
   puedeEditarUnidades,
   contextoUbicacion,
   initialTab,
@@ -883,6 +900,9 @@ function ModalForm({
   fotoUrl: string | null
   onFotoChange: (url: string | null) => void
   onArchivoPendiente: (file: File | null) => void
+  brochureUrl: string | null
+  onBrochureChange: (url: string | null) => void
+  onArchivoBrochurePendiente: (file: File | null) => void
   puedeEditarUnidades: boolean
   contextoUbicacion?: ContextoDetalleInventario | null
   initialTab?: TabDetalleInventario
@@ -1042,6 +1062,15 @@ function ModalForm({
                 fotoUrl={fotoUrl}
                 onFotoChange={onFotoChange}
                 onArchivoPendiente={onArchivoPendiente}
+                disabled={loading}
+              />
+            </div>
+            <div className="mt-4">
+              <ProductoBrochureField
+                inventarioId={inventarioId}
+                brochureUrl={brochureUrl}
+                onBrochureChange={onBrochureChange}
+                onArchivoPendiente={onArchivoBrochurePendiente}
                 disabled={loading}
               />
             </div>

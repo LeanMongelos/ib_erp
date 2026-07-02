@@ -12,8 +12,11 @@ function leerHtml(nombre: string): string {
 
 export const HTML_PLANTILLA_PRESUPUESTO = leerHtml('html-presupuesto.html')
 export const HTML_PLANTILLA_FACTURA = leerHtml('html-factura.html')
+export const HTML_PLANTILLA_REMITO = leerHtml('html-remito.html')
 export const HTML_PLANTILLA_ACTA_ALQUILER = leerHtml('acta-alquiler-html.html')
 
-export function htmlDefaultPorTipo(tipo: 'FACTURA' | 'PRESUPUESTO'): string {
-  return tipo === 'FACTURA' ? HTML_PLANTILLA_FACTURA : HTML_PLANTILLA_PRESUPUESTO
+export function htmlDefaultPorTipo(tipo: 'FACTURA' | 'PRESUPUESTO' | 'REMITO'): string {
+  if (tipo === 'FACTURA') return HTML_PLANTILLA_FACTURA
+  if (tipo === 'REMITO') return HTML_PLANTILLA_REMITO
+  return HTML_PLANTILLA_PRESUPUESTO
 }

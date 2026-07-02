@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Search, Plus, FileText, Zap, Ban } from 'lucide-react'
+import { Search, Plus, FileText, Zap, Ban, PackageCheck } from 'lucide-react'
 import { toast } from 'sonner'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -215,6 +215,13 @@ export function FacturasTable({ facturas }: { facturas: FacturaRow[] }) {
                         title="Ver PDF"
                       >
                         <FileText size={15} />
+                      </button>
+                      <button
+                        onClick={() => window.open(`/api/facturas/${f.id}/entrega`, '_blank')}
+                        className="p-1.5 text-[#6b7280] hover:text-[#E8650A] rounded"
+                        title="Imprimir factura + brochures de los equipos (entrega)"
+                      >
+                        <PackageCheck size={15} />
                       </button>
                       {['BORRADOR', 'PENDIENTE', 'RECHAZADA'].includes(f.estado) && (() => {
                         const bloqueado = Boolean(validarEmisionAfip(f.emisor))
